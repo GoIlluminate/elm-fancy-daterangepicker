@@ -6,10 +6,11 @@ module DateRangePicker
         , update
         , defaultSettings
         , isOpen
+        , view
         )
 
 import Date exposing (Date, Day(..), Month(..), day, month, year)
-import Html exposing (Html)
+import Html exposing (Html, div, text)
 import Html.Attributes as Attrs
 import Task
 import DateRangePicker.Date exposing (initDate)
@@ -83,11 +84,31 @@ update settings msg (DateRangePicker model) =
             model ! []
 
 
-{-| Expose if the daterangepicker is open
+{-| Expose if the daterange picker is open
 -}
 isOpen : DateRangePicker -> Bool
 isOpen (DateRangePicker model) =
     model.open
+
+
+{-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
+-}
+view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
+view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
+    let
+        something =
+            ""
+    in
+        div [] [ text "hi" ]
+
+
+dateRangePicker : ( Maybe Date, Maybe Date ) -> Settings -> Model -> Html Msg
+dateRangePicker ( selectedStartDate, selectedEndDate ) settings ({ today } as model) =
+    let
+        something =
+            ""
+    in
+        div [] []
 
 
 (!) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )

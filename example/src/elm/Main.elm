@@ -65,7 +65,7 @@ update msg ({ date, datePicker, dateRangePicker } as model) =
 
 
 view : Model -> Html Msg
-view ({ date, datePicker } as model) =
+view ({ date, datePicker, dateRangePicker } as model) =
     div []
         [ case date of
             Nothing ->
@@ -75,6 +75,7 @@ view ({ date, datePicker } as model) =
                 h1 [] [ text <| formatDate date ]
         , DatePicker.view date DatePicker.defaultSettings datePicker
             |> Html.map ToDatePicker
+        , DateRangePicker.view ( date, date ) DateRangePicker.defaultSettings dateRangePicker |> Html.map ToDateRangePicker
         ]
 
 
