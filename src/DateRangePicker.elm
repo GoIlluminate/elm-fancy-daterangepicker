@@ -10,8 +10,8 @@ module DateRangePicker
         )
 
 import Date exposing (Date, Day(..), Month(..), day, month, year)
-import Html exposing (Html, div, text)
-import Html.Attributes as Attrs
+import Html exposing (Html, div, text, table, thead, th, tbody, tr, td)
+import Html.Attributes as Attrs exposing (class, colspan)
 import Task
 import DateRangePicker.Date exposing (initDate)
 
@@ -99,7 +99,8 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
         something =
             ""
     in
-        div [] [ text "hi" ]
+        -- div [] [ text "hi" ]
+        fullYearCalendar
 
 
 dateRangePicker : ( Maybe Date, Maybe Date ) -> Settings -> Model -> Html Msg
@@ -109,6 +110,108 @@ dateRangePicker ( selectedStartDate, selectedEndDate ) settings ({ today } as mo
             ""
     in
         div [] []
+
+
+fullYearCalendar : Html Msg
+fullYearCalendar =
+    div [ class "full-year-calendar-wrapper" ]
+        [ div [ class "full-year-calendar" ]
+            [ div [ class "yr-label" ] [ text "2018" ]
+            , printQuarter "Q1" [ "January", "February", "March" ]
+            , printQuarter "Q2" [ "April", "May", "June" ]
+            , printQuarter "Q3" [ "July", "August", "September" ]
+            , printQuarter "Q4" [ "October", "November", "December" ]
+            ]
+        ]
+
+
+printQuarter : String -> List String -> Html Msg
+printQuarter qtr months =
+    div [ class "quarter-row" ] <|
+        ([ div [ class "qtr-label" ] [ text qtr ] ]
+            ++ List.map printMonth months
+        )
+
+
+printMonth : String -> Html Msg
+printMonth month =
+    div [ class "month" ]
+        [ div [ class "month-label" ] [ text month ]
+        , printWeek
+        , printWeek
+        , printWeek
+        , printWeek
+        ]
+
+
+printWeek : Html Msg
+printWeek =
+    div [ class "week" ]
+        [ div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        , div [ class "day" ] []
+        ]
+
+
+printMonthCalendar : String -> Html Msg
+printMonthCalendar month =
+    table [ class "month-table" ]
+        [ thead []
+            [ th [ colspan 7 ] [ text month ]
+            ]
+        , tbody []
+            [ tr []
+                [ td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                ]
+            , tr []
+                [ td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                ]
+            , tr []
+                [ td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                ]
+            , tr []
+                [ td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                ]
+            , tr []
+                [ td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                , td [ class "day" ] []
+                ]
+            ]
+        ]
 
 
 (!) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
