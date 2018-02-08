@@ -1,68 +1,95 @@
 module DateRangePicker
     exposing
-        ( DateRangePicker
-        , Model
-        , Settings
-        , Msg
-        , defaultSettings
-        , update
+        ( Msg
+        , DateRangePicker
         , init
+        , update
+        , defaultSettings
+        , isOpen
         )
 
-import Html exposing (Html, Attribute)
-import Html.Attributes exposing (style, class)
-import Html.Events exposing (on)
-import Date
+import Date exposing (Date, Day(..), Month(..), day, month, year)
+import Html exposing (Html)
+import Html.Attributes as Attrs
+import Task
+import DateRangePicker.Date exposing (initDate)
 
-{-| The base model for the datepicker
+
+{-| An opaque type representing messages that are passed within the DateRangePicker.
+-}
+type Msg
+    = CurrentDate Date
+    | SelectDate (Maybe Date)
+
+
+{-| The settings that the DateRangePicker uses
+-}
+type alias Settings =
+    { placeholder : String
+    , className : Maybe String
+    , inputName : Maybe String
+    , inputId : Maybe String
+    , inputAttributes : List (Html.Attribute Msg)
+    }
+
+
+{-| The model to be used within the DateRangePicker.
+-}
+type alias Model =
+    { today : Date
+    , startDate : Maybe Date
+    , endDate : Maybe Date
+    , inputText : Maybe String
+    , open : Bool
+    }
+
+
+{-| The DateRangePicker model.
 -}
 type DateRangePicker
     = DateRangePicker Model
 
-{-| Represents your datepicker as a model
--}
-type alias Model =
-    { settings : Settings
-    }
-
-type alias Settings =
-    { dateRange : Bool
-    }
-
-{-| Settings for your datepicker
-# startDate = start date
-# endDate = end date
-# minDate = earliest date the datepicker goes to
-# maxDate = latest date the datepicker goes to
-# singleDatePicker = option for selecting only a single date or a daterange
--}
-type alias PossibleSettings =
-    { startDate : Date.Date
-    , endDate : Date.Date
-    , minDate : Date.Date
-    , maxDate : Date.Date
-    , singleDatePicker : Bool
-    }
 
 defaultSettings : Settings
 defaultSettings =
-    { dateRange = True
+    { placeholder = "Select a date..."
+    , className = Just "elm-daterangepicker"
+    , inputName = Nothing
+    , inputId = Nothing
+    , inputAttributes = []
     }
 
-type Msg
-    = NoOp
 
-init : DateRangePicker
+init : ( DateRangePicker, Cmd Msg )
 init =
-    let
-        model =
-            { settings = defaultSettings
-            }
-    in
-        DateRangePicker model
+    ( DateRangePicker <|
+        { today = initDate
+        , startDate = Nothing
+        , endDate = Nothing
+        , inputText = Nothing
+        , open = False
+        }
+    , Task.perform CurrentDate Date.now
+    )
 
-update : DateRangePicker -> Msg -> (DateRangePicker, Cmd Msg)
-update (DateRangePicker model) msg =
+
+update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
+update settings msg (DateRangePicker model) =
     case msg of
-        NoOp ->
-            (DateRangePicker model, Cmd.none)
+        CurrentDate date ->
+            { model | today = date } ! []
+
+        _ ->
+            model ! []
+
+
+{-| Expose if the daterangepicker is open
+-}
+isOpen : DateRangePicker -> Bool
+isOpen (DateRangePicker model) =
+    model.open
+
+
+(!) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
+(!) model cmds =
+    ( DateRangePicker model, Cmd.batch cmds )
