@@ -9,12 +9,12 @@ module DateRangePicker
         , view
         )
 
-import Date exposing (Date, Day(..), Month(..), day, month, year)
+import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p)
 import Html.Attributes as Attrs exposing (class, colspan)
 import Task
 import List.Extra as LE
-import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, formatDate, formatMonth, daysInMonth)
+import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
 
 
 {-| An opaque type representing messages that are passed within the DateRangePicker.
@@ -152,24 +152,68 @@ printMonth m =
     let
         h =
             List.head m
+
+        t =
+            List.head <| List.reverse m
     in
-        case h of
-            Just a ->
+        case ( h, t ) of
+            ( Just a, Just b ) ->
                 div [ class "month" ]
-                    [ div [ class "month-label" ]
+                    ([ div [ class "month-label" ]
                         [ text <|
                             formatMonth <|
                                 month a
                         ]
-                    , printWeek
-                    , printWeek
-                    , printWeek
-                    , printWeek
-                    , printWeek
-                    ]
+                     ]
+                        ++ printDaysOfWeek
+                        ++ padDaysLeft a
+                        ++ List.map printDay m
+                        ++ padDaysRight b
+                    )
 
-            Nothing ->
+            ( _, _ ) ->
                 div [] []
+
+
+printDaysOfWeek : List (Html Msg)
+printDaysOfWeek =
+    let
+        days =
+            List.range 1 7
+
+        go n =
+            div [ class "dow" ] [ text <| formatDay <| dayFromInt n ]
+    in
+        List.map go days
+
+
+padDaysLeft : Date -> List (Html Msg)
+padDaysLeft d =
+    let
+        dd =
+            dayToInt <| dayOfWeek d
+
+        go =
+            div [ class "day-filler" ] []
+    in
+        List.repeat (dd - 1) go
+
+
+padDaysRight : Date -> List (Html Msg)
+padDaysRight d =
+    let
+        dd =
+            dayToInt <| dayOfWeek d
+
+        go =
+            div [ class "day-filler" ] []
+    in
+        List.repeat (7 - dd) go
+
+
+printDay : Date -> Html Msg
+printDay date =
+    div [ class "day" ] [ text <| toString <| day date ]
 
 
 printWeek : Html Msg

@@ -18,6 +18,8 @@ module DateRangePicker.Date
         , mkDate
         , datesInRangeIncl
         , daysInMonth
+        , dayToInt
+        , dayFromInt
         )
 
 import Date exposing (Date, Day(..), Month(..), year, month, day)
@@ -342,25 +344,25 @@ dayToString day =
 dayToInt : Date.Day -> Int
 dayToInt day =
     case day of
-        Mon ->
+        Sun ->
             1
 
-        Tue ->
+        Mon ->
             2
 
-        Wed ->
+        Tue ->
             3
 
-        Thu ->
+        Wed ->
             4
 
-        Fri ->
+        Thu ->
             5
 
-        Sat ->
+        Fri ->
             6
 
-        Sun ->
+        Sat ->
             7
 
 
@@ -368,25 +370,25 @@ dayFromInt : Int -> Date.Day
 dayFromInt day =
     case day of
         1 ->
-            Mon
+            Sun
 
         2 ->
-            Tue
+            Mon
 
         3 ->
-            Wed
+            Tue
 
         4 ->
-            Thu
+            Wed
 
         5 ->
-            Fri
+            Thu
 
         6 ->
-            Sat
+            Fri
 
         7 ->
-            Sun
+            Sat
 
         _ ->
             Debug.crash ("dayFromInt: invalid day: " ++ toString day)
