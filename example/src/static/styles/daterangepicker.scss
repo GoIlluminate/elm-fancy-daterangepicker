@@ -8,6 +8,8 @@
     height: 500px;
     width: 500px;
     margin: auto;
+    background: darkblue;
+    padding: 5px;
 }
 
 .full-year-calendar {
@@ -17,32 +19,36 @@
     grid-template-columns: 1fr;
     grid-auto-flow: dense;
     grid-gap: 5px;
-    border: solid 1px black;
 }
 
 .day-filler {
-    background: black;
+    background: darkblue;
 }
 
 .qtr-label {
     display: grid;
     align-items: center;
-    background: grey;
+    background: white;
+    color: darkblue;
+    text-align: center;
 }
 
 .yr-label {
     text-align: center;
-    background: grey;
+    background: white;
+    color: darkblue;
 }
 
 .month-label {
-    background: grey;
-    border-bottom: solid 1px white;
+    background: white;
+    border-bottom: solid 1px darkblue;
+    color: darkblue;
 }
 
 .dow {
-    background: grey;
-    border-bottom: solid 1px white;
+    background: white;
+    border-bottom: solid 1px darkblue;
+    color: darkblue;
 }
 
 .qtr-row {
