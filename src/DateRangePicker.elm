@@ -15,16 +15,23 @@ import Html.Attributes as Attrs exposing (class, colspan)
 import Html.Events exposing (onClick)
 import Task
 import List.Extra as LE
-import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
+import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
 
 
 {-| An opaque type representing messages that are passed within the DateRangePicker.
 -}
 type Msg
     = CurrentDate Date
-    | SelectDate (Maybe Date)
     | PrevYear
     | NextYear
+    | SetDateRange DateRange
+    | DoNothing
+
+
+type alias DateRange =
+    { start : Date
+    , end : Date
+    }
 
 
 {-| The settings that the DateRangePicker uses
@@ -42,11 +49,10 @@ type alias Settings =
 -}
 type alias Model =
     { today : Date
-    , startDate : Maybe Date
-    , endDate : Maybe Date
     , inputText : Maybe String
     , open : Bool
     , currentYear : FullYear
+    , dateRange : Maybe DateRange
     }
 
 
@@ -70,11 +76,10 @@ init : ( DateRangePicker, Cmd Msg )
 init =
     ( DateRangePicker <|
         { today = initDate
-        , startDate = Nothing
-        , endDate = Nothing
         , inputText = Nothing
         , open = False
         , currentYear = prepareYear initDate
+        , dateRange = Nothing
         }
     , Task.perform CurrentDate Date.now
     )
@@ -102,7 +107,10 @@ update settings msg (DateRangePicker model) =
             in
                 { model | currentYear = nextYear } ! []
 
-        _ ->
+        SetDateRange dateRange ->
+            { model | dateRange = Just dateRange } ! []
+
+        DoNothing ->
             model ! []
 
 
@@ -116,8 +124,8 @@ isOpen (DateRangePicker model) =
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
-view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open, currentYear } as model)) =
-    fullYearCalendar currentYear
+view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker model) =
+    fullYearCalendar model
 
 
 
@@ -133,66 +141,137 @@ dateRangePicker ( selectedStartDate, selectedEndDate ) settings ({ today } as mo
         div [] []
 
 
-fullYearCalendar : FullYear -> Html Msg
-fullYearCalendar fullYear =
-    let
-        something =
-            ""
-    in
-        div [ class "full-year-calendar-wrapper" ]
-            [ div [ class "full-year-calendar" ] <|
-                (printYearLabel fullYear
-                    ++ List.map printQuarter fullYear.quarters
-                )
-            ]
+fullYearCalendar : Model -> Html Msg
+fullYearCalendar model =
+    div [ class "full-year-calendar-wrapper" ]
+        [ div [ class "full-year-calendar" ] <|
+            (printYearLabel model.currentYear
+                ++ printQuarters model
+            )
+        ]
 
 
 printYearLabel : FullYear -> List (Html Msg)
 printYearLabel fullYear =
-    [ div [ class "yr-label-wrapper" ]
-        [ div [ class "yr-btn yr-prev", onClick PrevYear ] [ text "<" ]
-        , div [ class "yr-btn yr-label" ] [ text fullYear.name ]
-        , div [ class "yr-btn yr-next", onClick NextYear ] [ text ">" ]
+    let
+        start =
+            mkDate fullYear.year Jan 1
+
+        end =
+            mkDate fullYear.year Dec 31
+
+        setYearRange =
+            onClick <|
+                SetDateRange <|
+                    { start = start
+                    , end = end
+                    }
+    in
+        [ div [ class "yr-label-wrapper" ]
+            [ div [ class "yr-btn yr-prev", onClick PrevYear ] [ text "<" ]
+            , div [ class "yr-btn yr-label", setYearRange ] [ text fullYear.name ]
+            , div [ class "yr-btn yr-next", onClick NextYear ] [ text ">" ]
+            ]
         ]
-    ]
 
 
-printQuarter : Quarter -> Html Msg
-printQuarter qtr =
-    div [ class "qtr-row" ] <|
-        ([ div [ class "qtr-label" ] [ text qtr.name ] ]
-            ++ List.map printMonth qtr.months
-        )
+printQuarters : Model -> List (Html Msg)
+printQuarters model =
+    let
+        quarters =
+            model.currentYear.quarters
+    in
+        List.map (printQuarter model) quarters
 
 
-printMonth : List Date -> Html Msg
-printMonth m =
+printQuarter : Model -> Quarter -> Html Msg
+printQuarter model qtr =
+    let
+        m1 =
+            List.head qtr.months
+
+        m2 =
+            List.head <|
+                List.reverse qtr.months
+    in
+        case ( m1, m2 ) of
+            ( Just a, Just b ) ->
+                let
+                    startOfQuarter =
+                        List.head a
+
+                    endOfQuarter =
+                        List.head <|
+                            List.reverse b
+
+                    setQuarterDateRange =
+                        case ( startOfQuarter, endOfQuarter ) of
+                            ( Just aa, Just bb ) ->
+                                let
+                                    x =
+                                        Debug.log "a" aa
+                                in
+                                    onClick <|
+                                        SetDateRange <|
+                                            { start = aa
+                                            , end = bb
+                                            }
+
+                            ( _, _ ) ->
+                                onClick DoNothing
+
+                    monthDiv =
+                        div [ class "qtr-row" ] <|
+                            ([ div [ class "qtr-label", setQuarterDateRange ] [ text qtr.name ] ]
+                                ++ List.map (printMonth model) qtr.months
+                            )
+                in
+                    monthDiv
+
+            ( _, _ ) ->
+                div [] []
+
+
+printMonth : Model -> List Date -> Html Msg
+printMonth model m =
     let
         h =
             List.head m
-
-        t =
-            List.head <| List.reverse m
     in
-        case ( h, t ) of
-            ( Just a, Just b ) ->
+        case h of
+            Just a ->
                 let
                     days =
-                        [] ++ padDaysLeft a ++ List.map printDay m
-                in
-                    div [ class "month" ]
-                        ([ div [ class "month-label" ]
+                        [] ++ padDaysLeft a ++ List.map (printDay model) m
+
+                    setMonthDateRange =
+                        onClick <|
+                            SetDateRange <|
+                                { start = startOfMonth a
+                                , end = endOfMonth a
+                                }
+
+                    xxx =
+                        Debug.log "startOfMonth" (startOfMonth a)
+
+                    yyy =
+                        Debug.log "endOfMonth" (endOfMonth a)
+
+                    monthDiv =
+                        div [ class "month-label", setMonthDateRange ]
                             [ text <|
                                 formatMonth <|
                                     month a
                             ]
-                         ]
+                in
+                    div [ class "month" ]
+                        ([ monthDiv ]
                             ++ printDaysOfWeek
                             ++ days
                             ++ padMonth (42 - List.length days)
                         )
 
-            ( _, _ ) ->
+            _ ->
                 div [] []
 
 
@@ -237,9 +316,21 @@ padMonth i =
     List.repeat i <| div [ class "day-filler" ] []
 
 
-printDay : Date -> Html Msg
-printDay date =
-    div [ class "day" ] [ text <| toString <| day date ]
+printDay : Model -> Date -> Html Msg
+printDay model date =
+    let
+        className =
+            case model.dateRange of
+                Just a ->
+                    if inRange date a then
+                        "day selected-range"
+                    else
+                        "day"
+
+                Nothing ->
+                    "day"
+    in
+        div [ class className ] [ text <| toString <| day date ]
 
 
 printWeek : Html Msg
@@ -316,3 +407,15 @@ type alias FullYear =
     , year : Int
     , quarters : List Quarter
     }
+
+
+inRange : Date -> DateRange -> Bool
+inRange date { start, end } =
+    let
+        ( timeDate, timeStart, timeEnd ) =
+            ( Date.toTime date, Date.toTime start, Date.toTime end )
+    in
+        if timeStart <= timeDate && timeEnd >= timeDate then
+            True
+        else
+            False

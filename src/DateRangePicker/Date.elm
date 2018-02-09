@@ -20,6 +20,8 @@ module DateRangePicker.Date
         , daysInMonth
         , dayToInt
         , dayFromInt
+        , endOfMonth
+        , startOfMonth
         )
 
 import Date exposing (Date, Day(..), Month(..), year, month, day)
@@ -203,6 +205,23 @@ repeat f =
 firstOfMonth : Date -> Date
 firstOfMonth date =
     mkDate (year date) (month date) 1
+
+
+startOfMonth : Date -> Date
+startOfMonth date =
+    mkDate (year date) (month date) 1
+
+
+endOfMonth : Date -> Date
+endOfMonth date =
+    let
+        y =
+            year date
+
+        m =
+            month date
+    in
+        mkDate y m (daysInMonth y m)
 
 
 nextMonth : Date -> Date
