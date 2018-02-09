@@ -12,6 +12,7 @@ module DateRangePicker
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p)
 import Html.Attributes as Attrs exposing (class, colspan)
+import Html.Events exposing (onClick)
 import Task
 import List.Extra as LE
 import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
@@ -22,6 +23,8 @@ import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, dayToI
 type Msg
     = CurrentDate Date
     | SelectDate (Maybe Date)
+    | PrevYear
+    | NextYear
 
 
 {-| The settings that the DateRangePicker uses
@@ -43,6 +46,7 @@ type alias Model =
     , endDate : Maybe Date
     , inputText : Maybe String
     , open : Bool
+    , currentYear : FullYear
     }
 
 
@@ -70,6 +74,7 @@ init =
         , endDate = Nothing
         , inputText = Nothing
         , open = False
+        , currentYear = prepareYear initDate
         }
     , Task.perform CurrentDate Date.now
     )
@@ -79,7 +84,23 @@ update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
 update settings msg (DateRangePicker model) =
     case msg of
         CurrentDate date ->
-            { model | today = date } ! []
+            { model | today = date, currentYear = prepareYear date } ! []
+
+        PrevYear ->
+            let
+                prevYear =
+                    prepareYear <|
+                        mkDate (model.currentYear.year - 1) Jan 1
+            in
+                { model | currentYear = prevYear } ! []
+
+        NextYear ->
+            let
+                nextYear =
+                    prepareYear <|
+                        mkDate (model.currentYear.year + 1) Jan 1
+            in
+                { model | currentYear = nextYear } ! []
 
         _ ->
             model ! []
@@ -95,12 +116,8 @@ isOpen (DateRangePicker model) =
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
-view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
-    let
-        fullYear =
-            prepareYear model.today
-    in
-        fullYearCalendar fullYear
+view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open, currentYear } as model)) =
+    fullYearCalendar currentYear
 
 
 
@@ -124,10 +141,20 @@ fullYearCalendar fullYear =
     in
         div [ class "full-year-calendar-wrapper" ]
             [ div [ class "full-year-calendar" ] <|
-                ([ div [ class "yr-label" ] [ text fullYear.name ] ]
+                (printYearLabel fullYear
                     ++ List.map printQuarter fullYear.quarters
                 )
             ]
+
+
+printYearLabel : FullYear -> List (Html Msg)
+printYearLabel fullYear =
+    [ div [ class "yr-label-wrapper" ]
+        [ div [ class "yr-btn yr-prev", onClick PrevYear ] [ text "<" ]
+        , div [ class "yr-btn yr-label" ] [ text fullYear.name ]
+        , div [ class "yr-btn yr-next", onClick NextYear ] [ text ">" ]
+        ]
+    ]
 
 
 printQuarter : Quarter -> Html Msg
@@ -136,15 +163,6 @@ printQuarter qtr =
         ([ div [ class "qtr-label" ] [ text qtr.name ] ]
             ++ List.map printMonth qtr.months
         )
-
-
-
--- printQuarter : String -> List String -> Html Msg
--- printQuarter qtr months =
---     div [ class "quarter-row" ] <|
---         ([ div [ class "qtr-label" ] [ text qtr ] ]
---             ++ List.map printMonth months
---         )
 
 
 printMonth : List Date -> Html Msg
@@ -158,18 +176,21 @@ printMonth m =
     in
         case ( h, t ) of
             ( Just a, Just b ) ->
-                div [ class "month" ]
-                    ([ div [ class "month-label" ]
-                        [ text <|
-                            formatMonth <|
-                                month a
-                        ]
-                     ]
-                        ++ printDaysOfWeek
-                        ++ padDaysLeft a
-                        ++ List.map printDay m
-                        ++ padDaysRight b
-                    )
+                let
+                    days =
+                        [] ++ padDaysLeft a ++ List.map printDay m
+                in
+                    div [ class "month" ]
+                        ([ div [ class "month-label" ]
+                            [ text <|
+                                formatMonth <|
+                                    month a
+                            ]
+                         ]
+                            ++ printDaysOfWeek
+                            ++ days
+                            ++ padMonth (42 - List.length days)
+                        )
 
             ( _, _ ) ->
                 div [] []
@@ -211,6 +232,11 @@ padDaysRight d =
         List.repeat (7 - dd) go
 
 
+padMonth : Int -> List (Html Msg)
+padMonth i =
+    List.repeat i <| div [ class "day-filler" ] []
+
+
 printDay : Date -> Html Msg
 printDay date =
     div [ class "day" ] [ text <| toString <| day date ]
@@ -246,6 +272,7 @@ prepareYear date =
             datesInRangeIncl start end
     in
         { name = toString yr
+        , year = yr
         , quarters =
             prepareQuarters <|
                 LE.groupWhile (\x y -> (month x) == (month y)) dates
@@ -286,5 +313,6 @@ type alias Quarter =
 
 type alias FullYear =
     { name : String
+    , year : Int
     , quarters : List Quarter
     }
