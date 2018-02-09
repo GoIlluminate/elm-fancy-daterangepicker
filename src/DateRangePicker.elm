@@ -10,10 +10,11 @@ module DateRangePicker
         )
 
 import Date exposing (Date, Day(..), Month(..), day, month, year)
-import Html exposing (Html, div, text, table, thead, th, tbody, tr, td)
+import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p)
 import Html.Attributes as Attrs exposing (class, colspan)
 import Task
-import DateRangePicker.Date exposing (initDate)
+import List.Extra as LE
+import DateRangePicker.Date exposing (initDate, mkDate, datesInRangeIncl, formatDate, formatMonth, daysInMonth)
 
 
 {-| An opaque type representing messages that are passed within the DateRangePicker.
@@ -96,11 +97,14 @@ isOpen (DateRangePicker model) =
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
 view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
     let
-        something =
-            ""
+        fullYear =
+            prepareYear model.today
     in
-        -- div [] [ text "hi" ]
-        fullYearCalendar
+        fullYearCalendar fullYear
+
+
+
+-- div [] <| List.map (\d -> p [] [ text <| toString d ]) dates
 
 
 dateRangePicker : ( Maybe Date, Maybe Date ) -> Settings -> Model -> Html Msg
@@ -112,36 +116,60 @@ dateRangePicker ( selectedStartDate, selectedEndDate ) settings ({ today } as mo
         div [] []
 
 
-fullYearCalendar : Html Msg
-fullYearCalendar =
-    div [ class "full-year-calendar-wrapper" ]
-        [ div [ class "full-year-calendar" ]
-            [ div [ class "yr-label" ] [ text "2018" ]
-            , printQuarter "Q1" [ "January", "February", "March" ]
-            , printQuarter "Q2" [ "April", "May", "June" ]
-            , printQuarter "Q3" [ "July", "August", "September" ]
-            , printQuarter "Q4" [ "October", "November", "December" ]
+fullYearCalendar : FullYear -> Html Msg
+fullYearCalendar fullYear =
+    let
+        something =
+            ""
+    in
+        div [ class "full-year-calendar-wrapper" ]
+            [ div [ class "full-year-calendar" ] <|
+                ([ div [ class "yr-label" ] [ text fullYear.name ] ]
+                    ++ List.map printQuarter fullYear.quarters
+                )
             ]
-        ]
 
 
-printQuarter : String -> List String -> Html Msg
-printQuarter qtr months =
-    div [ class "quarter-row" ] <|
-        ([ div [ class "qtr-label" ] [ text qtr ] ]
-            ++ List.map printMonth months
+printQuarter : Quarter -> Html Msg
+printQuarter qtr =
+    div [ class "qtr-row" ] <|
+        ([ div [ class "qtr-label" ] [ text qtr.name ] ]
+            ++ List.map printMonth qtr.months
         )
 
 
-printMonth : String -> Html Msg
-printMonth month =
-    div [ class "month" ]
-        [ div [ class "month-label" ] [ text month ]
-        , printWeek
-        , printWeek
-        , printWeek
-        , printWeek
-        ]
+
+-- printQuarter : String -> List String -> Html Msg
+-- printQuarter qtr months =
+--     div [ class "quarter-row" ] <|
+--         ([ div [ class "qtr-label" ] [ text qtr ] ]
+--             ++ List.map printMonth months
+--         )
+
+
+printMonth : List Date -> Html Msg
+printMonth m =
+    let
+        h =
+            List.head m
+    in
+        case h of
+            Just a ->
+                div [ class "month" ]
+                    [ div [ class "month-label" ]
+                        [ text <|
+                            formatMonth <|
+                                month a
+                        ]
+                    , printWeek
+                    , printWeek
+                    , printWeek
+                    , printWeek
+                    , printWeek
+                    ]
+
+            Nothing ->
+                div [] []
 
 
 printWeek : Html Msg
@@ -158,62 +186,61 @@ printWeek =
         ]
 
 
-printMonthCalendar : String -> Html Msg
-printMonthCalendar month =
-    table [ class "month-table" ]
-        [ thead []
-            [ th [ colspan 7 ] [ text month ]
-            ]
-        , tbody []
-            [ tr []
-                [ td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                ]
-            , tr []
-                [ td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                ]
-            , tr []
-                [ td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                ]
-            , tr []
-                [ td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                ]
-            , tr []
-                [ td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                , td [ class "day" ] []
-                ]
-            ]
-        ]
+prepareYear : Date -> FullYear
+prepareYear date =
+    let
+        yr =
+            year date
+
+        start =
+            mkDate yr Jan 1
+
+        end =
+            mkDate yr Dec 31
+
+        dates =
+            datesInRangeIncl start end
+    in
+        { name = toString yr
+        , quarters =
+            prepareQuarters <|
+                LE.groupWhile (\x y -> (month x) == (month y)) dates
+        }
+
+
+chunksOfLeft : Int -> List a -> List (List a)
+chunksOfLeft k xs =
+    let
+        len =
+            List.length xs
+    in
+        if len > k then
+            List.take k xs :: chunksOfLeft k (List.drop k xs)
+        else
+            [ xs ]
+
+
+prepareQuarters : List (List Date) -> List Quarter
+prepareQuarters lst =
+    let
+        qs =
+            chunksOfLeft 3 lst
+    in
+        List.indexedMap (\idx q -> { name = "Q" ++ (toString (idx + 1)), months = q }) qs
 
 
 (!) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
 (!) model cmds =
     ( DateRangePicker model, Cmd.batch cmds )
+
+
+type alias Quarter =
+    { name : String
+    , months : List (List Date)
+    }
+
+
+type alias FullYear =
+    { name : String
+    , quarters : List Quarter
+    }

@@ -3,9 +3,11 @@
     margin: 0px;
 }
 .full-year-calendar-wrapper {
-    height: 400px;
+    display: grid;
+    height: 500px;
     width: 500px;
-    border: solid 1px black;
+    margin: auto;
+    background: black;
 }
 
 .full-year-calendar {
@@ -14,34 +16,39 @@
     display: grid;
     grid-template-columns: 1fr;
     grid-auto-flow: dense;
-    grid-gap: 0px 0px;
+    grid-gap: 1px 0px;
+    border: solid 1px black;
 }
 
 .qtr-label {
     display: grid;
     align-items: center;
-    border: solid 1px blue;
+    background: grey;
 }
 
 .yr-label {
     text-align: center;
+    background: grey;
 }
 
-.quarter-row {
+.month-label {
+    background: grey;
+}
+
+.qtr-row {
     height: 100%;
     width: 100%;
     display: grid;
     grid-auto-flow: dense;
-    grid-gap: 1px 1px;
+    grid-gap: 0px 1px;
     grid-template-columns: 20px 1fr 1fr 1fr;
 }
 
 .month {
-    border: solid 1px blue;
     display: grid;
     grid-auto-flow: dense;
     grid-gap: 0px 0px;
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-rows: repeat(6, 1fr);
     text-align: center;
 }
 

@@ -15,6 +15,9 @@ module DateRangePicker.Date
         , nextMonth
         , newYear
         , yearRange
+        , mkDate
+        , datesInRangeIncl
+        , daysInMonth
         )
 
 import Date exposing (Date, Day(..), Month(..), year, month, day)
@@ -160,6 +163,22 @@ datesInRange firstDay min max =
     in
         go max []
             |> trimDates firstDay
+
+
+datesInRangeIncl : Date -> Date -> List Date
+datesInRangeIncl min max =
+    let
+        go x acc =
+            let
+                y =
+                    subDay x
+            in
+                if dateTuple y == dateTuple min then
+                    y :: acc
+                else
+                    go y (y :: acc)
+    in
+        go (addDay max) []
 
 
 dateTuple : Date -> ( Int, Int, Int )
