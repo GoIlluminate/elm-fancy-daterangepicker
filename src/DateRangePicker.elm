@@ -74,16 +74,20 @@ type DateRangePicker
     = DateRangePicker Model
 
 
-type alias Quarter =
-    { name : String
-    , months : List (List Date)
-    }
-
-
+{-| An opaque type to represent the full year that the daterangepicker is using.
+-}
 type alias FullYear =
     { name : String
     , year : Int
     , quarters : List Quarter
+    }
+
+
+{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1
+-}
+type alias Quarter =
+    { name : String
+    , months : List (List Date)
     }
 
 
@@ -98,6 +102,10 @@ defaultSettings =
     }
 
 
+{-| The default initial state of the DateRangePicker. You must execute
+the returned command in order to set the current date and for the
+daterangepicker to behave correctly.
+-}
 init : ( DateRangePicker, Cmd Msg )
 init =
     ( DateRangePicker initModel
@@ -105,6 +113,8 @@ init =
     )
 
 
+{-| The inital model used within the inital state.
+-}
 initModel : Model
 initModel =
     { today = initDate
@@ -118,6 +128,9 @@ initModel =
     }
 
 
+{-| The initial command to get the current date, used within the
+initial state.
+-}
 initCmd : Cmd Msg
 initCmd =
     Task.perform CurrentDate Date.now
