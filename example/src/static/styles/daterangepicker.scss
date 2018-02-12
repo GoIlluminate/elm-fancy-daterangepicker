@@ -1,143 +1,119 @@
-* {
-    padding: 0px;
-    margin: 0px;
-    font-size: 12px;
-}
-
-.hover-date {
+.elm-daterangepicker--hover-date {
     cursor: pointer;
     &:hover {
         background: #ccc;
     }
 }
 
-.full-year-calendar-wrapper {
+.elm-daterangepicker--calendar-wrapper {
+    padding: 0px;
+    margin: 0px;
+    font-size: 12px;
     display: grid;
     width: 500px;
     background: darkblue;
     padding: 5px;
-}
-
-.full-year-calendar {
-    height: 100%;
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-auto-flow: dense;
-    grid-gap: 5px;
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Firefox */
+    .elm-daterangepicker--calendar {
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Firefox */
         -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; /* Non-prefixed version, currently
-                                  supported by Chrome and Opera */
-}
-
-.day-filler {
-    background: white;
-    opacity: 0.5;
-}
-
-.qtr-label {
-    @extend .hover-date;
-    display: grid;
-    align-items: center;
-    background: white;
-    color: darkblue;
-    text-align: center;
-}
-
-.yr-btn {
-    @extend .hover-date;
-    font-weight: bold;
-}
-
-.yr-prev:before {
-    content: '◄';
-}
-
-.yr-next:before {
-    content: '►';
-}
-
-.yr-label-wrapper {
-    display: grid;
-    grid-template-columns: 25px auto 25px;
-    text-align: center;
-    background: white;
-    color: darkblue;
-}
-
-.daterangepicker-footer {
-    color: darkblue;
-    border-top: solid 1px white;
-    padding-top: 3px;
-    .done-btn, .reset-btn {
-        padding-left: 15px;
-        padding-right: 15px;
+        user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+        height: 100%;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-auto-flow: dense;
+        grid-gap: 5px;
+        .elm-daterangepicker--yr-label-wrapper {
+            display: grid;
+            grid-template-columns: 25px auto 25px;
+            text-align: center;
+            background: white;
+            color: darkblue;
+            .elm-daterangepicker--yr-btn {
+                @extend .elm-daterangepicker--hover-date;
+                font-weight: bold;
+            }
+            .elm-daterangepicker--yr-prev:before {
+                content: '◄';
+            }
+            
+            .elm-daterangepicker--yr-next:before {
+                content: '►';
+            }
+        }
+        .elm-daterangepicker--qtr-row {
+            height: 100%;
+            width: 100%;
+            display: grid;
+            grid-auto-flow: dense;
+            grid-gap: 5px;
+            grid-template-columns: 20px 1fr 1fr 1fr;
+            .elm-daterangepicker--qtr-label {
+                @extend .elm-daterangepicker--hover-date;
+                display: grid;
+                align-items: center;
+                background: white;
+                color: darkblue;
+                text-align: center;
+            }
+            .elm-daterangepicker--month {
+                display: grid;
+                grid-auto-flow: dense;
+                grid-gap: 0px;
+                grid-template-rows: repeat(8, 1fr);
+                grid-template-columns: repeat(7, 1fr);
+                text-align: center;
+                >div:first-child {
+                    grid-column-start: 1;
+                    grid-column-end: 8;
+                }
+                > div.dow:not(:first-child) {
+                    border-left: solid 1px white;
+                }
+                .elm-daterangepicker--month-label {
+                    @extend .elm-daterangepicker--hover-date;
+                    background: white;
+                    border-bottom: solid 1px darkblue;
+                    color: darkblue;
+                }
+                .elm-daterangepicker--dow {
+                    background: white;
+                    border-bottom: solid 1px darkblue;
+                    color: darkblue;
+                }
+                .elm-daterangepicker--day-filler {
+                    background: white;
+                    opacity: 0.5;
+                }
+                .elm-daterangepicker--day {
+                    @extend .elm-daterangepicker--hover-date;
+                    color: darkblue;
+                    background: white;
+                }
+                .elm-daterangepicker--selected-range {
+                    background: grey;
+                    color: white;
+                }
+            }
+        }
+        .elm-daterangepicker--footer {
+            color: darkblue;
+            border-top: solid 1px white;
+            padding-top: 3px;
+            .elm-daterangepicker--done-btn, .elm-daterangepicker--reset-btn {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            .elm-daterangepicker--done-btn {
+                float: right;
+            }
+        }
     }
-    .done-btn {
-        float: right;
-    }
 }
 
-.month-label {
-    @extend .hover-date;
-    background: white;
-    border-bottom: solid 1px darkblue;
-    color: darkblue;
-}
-
-.dow {
-    background: white;
-    border-bottom: solid 1px darkblue;
-    color: darkblue;
-}
-
-.qtr-row {
-    height: 100%;
-    width: 100%;
-    display: grid;
-    grid-auto-flow: dense;
-    grid-gap: 5px;
-    grid-template-columns: 20px 1fr 1fr 1fr;
-}
-
-.month {
-    display: grid;
-    grid-auto-flow: dense;
-    grid-gap: 0px;
-    grid-template-rows: repeat(8, 1fr);
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    >div:first-child {
-        grid-column-start: 1;
-        grid-column-end: 8;
-    }
-    > div.dow:not(:first-child) {
-        border-left: solid 1px white;
-    }
-}
-
-.week {
-    display: grid;
-    grid-auto-flow: dense;
-    grid-gap: 1px 1px;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: 1fr
-}
-
-.day {
-    @extend .hover-date;
-    color: darkblue;
-    background: white;
-}
-
-.selected-range {
-    background: grey;
-    color: white;
-}
 .date-wrapper {
     margin: 25px;
 }

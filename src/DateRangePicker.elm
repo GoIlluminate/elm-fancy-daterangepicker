@@ -46,8 +46,6 @@ type alias DateRange =
 -}
 type alias Settings =
     { placeholder : String
-    , classNamespace : String
-    , inputClassList : List ( String, Bool )
     , inputName : Maybe String
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
@@ -94,8 +92,6 @@ type alias Quarter =
 defaultSettings : Settings
 defaultSettings =
     { placeholder = "Select a date..."
-    , classNamespace = "elm-daterangepicker"
-    , inputClassList = []
     , inputName = Nothing
     , inputId = Nothing
     , inputAttributes = []
@@ -136,13 +132,19 @@ initCmd =
     Task.perform CurrentDate Date.now
 
 
+{-| The daterangepicker update function.
+-}
 update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
 update settings msg (DateRangePicker ({ forceOpen } as model)) =
     let
         ( newModel, cmds ) =
             case msg of
                 CurrentDate date ->
-                    { model | today = date, currentYear = prepareYear date } ! []
+                    { model
+                        | today = date
+                        , currentYear = prepareYear date
+                    }
+                        ! []
 
                 PrevYear ->
                     let
@@ -184,7 +186,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                                 dateRange =
                                     case ( start, end ) of
                                         ( Just aa, Just bb ) ->
-                                            if aa !<= bb then
+                                            if aa $<= bb then
                                                 Just
                                                     { start = aa
                                                     , end = bb
@@ -253,32 +255,19 @@ isOpen (DateRangePicker model) =
     model.open
 
 
-mkClass : Settings -> String -> Html.Attribute msg
-mkClass { classNamespace } c =
-    Attrs.class (classNamespace ++ c)
-
-
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
 view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
     let
-        class =
-            mkClass settings
-
         potentialInputId =
             settings.inputId
                 |> Maybe.map Attrs.id
                 |> (List.singleton >> List.filterMap identity)
 
-        inputClasses =
-            [ ( settings.classNamespace ++ "input", True ) ]
-                ++ settings.inputClassList
-
         inputCommon xs =
             input
-                ([ Attrs.classList inputClasses
-                 , Attrs.name (settings.inputName ?> "")
+                ([ Attrs.name (settings.inputName ?> "")
                  , type_ "text"
                  , onBlur Blur
                  , onClick Focus
@@ -299,7 +288,7 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
                     |> value
                 ]
     in
-        div [ class "daterangepicker-container" ]
+        div [ class "elm-daterangepicker--container" ]
             [ dateInput
             , if open then
                 dateRangePicker model
@@ -319,11 +308,11 @@ dateRangePicker model =
                     }
     in
         div
-            [ class "full-year-calendar-wrapper"
+            [ class "elm-daterangepicker--calendar-wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
-            [ div [ class "full-year-calendar" ] <|
+            [ div [ class "elm-daterangepicker--calendar" ] <|
                 (printYearLabel model.currentYear
                     ++ printQuarters model
                     ++ printFooter
@@ -333,9 +322,9 @@ dateRangePicker model =
 
 printFooter : List (Html Msg)
 printFooter =
-    [ div [ class "daterangepicker-footer" ]
-        [ button [ onClick Close, class "done-btn" ] [ text "Done" ]
-        , button [ onClick Reset, class "reset-btn" ] [ text "Reset" ]
+    [ div [ class "elm-daterangepicker--footer" ]
+        [ button [ onClick Close, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
+        , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ text "Reset" ]
         ]
     ]
 
@@ -356,10 +345,10 @@ printYearLabel fullYear =
                     , end = end
                     }
     in
-        [ div [ class "yr-label-wrapper" ]
-            [ div [ class "yr-btn yr-prev", onClick PrevYear ] []
-            , div [ class "yr-btn yr-label", setYearRange ] [ text fullYear.name ]
-            , div [ class "yr-btn yr-next", onClick NextYear ] []
+        [ div [ class "elm-daterangepicker--yr-label-wrapper" ]
+            [ div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", onClick PrevYear ] []
+            , div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-label", setYearRange ] [ text fullYear.name ]
+            , div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-next", onClick NextYear ] []
             ]
         ]
 
@@ -406,15 +395,15 @@ printQuarter model qtr =
                                 onClick DoNothing
 
                     monthDiv =
-                        div [ class "qtr-row" ] <|
-                            ([ div [ class "qtr-label", setQuarterDateRange ] [ text qtr.name ] ]
+                        div [ class "elm-daterangepicker--qtr-row" ] <|
+                            ([ div [ class "elm-daterangepicker--qtr-label", setQuarterDateRange ] [ text qtr.name ] ]
                                 ++ List.map (printMonth model) qtr.months
                             )
                 in
                     monthDiv
 
             ( _, _ ) ->
-                div [] []
+                text ""
 
 
 printMonth : Model -> List Date -> Html Msg
@@ -437,13 +426,13 @@ printMonth model m =
                                 }
 
                     monthDiv =
-                        div [ class "month-label", setMonthDateRange ]
+                        div [ class "elm-daterangepicker--month-label", setMonthDateRange ]
                             [ text <|
                                 formatMonth <|
                                     month a
                             ]
                 in
-                    div [ class "month" ]
+                    div [ class "elm-daterangepicker--month" ]
                         ([ monthDiv ]
                             ++ printDaysOfWeek
                             ++ days
@@ -451,7 +440,7 @@ printMonth model m =
                         )
 
             _ ->
-                div [] []
+                text ""
 
 
 printDaysOfWeek : List (Html Msg)
@@ -461,7 +450,7 @@ printDaysOfWeek =
             List.range 1 7
 
         go n =
-            div [ class "dow" ]
+            div [ class "elm-daterangepicker--dow" ]
                 [ text <|
                     formatDay <|
                         dayFromInt n
@@ -476,27 +465,22 @@ padDaysLeft d =
         dd =
             dayToInt <| dayOfWeek d
 
-        go =
-            div [ class "day-filler" ] []
-    in
-        List.repeat (dd - 1) go
-
-
-padDaysRight : Date -> List (Html Msg)
-padDaysRight d =
-    let
-        dd =
-            dayToInt <| dayOfWeek d
+        i =
+            dd - 1
 
         go =
-            div [ class "day-filler" ] []
+            div [ class "elm-daterangepicker--day-filler" ] []
     in
-        List.repeat (7 - dd) go
+        List.repeat i go
 
 
 padMonth : Int -> List (Html Msg)
 padMonth i =
-    List.repeat i <| div [ class "day-filler" ] []
+    let
+        go =
+            div [ class "elm-daterangepicker--day-filler" ] []
+    in
+        List.repeat i go
 
 
 printDay : Model -> Date -> Html Msg
@@ -506,15 +490,15 @@ printDay model date =
             case model.dateRange of
                 Just a ->
                     if (inRange date a) then
-                        "day selected-range"
+                        "elm-daterangepicker--day elm-daterangepicker--selected-range"
                     else
-                        "day"
+                        "elm-daterangepicker--day"
 
                 Nothing ->
                     if isStartOrEnd date model then
-                        "day selected-range"
+                        "elm-daterangepicker--day elm-daterangepicker--selected-range"
                     else
-                        "day"
+                        "elm-daterangepicker--day"
 
         setDate =
             onClick <| SetDate date
@@ -549,18 +533,6 @@ prepareYear date =
         }
 
 
-chunksOfLeft : Int -> List a -> List (List a)
-chunksOfLeft k xs =
-    let
-        len =
-            List.length xs
-    in
-        if len > k then
-            List.take k xs :: chunksOfLeft k (List.drop k xs)
-        else
-            [ xs ]
-
-
 prepareQuarters : List (List Date) -> List Quarter
 prepareQuarters lst =
     let
@@ -570,16 +542,9 @@ prepareQuarters lst =
         List.indexedMap (\idx q -> { name = "Q" ++ (toString (idx + 1)), months = q }) qs
 
 
-(!) : Model -> List (Cmd Msg) -> ( Model, Cmd Msg )
-(!) model cmds =
-    ( model, Cmd.batch cmds )
-
-
-(!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
-(!>) model cmds =
-    ( DateRangePicker model, Cmd.batch cmds )
-
-
+{-| A function to check if a given date is within a
+given dateRange.
+-}
 inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
     let
@@ -595,6 +560,9 @@ inRange date { start, end } =
             False
 
 
+{-| A function that checks if the passed in date is equal
+to the model's startDate or endDate
+-}
 isStartOrEnd : Date -> Model -> Bool
 isStartOrEnd date model =
     case ( model.startDate, model.endDate ) of
@@ -611,11 +579,9 @@ isStartOrEnd date model =
             False
 
 
-(!<=) : Date -> Date -> Bool
-(!<=) a b =
-    Date.toTime a <= Date.toTime b
-
-
+{-| A function that updates the inputText based on the
+model's selected dateRange
+-}
 updateInputText : Model -> Model
 updateInputText model =
     case model.dateRange of
@@ -634,6 +600,33 @@ updateInputText model =
             { model | inputText = Nothing }
 
 
+chunksOfLeft : Int -> List a -> List (List a)
+chunksOfLeft k xs =
+    let
+        len =
+            List.length xs
+    in
+        if len > k then
+            List.take k xs :: chunksOfLeft k (List.drop k xs)
+        else
+            [ xs ]
+
+
 (?>) : Maybe a -> a -> a
 (?>) =
     flip Maybe.withDefault
+
+
+($<=) : Date -> Date -> Bool
+($<=) a b =
+    Date.toTime a <= Date.toTime b
+
+
+(!) : Model -> List (Cmd Msg) -> ( Model, Cmd Msg )
+(!) model cmds =
+    ( model, Cmd.batch cmds )
+
+
+(!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
+(!>) model cmds =
+    ( DateRangePicker model, Cmd.batch cmds )
