@@ -25,6 +25,7 @@ type Msg
     | PrevYear
     | NextYear
     | SetDateRange DateRange
+    | SetDate Date
     | DoNothing
 
 
@@ -53,6 +54,8 @@ type alias Model =
     , open : Bool
     , currentYear : FullYear
     , dateRange : Maybe DateRange
+    , startDate : Maybe Date
+    , endDate : Maybe Date
     }
 
 
@@ -80,6 +83,8 @@ init =
         , open = False
         , currentYear = prepareYear initDate
         , dateRange = Nothing
+        , startDate = Nothing
+        , endDate = Nothing
         }
     , Task.perform CurrentDate Date.now
     )
@@ -87,31 +92,81 @@ init =
 
 update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
 update settings msg (DateRangePicker model) =
-    case msg of
-        CurrentDate date ->
-            { model | today = date, currentYear = prepareYear date } ! []
+    let
+        newModel =
+            case msg of
+                CurrentDate date ->
+                    { model | today = date, currentYear = prepareYear date }
 
-        PrevYear ->
-            let
-                prevYear =
-                    prepareYear <|
-                        mkDate (model.currentYear.year - 1) Jan 1
-            in
-                { model | currentYear = prevYear } ! []
+                PrevYear ->
+                    let
+                        prevYear =
+                            prepareYear <|
+                                mkDate (model.currentYear.year - 1) Jan 1
+                    in
+                        { model | currentYear = prevYear }
 
-        NextYear ->
-            let
-                nextYear =
-                    prepareYear <|
-                        mkDate (model.currentYear.year + 1) Jan 1
-            in
-                { model | currentYear = nextYear } ! []
+                NextYear ->
+                    let
+                        nextYear =
+                            prepareYear <|
+                                mkDate (model.currentYear.year + 1) Jan 1
+                    in
+                        { model | currentYear = nextYear }
 
-        SetDateRange dateRange ->
-            { model | dateRange = Just dateRange } ! []
+                SetDateRange dateRange ->
+                    { model | dateRange = Just dateRange }
 
-        DoNothing ->
-            model ! []
+                SetDate date ->
+                    case ( model.startDate, model.endDate ) of
+                        ( Just a, Just b ) ->
+                            { model
+                                | startDate = Just date
+                                , endDate = Nothing
+                                , dateRange = Nothing
+                            }
+
+                        ( Just a, Nothing ) ->
+                            let
+                                start =
+                                    model.startDate
+
+                                end =
+                                    Just date
+
+                                dateRange =
+                                    case ( start, end ) of
+                                        ( Just aa, Just bb ) ->
+                                            if aa !<= bb then
+                                                Just
+                                                    { start = aa
+                                                    , end = bb
+                                                    }
+                                            else
+                                                Nothing
+
+                                        ( _, _ ) ->
+                                            Nothing
+                            in
+                                { model
+                                    | endDate = Nothing
+                                    , startDate = Nothing
+                                    , dateRange = dateRange
+                                }
+
+                        ( Nothing, Nothing ) ->
+                            { model
+                                | startDate = Just date
+                                , dateRange = Nothing
+                            }
+
+                        ( _, _ ) ->
+                            model
+
+                DoNothing ->
+                    model
+    in
+        (updateInputText newModel) ! []
 
 
 {-| Expose if the daterange picker is open
@@ -125,11 +180,10 @@ isOpen (DateRangePicker model) =
 -}
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
 view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker model) =
-    fullYearCalendar model
-
-
-
--- div [] <| List.map (\d -> p [] [ text <| toString d ]) dates
+    div [ class "daterangepicker-wrapper" ]
+        [ text <| Maybe.withDefault settings.placeholder model.inputText
+        , fullYearCalendar model
+        ]
 
 
 dateRangePicker : ( Maybe Date, Maybe Date ) -> Settings -> Model -> Html Msg
@@ -207,15 +261,11 @@ printQuarter model qtr =
                     setQuarterDateRange =
                         case ( startOfQuarter, endOfQuarter ) of
                             ( Just aa, Just bb ) ->
-                                let
-                                    x =
-                                        Debug.log "a" aa
-                                in
-                                    onClick <|
-                                        SetDateRange <|
-                                            { start = aa
-                                            , end = bb
-                                            }
+                                onClick <|
+                                    SetDateRange <|
+                                        { start = aa
+                                        , end = bb
+                                        }
 
                             ( _, _ ) ->
                                 onClick DoNothing
@@ -251,12 +301,6 @@ printMonth model m =
                                 , end = endOfMonth a
                                 }
 
-                    xxx =
-                        Debug.log "startOfMonth" (startOfMonth a)
-
-                    yyy =
-                        Debug.log "endOfMonth" (endOfMonth a)
-
                     monthDiv =
                         div [ class "month-label", setMonthDateRange ]
                             [ text <|
@@ -282,7 +326,11 @@ printDaysOfWeek =
             List.range 1 7
 
         go n =
-            div [ class "dow" ] [ text <| formatDay <| dayFromInt n ]
+            div [ class "dow" ]
+                [ text <|
+                    formatDay <|
+                        dayFromInt n
+                ]
     in
         List.map go days
 
@@ -322,29 +370,25 @@ printDay model date =
         className =
             case model.dateRange of
                 Just a ->
-                    if inRange date a then
+                    if (inRange date a) then
                         "day selected-range"
                     else
                         "day"
 
                 Nothing ->
-                    "day"
+                    if isStartOrEnd date model then
+                        "day selected-range"
+                    else
+                        "day"
+
+        setDate =
+            onClick <| SetDate date
     in
-        div [ class className ] [ text <| toString <| day date ]
-
-
-printWeek : Html Msg
-printWeek =
-    div [ class "week" ]
-        [ div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        , div [ class "day" ] []
-        ]
+        div [ class className, setDate ]
+            [ text <|
+                toString <|
+                    day date
+            ]
 
 
 prepareYear : Date -> FullYear
@@ -413,9 +457,51 @@ inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
     let
         ( timeDate, timeStart, timeEnd ) =
-            ( Date.toTime date, Date.toTime start, Date.toTime end )
+            ( Date.toTime date
+            , Date.toTime start
+            , Date.toTime end
+            )
     in
         if timeStart <= timeDate && timeEnd >= timeDate then
             True
         else
             False
+
+
+isStartOrEnd : Date -> Model -> Bool
+isStartOrEnd date model =
+    case ( model.startDate, model.endDate ) of
+        ( Just a, Just b ) ->
+            Date.toTime a == Date.toTime date || Date.toTime b == Date.toTime date
+
+        ( Just a, _ ) ->
+            Date.toTime a == Date.toTime date
+
+        ( _, Just b ) ->
+            Date.toTime b == Date.toTime date
+
+        ( _, _ ) ->
+            False
+
+
+(!<=) : Date -> Date -> Bool
+(!<=) a b =
+    Date.toTime a <= Date.toTime b
+
+
+updateInputText : Model -> Model
+updateInputText model =
+    case model.dateRange of
+        Just a ->
+            let
+                dateRangeString =
+                    String.concat
+                        [ formatDate a.start
+                        , " - "
+                        , formatDate a.end
+                        ]
+            in
+                { model | inputText = Just dateRangeString }
+
+        Nothing ->
+            { model | inputText = Nothing }
