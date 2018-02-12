@@ -5,110 +5,115 @@
     }
 }
 
-.elm-daterangepicker--calendar-wrapper {
-    padding: 0px;
-    margin: 0px;
-    font-size: 12px;
-    display: grid;
-    width: 500px;
-    background: darkblue;
-    padding: 5px;
-    .elm-daterangepicker--calendar {
-        -webkit-touch-callout: none; /* iOS Safari */
-        -webkit-user-select: none; /* Safari */
-        -khtml-user-select: none; /* Konqueror HTML */
-        -moz-user-select: none; /* Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-        user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-        height: 100%;
-        width: 100%;
+.elm-daterangepicker--container {
+    .elm-daterangepicker--date-input {
+        width: 175px;
+    }
+    .elm-daterangepicker--calendar-wrapper {
+        padding: 0px;
+        margin: 0px;
+        font-size: 12px;
         display: grid;
-        grid-template-columns: 1fr;
-        grid-auto-flow: dense;
-        grid-gap: 5px;
-        .elm-daterangepicker--yr-label-wrapper {
-            display: grid;
-            grid-template-columns: 25px auto 25px;
-            text-align: center;
-            background: white;
-            color: darkblue;
-            .elm-daterangepicker--yr-btn {
-                @extend .elm-daterangepicker--hover-date;
-                font-weight: bold;
-            }
-            .elm-daterangepicker--yr-prev:before {
-                content: '◄';
-            }
-            
-            .elm-daterangepicker--yr-next:before {
-                content: '►';
-            }
-        }
-        .elm-daterangepicker--qtr-row {
+        width: 500px;
+        background: darkblue;
+        padding: 5px;
+        .elm-daterangepicker--calendar {
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari */
+            -khtml-user-select: none; /* Konqueror HTML */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
             height: 100%;
             width: 100%;
             display: grid;
+            grid-template-columns: 1fr;
             grid-auto-flow: dense;
             grid-gap: 5px;
-            grid-template-columns: 20px 1fr 1fr 1fr;
-            .elm-daterangepicker--qtr-label {
-                @extend .elm-daterangepicker--hover-date;
+            .elm-daterangepicker--yr-label-wrapper {
                 display: grid;
-                align-items: center;
+                grid-template-columns: 25px auto 25px;
+                text-align: center;
                 background: white;
                 color: darkblue;
-                text-align: center;
+                .elm-daterangepicker--yr-btn {
+                    @extend .elm-daterangepicker--hover-date;
+                    font-weight: bold;
+                }
+                .elm-daterangepicker--yr-prev:before {
+                    content: '◄';
+                }
+                
+                .elm-daterangepicker--yr-next:before {
+                    content: '►';
+                }
             }
-            .elm-daterangepicker--month {
+            .elm-daterangepicker--qtr-row {
+                height: 100%;
+                width: 100%;
                 display: grid;
                 grid-auto-flow: dense;
-                grid-gap: 0px;
-                grid-template-rows: repeat(8, 1fr);
-                grid-template-columns: repeat(7, 1fr);
-                text-align: center;
-                >div:first-child {
-                    grid-column-start: 1;
-                    grid-column-end: 8;
-                }
-                > div.dow:not(:first-child) {
-                    border-left: solid 1px white;
-                }
-                .elm-daterangepicker--month-label {
+                grid-gap: 5px;
+                grid-template-columns: 20px 1fr 1fr 1fr;
+                .elm-daterangepicker--qtr-label {
                     @extend .elm-daterangepicker--hover-date;
+                    display: grid;
+                    align-items: center;
                     background: white;
-                    border-bottom: solid 1px darkblue;
                     color: darkblue;
+                    text-align: center;
                 }
-                .elm-daterangepicker--dow {
-                    background: white;
-                    border-bottom: solid 1px darkblue;
-                    color: darkblue;
-                }
-                .elm-daterangepicker--day-filler {
-                    background: white;
-                    opacity: 0.5;
-                }
-                .elm-daterangepicker--day {
-                    @extend .elm-daterangepicker--hover-date;
-                    color: darkblue;
-                    background: white;
-                }
-                .elm-daterangepicker--selected-range {
-                    background: grey;
-                    color: white;
+                .elm-daterangepicker--month {
+                    display: grid;
+                    grid-auto-flow: dense;
+                    grid-gap: 0px;
+                    grid-template-rows: repeat(8, 1fr);
+                    grid-template-columns: repeat(7, 1fr);
+                    text-align: center;
+                    >div:first-child {
+                        grid-column-start: 1;
+                        grid-column-end: 8;
+                    }
+                    > div.dow:not(:first-child) {
+                        border-left: solid 1px white;
+                    }
+                    .elm-daterangepicker--month-label {
+                        @extend .elm-daterangepicker--hover-date;
+                        background: white;
+                        border-bottom: solid 1px darkblue;
+                        color: darkblue;
+                    }
+                    .elm-daterangepicker--dow {
+                        background: white;
+                        border-bottom: solid 1px darkblue;
+                        color: darkblue;
+                    }
+                    .elm-daterangepicker--day-filler {
+                        background: white;
+                        opacity: 0.5;
+                    }
+                    .elm-daterangepicker--day {
+                        @extend .elm-daterangepicker--hover-date;
+                        color: darkblue;
+                        background: white;
+                    }
+                    .elm-daterangepicker--selected-range {
+                        background: grey;
+                        color: white;
+                    }
                 }
             }
-        }
-        .elm-daterangepicker--footer {
-            color: darkblue;
-            border-top: solid 1px white;
-            padding-top: 3px;
-            .elm-daterangepicker--done-btn, .elm-daterangepicker--reset-btn {
-                padding-left: 15px;
-                padding-right: 15px;
-            }
-            .elm-daterangepicker--done-btn {
-                float: right;
+            .elm-daterangepicker--footer {
+                color: darkblue;
+                border-top: solid 1px white;
+                padding-top: 3px;
+                .elm-daterangepicker--done-btn, .elm-daterangepicker--reset-btn {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                }
+                .elm-daterangepicker--done-btn {
+                    float: right;
+                }
             }
         }
     }

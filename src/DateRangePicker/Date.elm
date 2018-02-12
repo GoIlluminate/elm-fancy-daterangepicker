@@ -50,7 +50,13 @@ initDate =
 
 formatDate : Date -> String
 formatDate date =
-    toString (year date) ++ "/" ++ monthToString (month date) ++ "/" ++ dayToString (day date)
+    String.concat
+        [ toString (month date)
+        , " "
+        , dayToString (day date)
+        , ", "
+        , toString (year date)
+        ]
 
 
 formatDay : Date.Day -> String

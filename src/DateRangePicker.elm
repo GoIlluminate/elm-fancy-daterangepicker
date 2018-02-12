@@ -12,7 +12,7 @@ module DateRangePicker
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a)
 import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, value, href)
-import Html.Events exposing (onClick, on, onBlur, onInput, onFocus, onWithOptions)
+import Html.Events exposing (onClick, onDoubleClick, on, onBlur, onInput, onFocus, onWithOptions)
 import Task
 import List.Extra as LE
 import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
@@ -310,6 +310,7 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
         dateInput =
             inputCommon
                 [ placeholder settings.placeholder
+                , class "elm-daterangepicker--date-input"
                 , model.inputText
                     |> Maybe.withDefault
                         ""
@@ -614,15 +615,7 @@ updateInputText : Model -> Model
 updateInputText model =
     case model.dateRange of
         Just a ->
-            let
-                dateRangeString =
-                    String.concat
-                        [ formatDate a.start
-                        , " - "
-                        , formatDate a.end
-                        ]
-            in
-                { model | inputText = Just dateRangeString }
+            { model | inputText = Just <| formatDateRange a }
 
         Nothing ->
             { model | inputText = Nothing }
@@ -658,3 +651,12 @@ chunksOfLeft k xs =
 (!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
 (!>) model cmds =
     ( DateRangePicker model, Cmd.batch cmds )
+
+
+formatDateRange : DateRange -> String
+formatDateRange dateRange =
+    String.concat
+        [ formatDate dateRange.start
+        , " - "
+        , formatDate dateRange.end
+        ]
