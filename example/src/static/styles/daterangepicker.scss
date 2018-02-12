@@ -4,14 +4,6 @@
     font-size: 12px;
 }
 
-.daterangepicker-wrapper {
-    margin: auto;
-}
-
-.daterangepicker-btns {
-    background: black;
-}
-
 .hover-date {
     cursor: pointer;
     &:hover {
@@ -33,10 +25,18 @@
     grid-template-columns: 1fr;
     grid-auto-flow: dense;
     grid-gap: 5px;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
 }
 
 .day-filler {
-    background: darkblue;
+    background: white;
+    opacity: 0.5;
 }
 
 .qtr-label {
@@ -53,6 +53,14 @@
     font-weight: bold;
 }
 
+.yr-prev:before {
+    content: '◄';
+}
+
+.yr-next:before {
+    content: '►';
+}
+
 .yr-label-wrapper {
     display: grid;
     grid-template-columns: 25px auto 25px;
@@ -64,8 +72,7 @@
 .daterangepicker-footer {
     color: darkblue;
     border-top: solid 1px white;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding-top: 3px;
     .done-btn, .reset-btn {
         padding-left: 15px;
         padding-right: 15px;
@@ -130,4 +137,7 @@
 .selected-range {
     background: grey;
     color: white;
+}
+.date-wrapper {
+    margin: 25px;
 }

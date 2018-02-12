@@ -344,9 +344,9 @@ printYearLabel fullYear =
                     }
     in
         [ div [ class "yr-label-wrapper" ]
-            [ div [ class "yr-btn yr-prev", onClick PrevYear ] [ text "<" ]
+            [ div [ class "yr-btn yr-prev", onClick PrevYear ] []
             , div [ class "yr-btn yr-label", setYearRange ] [ text fullYear.name ]
-            , div [ class "yr-btn yr-next", onClick NextYear ] [ text ">" ]
+            , div [ class "yr-btn yr-next", onClick NextYear ] []
             ]
         ]
 

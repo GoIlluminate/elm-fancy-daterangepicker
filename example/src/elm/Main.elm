@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Date exposing (Date, Day(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
+import Html.Attributes exposing (class)
 import DateRangePicker exposing (..)
 
 
@@ -40,7 +41,7 @@ update msg ({ date, dateRangePicker } as model) =
 
 view : Model -> Html Msg
 view ({ date, dateRangePicker } as model) =
-    div []
+    div [ class "date-wrapper" ]
         [ DateRangePicker.view ( date, date ) DateRangePicker.defaultSettings dateRangePicker |> Html.map ToDateRangePicker
         ]
 
