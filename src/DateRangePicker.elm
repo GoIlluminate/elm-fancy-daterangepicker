@@ -32,7 +32,7 @@ type Msg
     | Blur
     | MouseDown
     | MouseUp
-    | Close
+    | Done
     | Reset
 
 
@@ -163,7 +163,12 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                         { model | currentYear = nextYear } ! []
 
                 SetDateRange dateRange ->
-                    { model | dateRange = Just dateRange } ! []
+                    { model
+                        | dateRange = Just dateRange
+                        , startDate = Nothing
+                        , endDate = Nothing
+                    }
+                        ! []
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -236,8 +241,31 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                 MouseUp ->
                     { model | forceOpen = False } ! []
 
-                Close ->
-                    { model | open = False, forceOpen = False } ! []
+                Done ->
+                    let
+                        newModel =
+                            { model | open = False, forceOpen = False }
+                    in
+                        case newModel.dateRange of
+                            Just a ->
+                                newModel ! []
+
+                            Nothing ->
+                                case newModel.startDate of
+                                    Just b ->
+                                        let
+                                            newDateRange =
+                                                { start = b, end = b }
+                                        in
+                                            { newModel
+                                                | dateRange = Just newDateRange
+                                                , startDate = Nothing
+                                                , endDate = Nothing
+                                            }
+                                                ! []
+
+                                    Nothing ->
+                                        newModel ! []
 
                 Reset ->
                     initModel ! [ initCmd ]
@@ -284,7 +312,7 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
                 [ placeholder settings.placeholder
                 , model.inputText
                     |> Maybe.withDefault
-                        settings.placeholder
+                        ""
                     |> value
                 ]
     in
@@ -323,7 +351,7 @@ dateRangePicker model =
 printFooter : List (Html Msg)
 printFooter =
     [ div [ class "elm-daterangepicker--footer" ]
-        [ button [ onClick Close, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
+        [ button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ text "Reset" ]
         ]
     ]
