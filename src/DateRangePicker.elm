@@ -10,12 +10,13 @@ module DateRangePicker
         )
 
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
-import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p)
-import Html.Attributes as Attrs exposing (class, colspan)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a)
+import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, value, href)
+import Html.Events exposing (onClick, on, onBlur, onInput, onFocus, onWithOptions)
 import Task
 import List.Extra as LE
 import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
+import Json.Decode as Json
 
 
 {-| An opaque type representing messages that are passed within the DateRangePicker.
@@ -27,6 +28,12 @@ type Msg
     | SetDateRange DateRange
     | SetDate Date
     | DoNothing
+    | Focus
+    | Blur
+    | MouseDown
+    | MouseUp
+    | Close
+    | Reset
 
 
 type alias DateRange =
@@ -39,7 +46,8 @@ type alias DateRange =
 -}
 type alias Settings =
     { placeholder : String
-    , className : Maybe String
+    , classNamespace : String
+    , inputClassList : List ( String, Bool )
     , inputName : Maybe String
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
@@ -52,6 +60,7 @@ type alias Model =
     { today : Date
     , inputText : Maybe String
     , open : Bool
+    , forceOpen : Bool
     , currentYear : FullYear
     , dateRange : Maybe DateRange
     , startDate : Maybe Date
@@ -65,10 +74,24 @@ type DateRangePicker
     = DateRangePicker Model
 
 
+type alias Quarter =
+    { name : String
+    , months : List (List Date)
+    }
+
+
+type alias FullYear =
+    { name : String
+    , year : Int
+    , quarters : List Quarter
+    }
+
+
 defaultSettings : Settings
 defaultSettings =
     { placeholder = "Select a date..."
-    , className = Just "elm-daterangepicker"
+    , classNamespace = "elm-daterangepicker"
+    , inputClassList = []
     , inputName = Nothing
     , inputId = Nothing
     , inputAttributes = []
@@ -77,26 +100,36 @@ defaultSettings =
 
 init : ( DateRangePicker, Cmd Msg )
 init =
-    ( DateRangePicker <|
-        { today = initDate
-        , inputText = Nothing
-        , open = False
-        , currentYear = prepareYear initDate
-        , dateRange = Nothing
-        , startDate = Nothing
-        , endDate = Nothing
-        }
-    , Task.perform CurrentDate Date.now
+    ( DateRangePicker initModel
+    , initCmd
     )
 
 
+initModel : Model
+initModel =
+    { today = initDate
+    , inputText = Nothing
+    , open = False
+    , forceOpen = False
+    , currentYear = prepareYear initDate
+    , dateRange = Nothing
+    , startDate = Nothing
+    , endDate = Nothing
+    }
+
+
+initCmd : Cmd Msg
+initCmd =
+    Task.perform CurrentDate Date.now
+
+
 update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
-update settings msg (DateRangePicker model) =
+update settings msg (DateRangePicker ({ forceOpen } as model)) =
     let
-        newModel =
+        ( newModel, cmds ) =
             case msg of
                 CurrentDate date ->
-                    { model | today = date, currentYear = prepareYear date }
+                    { model | today = date, currentYear = prepareYear date } ! []
 
                 PrevYear ->
                     let
@@ -104,7 +137,7 @@ update settings msg (DateRangePicker model) =
                             prepareYear <|
                                 mkDate (model.currentYear.year - 1) Jan 1
                     in
-                        { model | currentYear = prevYear }
+                        { model | currentYear = prevYear } ! []
 
                 NextYear ->
                     let
@@ -112,10 +145,10 @@ update settings msg (DateRangePicker model) =
                             prepareYear <|
                                 mkDate (model.currentYear.year + 1) Jan 1
                     in
-                        { model | currentYear = nextYear }
+                        { model | currentYear = nextYear } ! []
 
                 SetDateRange dateRange ->
-                    { model | dateRange = Just dateRange }
+                    { model | dateRange = Just dateRange } ! []
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -125,6 +158,7 @@ update settings msg (DateRangePicker model) =
                                 , endDate = Nothing
                                 , dateRange = Nothing
                             }
+                                ! []
 
                         ( Just a, Nothing ) ->
                             let
@@ -148,25 +182,55 @@ update settings msg (DateRangePicker model) =
                                         ( _, _ ) ->
                                             Nothing
                             in
-                                { model
-                                    | endDate = Nothing
-                                    , startDate = Nothing
-                                    , dateRange = dateRange
-                                }
+                                case dateRange of
+                                    Just a ->
+                                        { model
+                                            | endDate = Nothing
+                                            , startDate = Nothing
+                                            , dateRange = dateRange
+                                        }
+                                            ! []
+
+                                    Nothing ->
+                                        { model
+                                            | startDate = Just date
+                                            , endDate = Nothing
+                                            , dateRange = Nothing
+                                        }
+                                            ! []
 
                         ( Nothing, Nothing ) ->
                             { model
                                 | startDate = Just date
                                 , dateRange = Nothing
                             }
+                                ! []
 
                         ( _, _ ) ->
-                            model
+                            model ! []
+
+                Focus ->
+                    { model | open = True, forceOpen = False } ! []
+
+                Blur ->
+                    { model | open = forceOpen } ! []
+
+                MouseDown ->
+                    { model | forceOpen = True } ! []
+
+                MouseUp ->
+                    { model | forceOpen = False } ! []
+
+                Close ->
+                    { model | open = False, forceOpen = False } ! []
+
+                Reset ->
+                    initModel ! [ initCmd ]
 
                 DoNothing ->
-                    model
+                    model ! []
     in
-        (updateInputText newModel) ! []
+        (updateInputText newModel) !> [ cmds ]
 
 
 {-| Expose if the daterange picker is open
@@ -176,33 +240,91 @@ isOpen (DateRangePicker model) =
     model.open
 
 
+mkClass : Settings -> String -> Html.Attribute msg
+mkClass { classNamespace } c =
+    Attrs.class (classNamespace ++ c)
+
+
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
 view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
-view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker model) =
-    div [ class "daterangepicker-wrapper" ]
-        [ text <| Maybe.withDefault settings.placeholder model.inputText
-        , fullYearCalendar model
-        ]
-
-
-dateRangePicker : ( Maybe Date, Maybe Date ) -> Settings -> Model -> Html Msg
-dateRangePicker ( selectedStartDate, selectedEndDate ) settings ({ today } as model) =
+view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
     let
-        something =
-            ""
+        class =
+            mkClass settings
+
+        potentialInputId =
+            settings.inputId
+                |> Maybe.map Attrs.id
+                |> (List.singleton >> List.filterMap identity)
+
+        inputClasses =
+            [ ( settings.classNamespace ++ "input", True ) ]
+                ++ settings.inputClassList
+
+        inputCommon xs =
+            input
+                ([ Attrs.classList inputClasses
+                 , Attrs.name (settings.inputName ?> "")
+                 , type_ "text"
+                 , onBlur Blur
+                 , onClick Focus
+                 , onFocus Focus
+                 ]
+                    ++ settings.inputAttributes
+                    ++ potentialInputId
+                    ++ xs
+                )
+                []
+
+        dateInput =
+            inputCommon
+                [ placeholder settings.placeholder
+                , model.inputText
+                    |> Maybe.withDefault
+                        settings.placeholder
+                    |> value
+                ]
     in
-        div [] []
+        div [ class "daterangepicker-container" ]
+            [ dateInput
+            , if open then
+                dateRangePicker model
+              else
+                text ""
+            ]
 
 
-fullYearCalendar : Model -> Html Msg
-fullYearCalendar model =
-    div [ class "full-year-calendar-wrapper" ]
-        [ div [ class "full-year-calendar" ] <|
-            (printYearLabel model.currentYear
-                ++ printQuarters model
-            )
+dateRangePicker : Model -> Html Msg
+dateRangePicker model =
+    let
+        onPicker ev =
+            Json.succeed
+                >> onWithOptions ev
+                    { preventDefault = False
+                    , stopPropagation = True
+                    }
+    in
+        div
+            [ class "full-year-calendar-wrapper"
+            , onPicker "mousedown" MouseDown
+            , onPicker "mouseup" MouseUp
+            ]
+            [ div [ class "full-year-calendar" ] <|
+                (printYearLabel model.currentYear
+                    ++ printQuarters model
+                    ++ printFooter
+                )
+            ]
+
+
+printFooter : List (Html Msg)
+printFooter =
+    [ div [ class "daterangepicker-footer" ]
+        [ button [ onClick Close, class "done-btn" ] [ text "Done" ]
+        , button [ onClick Reset, class "reset-btn" ] [ text "Reset" ]
         ]
+    ]
 
 
 printYearLabel : FullYear -> List (Html Msg)
@@ -435,22 +557,14 @@ prepareQuarters lst =
         List.indexedMap (\idx q -> { name = "Q" ++ (toString (idx + 1)), months = q }) qs
 
 
-(!) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
+(!) : Model -> List (Cmd Msg) -> ( Model, Cmd Msg )
 (!) model cmds =
+    ( model, Cmd.batch cmds )
+
+
+(!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
+(!>) model cmds =
     ( DateRangePicker model, Cmd.batch cmds )
-
-
-type alias Quarter =
-    { name : String
-    , months : List (List Date)
-    }
-
-
-type alias FullYear =
-    { name : String
-    , year : Int
-    , quarters : List Quarter
-    }
 
 
 inRange : Date -> DateRange -> Bool
@@ -505,3 +619,8 @@ updateInputText model =
 
         Nothing ->
             { model | inputText = Nothing }
+
+
+(?>) : Maybe a -> a -> a
+(?>) =
+    flip Maybe.withDefault

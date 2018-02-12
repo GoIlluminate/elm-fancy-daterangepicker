@@ -8,6 +8,10 @@
     margin: auto;
 }
 
+.daterangepicker-btns {
+    background: black;
+}
+
 .hover-date {
     cursor: pointer;
     &:hover {
@@ -55,6 +59,20 @@
     text-align: center;
     background: white;
     color: darkblue;
+}
+
+.daterangepicker-footer {
+    color: darkblue;
+    border-top: solid 1px white;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    .done-btn, .reset-btn {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    .done-btn {
+        float: right;
+    }
 }
 
 .month-label {
