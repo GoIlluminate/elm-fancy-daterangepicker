@@ -12,8 +12,6 @@ module DateRangePicker
 
 {-| A customizable daterangepicker component.
 
-
-
 @docs Msg, DateRangePicker
 @docs init, update, isOpen, view
 
@@ -80,6 +78,7 @@ type alias Model =
     , dateRange : Maybe DateRange
     , startDate : Maybe Date
     , endDate : Maybe Date
+    , showPresets : Bool
     }
 
 
@@ -105,6 +104,7 @@ type alias Quarter =
     , months : List (List Date)
     }
 
+
 {-| A record of default settings for the daterangepicker.
 -}
 defaultSettings : Settings
@@ -112,7 +112,6 @@ defaultSettings =
     { placeholder = "Select a date..."
     , inputName = Nothing
     , inputId = Nothing
-    
     , inputAttributes = []
     , presets = []
     }
@@ -141,6 +140,7 @@ initModel =
     , dateRange = Nothing
     , startDate = Nothing
     , endDate = Nothing
+    , showPresets = False
     }
 
 
@@ -289,7 +289,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
 
                 Reset ->
                     initModel ! [ initCmd ]
-                
+
                 TogglePresets ->
                     model ! []
 
@@ -375,9 +375,9 @@ dateRangePicker model =
 printFooter : List (Html Msg)
 printFooter =
     [ div [ class "elm-daterangepicker--footer" ]
-        [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [class "fa fa-cog"] [], text "Presets" ]
-        , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ text "Reset" ]
-        , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
+        [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
+        , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ i [ class "fa fa-ban" ] [], text "Reset" ]
+        , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ i [ class "fa fa-check" ] [], text "Done" ]
         ]
     ]
 
