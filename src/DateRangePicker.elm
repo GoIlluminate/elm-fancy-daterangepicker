@@ -2,6 +2,7 @@ module DateRangePicker
     exposing
         ( Msg
         , DateRangePicker
+        , Settings
         , init
         , update
         , defaultSettings
@@ -9,8 +10,22 @@ module DateRangePicker
         , view
         )
 
+{-| A customizable daterangepicker component.
+
+
+
+@docs Msg, DateRangePicker
+@docs init, update, isOpen, view
+
+
+# Settings
+
+@docs Settings, defaultSettings
+
+-}
+
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
-import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a)
+import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a, i)
 import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, value, href)
 import Html.Events exposing (onClick, onDoubleClick, on, onBlur, onInput, onFocus, onWithOptions)
 import Task
@@ -34,6 +49,7 @@ type Msg
     | MouseUp
     | Done
     | Reset
+    | TogglePresets
 
 
 type alias DateRange =
@@ -49,6 +65,7 @@ type alias Settings =
     , inputName : Maybe String
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
+    , presets : List DateRange
     }
 
 
@@ -88,13 +105,16 @@ type alias Quarter =
     , months : List (List Date)
     }
 
-
+{-| A record of default settings for the daterangepicker.
+-}
 defaultSettings : Settings
 defaultSettings =
     { placeholder = "Select a date..."
     , inputName = Nothing
     , inputId = Nothing
+    
     , inputAttributes = []
+    , presets = []
     }
 
 
@@ -269,6 +289,9 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
 
                 Reset ->
                     initModel ! [ initCmd ]
+                
+                TogglePresets ->
+                    model ! []
 
                 DoNothing ->
                     model ! []
@@ -352,8 +375,9 @@ dateRangePicker model =
 printFooter : List (Html Msg)
 printFooter =
     [ div [ class "elm-daterangepicker--footer" ]
-        [ button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
+        [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [class "fa fa-cog"] [], text "Presets" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ text "Reset" ]
+        , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ text "Done" ]
         ]
     ]
 
@@ -494,22 +518,22 @@ padDaysLeft d =
         dd =
             dayToInt <| dayOfWeek d
 
-        i =
+        n =
             dd - 1
 
         go =
             div [ class "elm-daterangepicker--day-filler" ] []
     in
-        List.repeat i go
+        List.repeat n go
 
 
 padMonth : Int -> List (Html Msg)
-padMonth i =
+padMonth n =
     let
         go =
             div [ class "elm-daterangepicker--day-filler" ] []
     in
-        List.repeat i go
+        List.repeat n go
 
 
 printDay : Model -> Date -> Html Msg

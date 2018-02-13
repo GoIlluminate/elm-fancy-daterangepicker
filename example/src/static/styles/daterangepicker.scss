@@ -6,6 +6,9 @@
 }
 
 .elm-daterangepicker--container {
+    i.fa {
+        margin-right: 5px;
+    }
     .elm-daterangepicker--date-input {
         width: 175px;
     }
@@ -104,16 +107,11 @@
                 }
             }
             .elm-daterangepicker--footer {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
                 color: darkblue;
                 border-top: solid 1px white;
                 padding-top: 3px;
-                .elm-daterangepicker--done-btn, .elm-daterangepicker--reset-btn {
-                    padding-left: 15px;
-                    padding-right: 15px;
-                }
-                .elm-daterangepicker--done-btn {
-                    float: right;
-                }
             }
         }
     }
