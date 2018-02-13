@@ -456,7 +456,21 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                             model ! []
 
                 Focus ->
-                    { model | open = True, forceOpen = False } ! []
+                    let
+                        newYear =
+                            case model.dateRange of
+                                Just a ->
+                                    prepareYear a.end
+
+                                Nothing ->
+                                    model.currentYear
+                    in
+                        { model
+                            | open = True
+                            , forceOpen = False
+                            , currentYear = newYear
+                        }
+                            ! []
 
                 Blur ->
                     { model | open = forceOpen } ! []
@@ -487,6 +501,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                                                 | dateRange = Just newDateRange
                                                 , startDate = Nothing
                                                 , endDate = Nothing
+                                                , currentYear = prepareYear newDateRange.end
                                             }
                                                 ! []
 
