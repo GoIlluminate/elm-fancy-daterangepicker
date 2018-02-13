@@ -588,16 +588,16 @@ dateRangePicker model =
                 True ->
                     printPresets model
 
-        footer =
-            printFooter
+        header =
+            printHeader
     in
         div
             [ class "elm-daterangepicker--wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
-            [ content
-            , footer
+            [ header
+            , content
             ]
 
 
@@ -608,9 +608,9 @@ printCalendar model =
             ++ printQuarters model
 
 
-printFooter : Html Msg
-printFooter =
-    div [ class "elm-daterangepicker--footer" ]
+printHeader : Html Msg
+printHeader =
+    div [ class "elm-daterangepicker--header" ]
         [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ i [ class "fa fa-ban" ] [], text "Reset" ]
         , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ i [ class "fa fa-check" ] [], text "Done" ]

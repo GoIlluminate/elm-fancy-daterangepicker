@@ -107,11 +107,11 @@
                 }
             }
         }
-        .elm-daterangepicker--footer {
+        .elm-daterangepicker--header {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             color: darkblue;
-            padding-top: 5px;
+            padding-bottom: 5px;
         }
         .elm-daterangepicker--presets {
             -webkit-touch-callout: none; /* iOS Safari */
