@@ -23,12 +23,12 @@ module DateRangePicker
 -}
 
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
-import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a, i)
+import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a, i, span)
 import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, value, href)
 import Html.Events exposing (onClick, onDoubleClick, on, onBlur, onInput, onFocus, onWithOptions)
 import Task
 import List.Extra as LE
-import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth)
+import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth, subDays, addDays, subMonths, addMonths, subYears, addYears)
 import Json.Decode as Json
 
 
@@ -56,6 +56,12 @@ type alias DateRange =
     }
 
 
+type PresetOption
+    = DefaultPresets
+    | CustomPresets
+    | NoPresets
+
+
 {-| The settings that the DateRangePicker uses
 -}
 type alias Settings =
@@ -63,7 +69,8 @@ type alias Settings =
     , inputName : Maybe String
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
-    , presets : List DateRange
+    , presets : List PresetSetting
+    , presetOption : PresetOption
     }
 
 
@@ -79,6 +86,7 @@ type alias Model =
     , startDate : Maybe Date
     , endDate : Maybe Date
     , showPresets : Bool
+    , presets : List Preset
     }
 
 
@@ -105,6 +113,187 @@ type alias Quarter =
     }
 
 
+type PresetInterval
+    = Days
+    | Months
+    | Years
+
+
+type PresetRelativeToToday
+    = ToToday
+    | FromToday
+
+
+type alias PresetSetting =
+    { name : String
+    , interval : PresetInterval
+    , presetRelativeToToday : PresetRelativeToToday
+    , value : Int
+    }
+
+
+type alias Preset =
+    { name : String
+    , dateRange : DateRange
+    }
+
+
+mkPreset : Date -> PresetSetting -> Preset
+mkPreset today { name, interval, presetRelativeToToday, value } =
+    let
+        start =
+            case presetRelativeToToday of
+                FromToday ->
+                    today
+
+                ToToday ->
+                    case interval of
+                        Days ->
+                            subDays value today
+
+                        Months ->
+                            subMonths value today
+
+                        Years ->
+                            subYears value today
+
+        end =
+            case presetRelativeToToday of
+                FromToday ->
+                    case interval of
+                        Days ->
+                            addDays value today
+
+                        Months ->
+                            addMonths value today
+
+                        Years ->
+                            addYears value today
+
+                ToToday ->
+                    today
+    in
+        { name = name
+        , dateRange = mkDateRange start end
+        }
+
+
+mkDateRange : Date -> Date -> DateRange
+mkDateRange start end =
+    { start = mkDate (year start) (month start) (day start)
+    , end = mkDate (year end) (month end) (day end)
+    }
+
+
+defaultPresets : Date -> List Preset
+defaultPresets today =
+    [ presetToday today
+    , presetYesterday today
+    , presetPastWeek today
+    , presetPastMonth today
+    , presetPastYear today
+    , presetLastYear today
+    , presetLastMonth today
+    ]
+
+
+presetToday : Date -> Preset
+presetToday today =
+    { name = "Today"
+    , dateRange = mkDateRange today today
+    }
+
+
+presetYesterday : Date -> Preset
+presetYesterday today =
+    let
+        start =
+            subDays 1 today
+
+        end =
+            subDays 1 today
+    in
+        { name = "Yesterday"
+        , dateRange = mkDateRange start end
+        }
+
+
+presetPastWeek : Date -> Preset
+presetPastWeek today =
+    let
+        start =
+            subDays 7 today
+
+        end =
+            today
+    in
+        { name = "Past Week"
+        , dateRange = mkDateRange start end
+        }
+
+
+presetPastMonth : Date -> Preset
+presetPastMonth today =
+    let
+        start =
+            addDays 1 <| subMonths 1 today
+
+        end =
+            today
+    in
+        { name = "Past Month"
+        , dateRange = mkDateRange start end
+        }
+
+
+presetPastYear : Date -> Preset
+presetPastYear today =
+    let
+        start =
+            addDays 1 <| subYears 1 today
+
+        end =
+            today
+    in
+        { name = "Past Year"
+        , dateRange = mkDateRange start end
+        }
+
+
+presetLastYear : Date -> Preset
+presetLastYear today =
+    let
+        newYear =
+            year <| subYears 1 today
+
+        start =
+            mkDate newYear Jan 1
+
+        end =
+            mkDate newYear Dec 31
+    in
+        { name = "Last Year"
+        , dateRange = mkDateRange start end
+        }
+
+
+presetLastMonth : Date -> Preset
+presetLastMonth today =
+    let
+        newMonth =
+            subMonths 1 today
+
+        start =
+            startOfMonth newMonth
+
+        end =
+            endOfMonth newMonth
+    in
+        { name = "Last Month"
+        , dateRange = mkDateRange start end
+        }
+
+
 {-| A record of default settings for the daterangepicker.
 -}
 defaultSettings : Settings
@@ -114,6 +303,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presets = []
+    , presetOption = DefaultPresets
     }
 
 
@@ -141,6 +331,7 @@ initModel =
     , startDate = Nothing
     , endDate = Nothing
     , showPresets = False
+    , presets = []
     }
 
 
@@ -160,11 +351,24 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
         ( newModel, cmds ) =
             case msg of
                 CurrentDate date ->
-                    { model
-                        | today = date
-                        , currentYear = prepareYear date
-                    }
-                        ! []
+                    let
+                        presets =
+                            case settings.presetOption of
+                                DefaultPresets ->
+                                    defaultPresets date
+
+                                CustomPresets ->
+                                    List.map (mkPreset date) settings.presets
+
+                                NoPresets ->
+                                    []
+                    in
+                        { model
+                            | today = date
+                            , currentYear = prepareYear date
+                            , presets = presets
+                        }
+                            ! []
 
                 PrevYear ->
                     let
@@ -187,6 +391,8 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                         | dateRange = Just dateRange
                         , startDate = Nothing
                         , endDate = Nothing
+                        , showPresets = False
+                        , currentYear = prepareYear dateRange.end
                     }
                         ! []
 
@@ -212,10 +418,10 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                                     case ( start, end ) of
                                         ( Just aa, Just bb ) ->
                                             if aa $<= bb then
-                                                Just
-                                                    { start = aa
-                                                    , end = bb
-                                                    }
+                                                Just <|
+                                                    mkDateRange
+                                                        aa
+                                                        bb
                                             else
                                                 Nothing
 
@@ -275,7 +481,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                                     Just b ->
                                         let
                                             newDateRange =
-                                                { start = b, end = b }
+                                                mkDateRange b b
                                         in
                                             { newModel
                                                 | dateRange = Just newDateRange
@@ -291,7 +497,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                     initModel ! [ initCmd ]
 
                 TogglePresets ->
-                    model ! []
+                    { model | showPresets = not model.showPresets } ! []
 
                 DoNothing ->
                     model ! []
@@ -358,28 +564,61 @@ dateRangePicker model =
                     { preventDefault = False
                     , stopPropagation = True
                     }
+
+        content =
+            case model.showPresets of
+                False ->
+                    printCalendar model
+
+                True ->
+                    printPresets model
+
+        footer =
+            printFooter
     in
         div
-            [ class "elm-daterangepicker--calendar-wrapper"
+            [ class "elm-daterangepicker--wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
-            [ div [ class "elm-daterangepicker--calendar" ] <|
-                (printYearLabel model.currentYear
-                    ++ printQuarters model
-                    ++ printFooter
-                )
+            [ content
+            , footer
             ]
 
 
-printFooter : List (Html Msg)
+printCalendar : Model -> Html Msg
+printCalendar model =
+    div [ class "elm-daterangepicker--calendar" ] <|
+        printYearLabel model.currentYear
+            ++ printQuarters model
+
+
+printFooter : Html Msg
 printFooter =
-    [ div [ class "elm-daterangepicker--footer" ]
+    div [ class "elm-daterangepicker--footer" ]
         [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ i [ class "fa fa-ban" ] [], text "Reset" ]
         , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ i [ class "fa fa-check" ] [], text "Done" ]
         ]
-    ]
+
+
+printPresets : Model -> Html Msg
+printPresets model =
+    div [ class "elm-daterangepicker--presets" ] <|
+        List.map printPreset model.presets
+
+
+printPreset : Preset -> Html Msg
+printPreset preset =
+    let
+        setDateRange =
+            onClick <|
+                SetDateRange preset.dateRange
+    in
+        div [ class "elm-daterangepicker--preset", setDateRange ]
+            [ span [ class "elm-daterangepicker--preset-name" ] [ text preset.name ]
+            , span [ class "elm-daterangepicker--preset-range" ] [ text <| formatDateRange preset.dateRange ]
+            ]
 
 
 printYearLabel : FullYear -> List (Html Msg)
@@ -394,9 +633,7 @@ printYearLabel fullYear =
         setYearRange =
             onClick <|
                 SetDateRange <|
-                    { start = start
-                    , end = end
-                    }
+                    mkDateRange start end
     in
         [ div [ class "elm-daterangepicker--yr-label-wrapper" ]
             [ div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", onClick PrevYear ] []
@@ -440,9 +677,7 @@ printQuarter model qtr =
                             ( Just aa, Just bb ) ->
                                 onClick <|
                                     SetDateRange <|
-                                        { start = aa
-                                        , end = bb
-                                        }
+                                        mkDateRange aa bb
 
                             ( _, _ ) ->
                                 onClick DoNothing
@@ -474,9 +709,7 @@ printMonth model m =
                     setMonthDateRange =
                         onClick <|
                             SetDateRange <|
-                                { start = startOfMonth a
-                                , end = endOfMonth a
-                                }
+                                mkDateRange (startOfMonth a) (endOfMonth a)
 
                     monthDiv =
                         div [ class "elm-daterangepicker--month-label", setMonthDateRange ]

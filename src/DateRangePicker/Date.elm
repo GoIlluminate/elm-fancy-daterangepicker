@@ -22,6 +22,10 @@ module DateRangePicker.Date
         , dayFromInt
         , endOfMonth
         , startOfMonth
+        , subYears
+        , addYears
+        , subMonths
+        , addMonths
         )
 
 import Date exposing (Date, Day(..), Month(..), year, month, day)
@@ -260,6 +264,38 @@ prevMonth date =
         mkDate prevYear prevMonth 1
 
 
+subDays : Int -> Date -> Date
+subDays =
+    repeat subDay
+
+
+subDay : Date -> Date
+subDay date =
+    let
+        month =
+            Date.month date
+
+        year =
+            Date.year date
+
+        day =
+            Date.day date - 1
+
+        pred =
+            predMonth month
+
+        predYear =
+            if pred == Dec then
+                year - 1
+            else
+                year
+    in
+        if day < 1 then
+            mkDate predYear pred (daysInMonth predYear pred)
+        else
+            mkDate year month day
+
+
 addDays : Int -> Date -> Date
 addDays =
     repeat addDay
@@ -295,36 +331,114 @@ addDay date =
             mkDate year month day
 
 
-subDays : Int -> Date -> Date
-subDays =
-    repeat subDay
+addMonths : Int -> Date -> Date
+addMonths =
+    repeat addMonth
 
 
-subDay : Date -> Date
-subDay date =
+addMonth : Date -> Date
+addMonth date =
+    let
+        month =
+            Date.month date
+
+        newMonth =
+            monthFromInt <| monthToInt month + 1
+
+        year =
+            Date.year date
+
+        newYear =
+            if newMonth == Jan then
+                year + 1
+            else
+                year
+
+        day =
+            Date.day date
+
+        newDay =
+            if day >= 29 && isLeapYear newYear then
+                29
+            else
+                day
+    in
+        mkDate newYear newMonth newDay
+
+
+subMonths : Int -> Date -> Date
+subMonths =
+    repeat subMonth
+
+
+subMonth : Date -> Date
+subMonth date =
+    let
+        month =
+            Date.month date
+
+        newMonth =
+            monthFromInt <| monthToInt month - 1
+
+        year =
+            Date.year date
+
+        newYear =
+            if newMonth == Dec then
+                year - 1
+            else
+                year
+
+        day =
+            Date.day date
+
+        newDay =
+            if day >= 29 && isLeapYear newYear then
+                29
+            else
+                day
+    in
+        mkDate newYear newMonth newDay
+
+
+subYears : Int -> Date -> Date
+subYears =
+    repeat subYear
+
+
+subYear : Date -> Date
+subYear date =
     let
         month =
             Date.month date
 
         year =
-            Date.year date
+            Date.year date - 1
 
         day =
-            Date.day date - 1
-
-        pred =
-            predMonth month
-
-        predYear =
-            if pred == Dec then
-                year - 1
-            else
-                year
+            Date.day date
     in
-        if day < 1 then
-            mkDate predYear pred (daysInMonth predYear pred)
-        else
-            mkDate year month day
+        mkDate year month day
+
+
+addYears : Int -> Date -> Date
+addYears =
+    repeat addYear
+
+
+addYear : Date -> Date
+addYear date =
+    let
+        month =
+            Date.month date
+
+        year =
+            Date.year date + 1
+
+        day =
+            Date.day date
+    in
+        mkDate year month day
 
 
 addDows : Int -> Date.Day -> Date.Day
