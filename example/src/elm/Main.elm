@@ -3,7 +3,7 @@ module Main exposing (..)
 import Date exposing (Date, Day(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (defaultSettings)
+import DateRangePicker exposing (defaultSettings, DateRange, getDateRange)
 
 
 type Msg
@@ -11,7 +11,7 @@ type Msg
 
 
 type alias Model =
-    { date : Maybe Date
+    { dateRange : Maybe DateRange
     , dateRangePicker : DateRangePicker.DateRangePicker
     }
 
@@ -22,7 +22,7 @@ init =
         ( dateRangePicker, dateRangePickerFx ) =
             DateRangePicker.init
     in
-        { date = Nothing
+        { dateRange = Nothing
         , dateRangePicker = dateRangePicker
         }
             ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
@@ -37,20 +37,20 @@ getSettings useDefault =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ date, dateRangePicker } as model) =
+update msg ({ dateRange, dateRangePicker } as model) =
     case msg of
         ToDateRangePicker msg ->
             let
                 ( newDateRangePicker, dateRangePickerFx ) =
                     DateRangePicker.update (getSettings True) msg dateRangePicker
             in
-                { model | dateRangePicker = newDateRangePicker } ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
+                { model | dateRangePicker = newDateRangePicker, dateRange = getDateRange newDateRangePicker } ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
 
 view : Model -> Html Msg
-view ({ date, dateRangePicker } as model) =
+view ({ dateRange, dateRangePicker } as model) =
     div [ class "date-wrapper" ]
-        [ DateRangePicker.view ( date, date ) DateRangePicker.defaultSettings dateRangePicker |> Html.map ToDateRangePicker
+        [ DateRangePicker.view dateRange DateRangePicker.defaultSettings dateRangePicker |> Html.map ToDateRangePicker
         ]
 
 

@@ -18,12 +18,13 @@ module DateRangePicker
         , defaultSettings
         , isOpen
         , view
+        , getDateRange
         )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DateRangePicker, DateRange
-@docs init, update, isOpen, view, mkDateRange
+@docs init, update, isOpen, view, mkDateRange, getDateRange
 
 
 # Settings
@@ -796,10 +797,17 @@ isOpen (DateRangePicker model) =
     model.open
 
 
+{-| Expose the current selected daterange.
+-}
+getDateRange : DateRangePicker -> Maybe DateRange
+getDateRange (DateRangePicker model) =
+    model.dateRange
+
+
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
-view : ( Maybe Date, Maybe Date ) -> Settings -> DateRangePicker -> Html Msg
-view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } as model)) =
+view : Maybe DateRange -> Settings -> DateRangePicker -> Html Msg
+view selectedDateRange settings (DateRangePicker ({ open } as model)) =
     let
         potentialInputId =
             settings.inputId
