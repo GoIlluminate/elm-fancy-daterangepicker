@@ -89,10 +89,12 @@
                         border-left: solid 1px white;
                     }
                     .elm-daterangepicker--month-label {
-                        @extend .elm-daterangepicker--hover-date;
                         background: white;
                         border-bottom: solid 1px darkblue;
                         color: darkblue;
+                        &:not(.elm-daterangepicker--disabled) {
+                            @extend .elm-daterangepicker--hover-date;
+                        }
                     }
                     .elm-daterangepicker--dow {
                         background: white;

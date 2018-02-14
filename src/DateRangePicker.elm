@@ -559,7 +559,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = Between (mkDate 2018 Mar 31) (mkDate 2018 Oct 1)
+    , restrictedDateRange = ToPresent
     }
 
 
@@ -894,19 +894,35 @@ getHeader =
 getPresets : Model -> Html Msg
 getPresets model =
     div [ class "elm-daterangepicker--presets" ] <|
-        List.map getPreset model.presets
+        List.map (getPreset model) model.presets
 
 
 {-| An opaque function that gets the Html Msg for a given preset.
 -}
-getPreset : Preset -> Html Msg
-getPreset preset =
+getPreset : Model -> Preset -> Html Msg
+getPreset model preset =
     let
+        isDisabledPreset =
+            isDisabledDate model preset.dateRange.start
+                && isDisabledDate model preset.dateRange.end
+
         setDateRange =
-            onClick <|
-                SetDateRange preset.dateRange
+            case isDisabledPreset of
+                True ->
+                    onClick DoNothing
+
+                False ->
+                    onClick <|
+                        SetDateRange preset.dateRange
+
+        className =
+            String.join " " <|
+                List.filter (\x -> x /= "")
+                    [ "elm-daterangepicker--preset"
+                    , mkClass "elm-daterangepicker--disabled" isDisabledPreset
+                    ]
     in
-        div [ class "elm-daterangepicker--preset", setDateRange ]
+        div [ class className, setDateRange ]
             [ span [ class "elm-daterangepicker--preset-name" ] [ text preset.name ]
             , span [ class "elm-daterangepicker--preset-range" ] [ text <| formatDateRange preset.dateRange ]
             ]
