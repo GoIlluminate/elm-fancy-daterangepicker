@@ -5,6 +5,12 @@
     }
 }
 
+.elm-daterangepicker--disabled {
+    text-decoration: line-through !important;
+    cursor: not-allowed !important;
+    color: grey !important;
+}
+
 .elm-daterangepicker--container {
     i.fa {
         margin-right: 5px;
@@ -59,12 +65,14 @@
                 grid-gap: 5px;
                 grid-template-columns: 20px 1fr 1fr 1fr;
                 .elm-daterangepicker--qtr-label {
-                    @extend .elm-daterangepicker--hover-date;
                     display: grid;
                     align-items: center;
                     background: white;
-                    color: darkblue;
                     text-align: center;
+                    color: darkblue;
+                    &:not(.elm-daterangepicker--disabled) {
+                        @extend .elm-daterangepicker--hover-date;
+                    }
                 }
                 .elm-daterangepicker--month {
                     display: grid;
@@ -96,22 +104,15 @@
                         opacity: 0.5;
                     }
                     .elm-daterangepicker--day {
-                        @extend .elm-daterangepicker--hover-date;
                         color: darkblue;
                         background: white;
+                        &:not(.elm-daterangepicker--disabled) {
+                            @extend .elm-daterangepicker--hover-date;
+                        }
                     }
                     .elm-daterangepicker--selected-range {
                         background: grey;
                         color: white;
-                    }
-                    .elm-daterangepicker--disabled-date {
-                        text-decoration: line-through;
-                        cursor: not-allowed;
-                        color: grey;
-                        background: white;
-                        &:hover {
-                            background: white;
-                        }
                     }
                 }
             }

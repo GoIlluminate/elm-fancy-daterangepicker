@@ -8,6 +8,7 @@ module DateRangePicker
         , PresetOptions
         , Preset
         , PresetSetting
+        , defaultPresetOptions
         , defaultPresets
         , mkDateRange
         , mkPresetFromDateRange
@@ -32,7 +33,7 @@ module DateRangePicker
 
 ## Presets
 
-@docs PresetOptions, PresetOption, Preset, PresetSetting, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
+@docs PresetOptions, PresetOption, Preset, PresetSetting, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
 
 -}
 
@@ -64,26 +65,6 @@ type Msg
     | TogglePresets
 
 
-{-| A type representing a date range with a start date and end date.
--}
-type alias DateRange =
-    { start : Date
-    , end : Date
-    }
-
-
-{-| The settings that the DateRangePicker uses.
--}
-type alias Settings =
-    { placeholder : String
-    , inputName : Maybe String
-    , inputId : Maybe String
-    , inputAttributes : List (Html.Attribute Msg)
-    , presetOptions : PresetOptions
-    , restrictedDateRange : RestrictedDateRange
-    }
-
-
 {-| The model to be used within the DateRangePicker.
 -}
 type alias Model =
@@ -101,34 +82,15 @@ type alias Model =
     }
 
 
-{-| A type representing the disabled dates for the datepicker
+{-| The settings that the DateRangePicker uses.
 -}
-type alias EnabledDateRange =
-    { start : Maybe Date
-    , end : Maybe Date
-    }
-
-
-{-| The DateRangePicker model.
--}
-type DateRangePicker
-    = DateRangePicker Model
-
-
-{-| An opaque type to represent the full year that the daterangepicker is using.
--}
-type alias FullYear =
-    { name : String
-    , year : Int
-    , quarters : List Quarter
-    }
-
-
-{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1.
--}
-type alias Quarter =
-    { name : String
-    , months : List (List Date)
+type alias Settings =
+    { placeholder : String
+    , inputName : Maybe String
+    , inputId : Maybe String
+    , inputAttributes : List (Html.Attribute Msg)
+    , presetOptions : PresetOptions
+    , restrictedDateRange : RestrictedDateRange
     }
 
 
@@ -223,13 +185,13 @@ type alias Preset =
 
 {-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
 @Off = no restrictions, any date to any date can be chosen.
-@ToPresent = from any date in the past up to today
+@ToPresent = from any date in the past up to today (including today)
 @FromPresent = from today to any date in the future
-@Past = from any date in the past up to yesterday
+@Past = from any date in the past up to yesterday (excluding today)
 @Future = from tomorrow up to any date in the future
-@Between date date = only between the two given dates
-@To date = from any date in the past up to the given date
-@From date = from the given date up to any date in the future
+@Between date date = only between the two given dates [start - end] (inclusive)
+@To date = from any date in the past up to the given date (inclusive)
+@From date = from the given date up to any date in the future (inclusive)
 -}
 type RestrictedDateRange
     = Off
@@ -240,6 +202,45 @@ type RestrictedDateRange
     | Between Date.Date Date.Date
     | To Date.Date
     | From Date.Date
+
+
+{-| A type representing a date range with a start date and end date.
+-}
+type alias DateRange =
+    { start : Date
+    , end : Date
+    }
+
+
+{-| An opaque type representing the enabled dates for the datepicker
+-}
+type alias EnabledDateRange =
+    { start : Maybe Date
+    , end : Maybe Date
+    }
+
+
+{-| The DateRangePicker model.
+-}
+type DateRangePicker
+    = DateRangePicker Model
+
+
+{-| An opaque type to represent the full year that the daterangepicker is using.
+-}
+type alias FullYear =
+    { name : String
+    , year : Int
+    , quarters : List Quarter
+    }
+
+
+{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1.
+-}
+type alias Quarter =
+    { name : String
+    , months : List (List Date)
+    }
 
 
 {-| An opaque function that makes the EnabledDateRange from settings.
@@ -311,6 +312,8 @@ mkEnabledDateRange start end =
             Nothing
 
 
+{-| An opaque function to make presets from settings and a date
+-}
 mkPresets : Settings -> Date -> List Preset
 mkPresets settings date =
     let
@@ -334,10 +337,16 @@ mkPresets settings date =
                 presetOptions.presets
 
             CustomOnly ->
-                customPresetsFromSettings_ ++ presetOptions.presets
+                List.concat
+                    [ customPresetsFromSettings_
+                    , presetOptions.presets
+                    ]
 
             AllPresets ->
-                defaultPresets_ ++ customPresetsFromSettings_
+                List.concat
+                    [ defaultPresets_
+                    , customPresetsFromSettings_
+                    ]
 
             NoPresets ->
                 []
@@ -550,10 +559,12 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = Future
+    , restrictedDateRange = Between (mkDate 2018 Mar 31) (mkDate 2018 Oct 1)
     }
 
 
+{-| A record of default preset options for the daterangepicker.
+-}
 defaultPresetOptions : PresetOptions
 defaultPresetOptions =
     { presetOption = DefaultPresets
@@ -639,14 +650,18 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                         { model | currentYear = nextYear } ! []
 
                 SetDateRange dateRange ->
-                    { model
-                        | dateRange = Just dateRange
-                        , startDate = Nothing
-                        , endDate = Nothing
-                        , showPresets = False
-                        , currentYear = prepareYear dateRange.end
-                    }
-                        ! []
+                    let
+                        newDateRange =
+                            getNewDateRange model dateRange
+                    in
+                        { model
+                            | dateRange = Just newDateRange
+                            , startDate = Nothing
+                            , endDate = Nothing
+                            , showPresets = False
+                            , currentYear = prepareYear newDateRange.end
+                        }
+                            ! []
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -807,10 +822,7 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
             inputCommon
                 [ placeholder settings.placeholder
                 , class "elm-daterangepicker--date-input"
-                , model.inputText
-                    |> Maybe.withDefault
-                        ""
-                    |> value
+                , model.inputText ?> "" |> value
                 ]
     in
         div [ class "elm-daterangepicker--container" ]
@@ -822,6 +834,8 @@ view ( selectedStartDate, selectedEndDate ) settings (DateRangePicker ({ open } 
             ]
 
 
+{-| An opaque function to create the daterange picker view.
+-}
 dateRangePicker : Model -> Html Msg
 dateRangePicker model =
     let
@@ -835,13 +849,13 @@ dateRangePicker model =
         content =
             case model.showPresets of
                 False ->
-                    printCalendar model
+                    getCalendar model
 
                 True ->
-                    printPresets model
+                    getPresets model
 
         header =
-            printHeader
+            getHeader
     in
         div
             [ class "elm-daterangepicker--wrapper"
@@ -853,15 +867,21 @@ dateRangePicker model =
             ]
 
 
-printCalendar : Model -> Html Msg
-printCalendar model =
+{-| An opaque function that prints the daterangepicker calendar.
+-}
+getCalendar : Model -> Html Msg
+getCalendar model =
     div [ class "elm-daterangepicker--calendar" ] <|
-        printYearLabel model.currentYear
-            ++ printQuarters model
+        List.concat
+            [ getYearHeader model
+            , getQuarters model
+            ]
 
 
-printHeader : Html Msg
-printHeader =
+{-| An opaque function gets the Html Msg for the header of the daterange picker.
+-}
+getHeader : Html Msg
+getHeader =
     div [ class "elm-daterangepicker--header" ]
         [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ i [ class "fa fa-ban" ] [], text "Reset" ]
@@ -869,14 +889,18 @@ printHeader =
         ]
 
 
-printPresets : Model -> Html Msg
-printPresets model =
+{-| An opaque function that gets the Html Msg for the presets of the daterange picker.
+-}
+getPresets : Model -> Html Msg
+getPresets model =
     div [ class "elm-daterangepicker--presets" ] <|
-        List.map printPreset model.presets
+        List.map getPreset model.presets
 
 
-printPreset : Preset -> Html Msg
-printPreset preset =
+{-| An opaque function that gets the Html Msg for a given preset.
+-}
+getPreset : Preset -> Html Msg
+getPreset preset =
     let
         setDateRange =
             onClick <|
@@ -888,81 +912,127 @@ printPreset preset =
             ]
 
 
-printYearLabel : FullYear -> List (Html Msg)
-printYearLabel fullYear =
+{-| An opaque function that gets the year header Html Msg for the calendar.
+-}
+getYearHeader : Model -> List (Html Msg)
+getYearHeader model =
     let
         start =
-            mkDate fullYear.year Jan 1
+            mkDate model.currentYear.year Jan 1
 
         end =
-            mkDate fullYear.year Dec 31
+            mkDate model.currentYear.year Dec 31
+
+        isDisabledYear =
+            isDisabledDate model start
+                && isDisabledDate model end
 
         setYearRange =
-            onClick <|
-                SetDateRange <|
-                    mkDateRange start end
+            case isDisabledYear of
+                True ->
+                    onClick DoNothing
+
+                False ->
+                    onClick <|
+                        SetDateRange <|
+                            mkDateRange start end
+
+        yrLabelClass =
+            String.join " " <|
+                List.filter (\x -> x /= "")
+                    [ "elm-daterangepicker--yr-btn"
+                    , "elm-daterangepicker--yr-label"
+                    , mkClass "elm-daterangepicker--disabled" isDisabledYear
+                    ]
     in
         [ div [ class "elm-daterangepicker--yr-label-wrapper" ]
             [ div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", onClick PrevYear ] []
-            , div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-label", setYearRange ] [ text fullYear.name ]
+            , div [ class yrLabelClass, setYearRange ] [ text model.currentYear.name ]
             , div [ class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-next", onClick NextYear ] []
             ]
         ]
 
 
-printQuarters : Model -> List (Html Msg)
-printQuarters model =
+{-| An opaque function that gets the Html Msg for the quarters of the calendar.
+-}
+getQuarters : Model -> List (Html Msg)
+getQuarters model =
     let
         quarters =
             model.currentYear.quarters
     in
-        List.map (printQuarter model) quarters
+        List.map (getQuarter model) quarters
 
 
-printQuarter : Model -> Quarter -> Html Msg
-printQuarter model qtr =
+{-| An opaque function that gets the Html Msg for a given Quarter.
+-}
+getQuarter : Model -> Quarter -> Html Msg
+getQuarter model qtr =
     let
-        m1 =
+        firstMonthOfQtr =
             List.head qtr.months
 
-        m2 =
+        lastMonthOfQtr =
             List.head <|
                 List.reverse qtr.months
     in
-        case ( m1, m2 ) of
-            ( Just a, Just b ) ->
+        case ( firstMonthOfQtr, lastMonthOfQtr ) of
+            ( Just firstMonth, Just lastMonth ) ->
                 let
-                    startOfQuarter =
-                        List.head a
+                    startOfQtr =
+                        List.head firstMonth
 
-                    endOfQuarter =
+                    endOfQtr =
                         List.head <|
-                            List.reverse b
+                            List.reverse lastMonth
 
-                    setQuarterDateRange =
-                        case ( startOfQuarter, endOfQuarter ) of
-                            ( Just aa, Just bb ) ->
-                                onClick <|
-                                    SetDateRange <|
-                                        mkDateRange aa bb
+                    qtrDiv =
+                        case ( startOfQtr, endOfQtr ) of
+                            ( Just start, Just end ) ->
+                                let
+                                    isDisabledQtr =
+                                        isDisabledDate model start
+                                            && isDisabledDate model end
+
+                                    setQtrDateRange =
+                                        case isDisabledQtr of
+                                            True ->
+                                                onClick DoNothing
+
+                                            False ->
+                                                onClick <|
+                                                    SetDateRange <|
+                                                        mkDateRange start end
+
+                                    className =
+                                        String.join " " <|
+                                            List.filter (\x -> x /= "")
+                                                [ "elm-daterangepicker--qtr-label"
+                                                , mkClass "elm-daterangepicker--disabled" isDisabledQtr
+                                                ]
+
+                                    qtrLabel =
+                                        div [ class className, setQtrDateRange ] [ text qtr.name ]
+                                in
+                                    div [ class "elm-daterangepicker--qtr-row" ] <|
+                                        List.concat
+                                            [ [ qtrLabel ]
+                                            , List.map (getMonth model) qtr.months
+                                            ]
 
                             ( _, _ ) ->
-                                onClick DoNothing
-
-                    monthDiv =
-                        div [ class "elm-daterangepicker--qtr-row" ] <|
-                            ([ div [ class "elm-daterangepicker--qtr-label", setQuarterDateRange ] [ text qtr.name ] ]
-                                ++ List.map (printMonth model) qtr.months
-                            )
+                                text ""
                 in
-                    monthDiv
+                    qtrDiv
 
             ( _, _ ) ->
                 text ""
 
 
-printMonth : Model -> List Date -> Html Msg
-printMonth model m =
+{-| An opaque function that gets the Html Msg for a given month of the calendar.
+-}
+getMonth : Model -> List Date -> Html Msg
+getMonth model m =
     let
         h =
             List.head m
@@ -971,33 +1041,61 @@ printMonth model m =
             Just a ->
                 let
                     days =
-                        [] ++ padDaysLeft a ++ List.map (printDay model) m
+                        List.concat
+                            [ padMonthLeft a
+                            , List.map (getDay model) m
+                            ]
+
+                    startOfMonth_ =
+                        startOfMonth a
+
+                    endOfMonth_ =
+                        endOfMonth a
+
+                    isDisabledMonth =
+                        isDisabledDate model startOfMonth_
+                            && isDisabledDate model endOfMonth_
 
                     setMonthDateRange =
-                        onClick <|
-                            SetDateRange <|
-                                mkDateRange (startOfMonth a) (endOfMonth a)
+                        case isDisabledMonth of
+                            True ->
+                                onClick DoNothing
+
+                            False ->
+                                onClick <|
+                                    SetDateRange <|
+                                        mkDateRange (startOfMonth a) (endOfMonth a)
+
+                    className =
+                        String.join " " <|
+                            List.filter (\x -> x /= "")
+                                [ "elm-daterangepicker--month-label"
+                                , mkClass "elm-daterangepicker--disabled" isDisabledMonth
+                                ]
 
                     monthDiv =
-                        div [ class "elm-daterangepicker--month-label", setMonthDateRange ]
+                        div [ class className, setMonthDateRange ]
                             [ text <|
                                 formatMonth <|
                                     month a
                             ]
                 in
-                    div [ class "elm-daterangepicker--month" ]
-                        ([ monthDiv ]
-                            ++ printDaysOfWeek
-                            ++ days
-                            ++ padMonth (42 - List.length days)
-                        )
+                    div [ class "elm-daterangepicker--month" ] <|
+                        List.concat
+                            [ [ monthDiv ]
+                            , getDaysOfWeek
+                            , days
+                            , padMonthRight (42 - List.length days)
+                            ]
 
             _ ->
                 text ""
 
 
-printDaysOfWeek : List (Html Msg)
-printDaysOfWeek =
+{-| An opaque function that gets the Days of the Week Html Msg for the calendar.
+-}
+getDaysOfWeek : List (Html Msg)
+getDaysOfWeek =
     let
         days =
             List.range 1 7
@@ -1012,8 +1110,12 @@ printDaysOfWeek =
         List.map go days
 
 
-padDaysLeft : Date -> List (Html Msg)
-padDaysLeft d =
+{-| An opaque function taht pads the month from the left with filler days
+in order to get the first of the month to line up correctly with the correct
+day of the week.
+-}
+padMonthLeft : Date -> List (Html Msg)
+padMonthLeft d =
     let
         dd =
             dayToInt <| dayOfWeek d
@@ -1027,8 +1129,12 @@ padDaysLeft d =
         List.repeat n go
 
 
-padMonth : Int -> List (Html Msg)
-padMonth n =
+{-| An opaque function that pads the end of the month with filler days in order to fill
+the month with 42 total days (days + filler days) to keep the size of each month in the
+calendar the same size.
+-}
+padMonthRight : Int -> List (Html Msg)
+padMonthRight n =
     let
         go =
             div [ class "elm-daterangepicker--day-filler" ] []
@@ -1036,8 +1142,10 @@ padMonth n =
         List.repeat n go
 
 
-printDay : Model -> Date -> Html Msg
-printDay model date =
+{-| An opaque function that gets the Html Msg for a Day.
+-}
+getDay : Model -> Date -> Html Msg
+getDay model date =
     let
         isDisabledDate_ =
             isDisabledDate model date
@@ -1047,11 +1155,16 @@ printDay model date =
                 List.filter (\x -> x /= "")
                     [ "elm-daterangepicker--day"
                     , mkClass "elm-daterangepicker--selected-range" <| isSelectedDateRange model date
-                    , mkClass "elm-daterangepicker--disabled-date" isDisabledDate_
+                    , mkClass "elm-daterangepicker--disabled" isDisabledDate_
                     ]
 
         setDate =
-            onClick <| SetDate date
+            case isDisabledDate_ of
+                True ->
+                    onClick DoNothing
+
+                False ->
+                    onClick <| SetDate date
     in
         div [ class className, setDate ]
             [ text <|
@@ -1060,6 +1173,9 @@ printDay model date =
             ]
 
 
+{-| An opaque function that returns a class name or an empty string
+if the bool is true or not
+-}
 mkClass : String -> Bool -> String
 mkClass cls bool =
     if bool then
@@ -1068,6 +1184,8 @@ mkClass cls bool =
         ""
 
 
+{-| An opaque function to check if the given date is a disabled date.
+-}
 isDisabledDate : Model -> Date -> Bool
 isDisabledDate model date =
     case model.enabledDateRange of
@@ -1077,18 +1195,20 @@ isDisabledDate model date =
         Just dateRange ->
             case ( dateRange.start, dateRange.end ) of
                 ( Just start, Just end ) ->
-                    inRange date <| mkDateRange start end
+                    not <| inRange date <| mkDateRange start end
 
                 ( Just start, Nothing ) ->
-                    start $> date
+                    date $< start
 
                 ( Nothing, Just end ) ->
-                    end $< date
+                    date $> (addDays 1 end)
 
                 ( Nothing, Nothing ) ->
                     False
 
 
+{-| An opaque function the check if the given date is in the selected range.
+-}
 isSelectedDateRange : Model -> Date -> Bool
 isSelectedDateRange model date =
     case model.dateRange of
@@ -1099,6 +1219,8 @@ isSelectedDateRange model date =
             isStartOrEnd date model
 
 
+{-| An opaque function that prepares the full year based on the given date.
+-}
 prepareYear : Date -> FullYear
 prepareYear date =
     let
@@ -1122,16 +1244,29 @@ prepareYear date =
         }
 
 
+{-| An opaque function that prepares the quarters of the full year
+given the full list of dates for the year.
+-}
 prepareQuarters : List (List Date) -> List Quarter
 prepareQuarters lst =
     let
         qs =
             chunksOfLeft 3 lst
     in
-        List.indexedMap (\idx q -> { name = "Q" ++ (toString (idx + 1)), months = q }) qs
+        List.indexedMap
+            (\idx q ->
+                { name =
+                    String.concat
+                        [ "Q"
+                        , toString <| idx + 1
+                        ]
+                , months = q
+                }
+            )
+            qs
 
 
-{-| A function to check if a given date is within a
+{-| An opaque function to check if a given date is within a
 given dateRange.
 -}
 inRange : Date -> DateRange -> Bool
@@ -1149,7 +1284,7 @@ inRange date { start, end } =
             False
 
 
-{-| A function that checks if the passed in date is equal
+{-| An opaque function that checks if the passed in date is equal
 to the model's startDate or endDate
 -}
 isStartOrEnd : Date -> Model -> Bool
@@ -1168,7 +1303,58 @@ isStartOrEnd date model =
             False
 
 
-{-| A function that updates the inputText based on the
+{-| An opaque function that gets the new date range from a selected date range
+and the enabled dates of the date picker.
+-}
+getNewDateRange : Model -> DateRange -> DateRange
+getNewDateRange model dateRange =
+    case model.enabledDateRange of
+        Just dr ->
+            case ( dr.start, dr.end ) of
+                ( Just start, Just end ) ->
+                    let
+                        newStart =
+                            if inRange dateRange.start <| mkDateRange start end then
+                                dateRange.start
+                            else
+                                start
+
+                        newEnd =
+                            if inRange dateRange.end <| mkDateRange start end then
+                                dateRange.end
+                            else
+                                end
+                    in
+                        mkDateRange newStart newEnd
+
+                ( Just start, Nothing ) ->
+                    let
+                        newStart =
+                            if dateRange.start $>= start then
+                                dateRange.start
+                            else
+                                start
+                    in
+                        mkDateRange newStart dateRange.end
+
+                ( Nothing, Just end ) ->
+                    let
+                        newEnd =
+                            if dateRange.end $<= end then
+                                dateRange.end
+                            else
+                                end
+                    in
+                        mkDateRange dateRange.start newEnd
+
+                ( Nothing, Nothing ) ->
+                    dateRange
+
+        Nothing ->
+            dateRange
+
+
+{-| An opaque function that updates the inputText based on the
 model's selected dateRange
 -}
 updateInputText : Model -> Model
@@ -1181,6 +1367,20 @@ updateInputText model =
             { model | inputText = Nothing }
 
 
+{-| An opaque recursive function that chunks a list of a into a
+list of lists of a of equal chunks.
+
+
+## Example:
+
+    chunksOfLeft 3 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ] =
+        [ [ 1, 2, 3 ]
+        , [ 4.5, 6 ]
+        , [ 7, 8, 9 ]
+        , [ 10, 11, 12 ]
+        ]
+
+-}
 chunksOfLeft : Int -> List a -> List (List a)
 chunksOfLeft k xs =
     let
