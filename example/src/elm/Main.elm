@@ -3,7 +3,7 @@ module Main exposing (..)
 import Date exposing (Date, Day(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (..)
+import DateRangePicker exposing (defaultSettings)
 
 
 type Msg
@@ -28,13 +28,21 @@ init =
             ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
 
+getSettings : Bool -> DateRangePicker.Settings
+getSettings useDefault =
+    if useDefault then
+        DateRangePicker.defaultSettings
+    else
+        { defaultSettings | formatDateRange = formatDateRange }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ date, dateRangePicker } as model) =
     case msg of
         ToDateRangePicker msg ->
             let
                 ( newDateRangePicker, dateRangePickerFx ) =
-                    DateRangePicker.update DateRangePicker.defaultSettings msg dateRangePicker
+                    DateRangePicker.update (getSettings True) msg dateRangePicker
             in
                 { model | dateRangePicker = newDateRangePicker } ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
@@ -46,9 +54,15 @@ view ({ date, dateRangePicker } as model) =
         ]
 
 
-formatDate : Date -> String
-formatDate d =
-    toString (month d) ++ " " ++ toString (day d) ++ ", " ++ toString (year d)
+formatDateRange : DateRangePicker.DateRange -> String
+formatDateRange dateRange =
+    String.concat
+        [ "["
+        , toString dateRange.start
+        , " TO "
+        , toString dateRange.end
+        , "]"
+        ]
 
 
 main : Program Never Model Msg
