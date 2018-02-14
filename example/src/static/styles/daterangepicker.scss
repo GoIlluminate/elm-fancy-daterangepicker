@@ -104,6 +104,15 @@
                         background: grey;
                         color: white;
                     }
+                    .elm-daterangepicker--disabled-date {
+                        text-decoration: line-through;
+                        cursor: not-allowed;
+                        color: grey;
+                        background: white;
+                        &:hover {
+                            background: white;
+                        }
+                    }
                 }
             }
         }

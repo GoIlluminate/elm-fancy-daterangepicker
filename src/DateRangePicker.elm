@@ -49,7 +49,7 @@ import Json.Decode as Json
 {-| An opaque type representing messages that are passed within the DateRangePicker.
 -}
 type Msg
-    = CurrentDate Date
+    = InitCurrentDate Date
     | PrevYear
     | NextYear
     | SetDateRange DateRange
@@ -80,6 +80,7 @@ type alias Settings =
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
     , presetOptions : PresetOptions
+    , restrictedDateRange : RestrictedDateRange
     }
 
 
@@ -96,6 +97,15 @@ type alias Model =
     , endDate : Maybe Date
     , showPresets : Bool
     , presets : List Preset
+    , enabledDateRange : Maybe EnabledDateRange
+    }
+
+
+{-| A type representing the disabled dates for the datepicker
+-}
+type alias EnabledDateRange =
+    { start : Maybe Date
+    , end : Maybe Date
     }
 
 
@@ -209,6 +219,128 @@ type alias Preset =
     { name : String
     , dateRange : DateRange
     }
+
+
+{-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
+@Off = no restrictions, any date to any date can be chosen.
+@ToPresent = from any date in the past up to today
+@FromPresent = from today to any date in the future
+@Past = from any date in the past up to yesterday
+@Future = from tomorrow up to any date in the future
+@Between date date = only between the two given dates
+@To date = from any date in the past up to the given date
+@From date = from the given date up to any date in the future
+-}
+type RestrictedDateRange
+    = Off
+    | ToPresent
+    | FromPresent
+    | Past
+    | Future
+    | Between Date.Date Date.Date
+    | To Date.Date
+    | From Date.Date
+
+
+{-| An opaque function that makes the EnabledDateRange from settings.
+
+
+## EnabledDateRange is Nothing if RestrictedDateRange is Off
+
+-}
+mkEnabledDateRangeFromSettings : Settings -> Date -> Maybe EnabledDateRange
+mkEnabledDateRangeFromSettings settings today =
+    case settings.restrictedDateRange of
+        Off ->
+            mkEnabledDateRange Nothing Nothing
+
+        ToPresent ->
+            mkEnabledDateRange Nothing (Just today)
+
+        FromPresent ->
+            mkEnabledDateRange (Just today) Nothing
+
+        Past ->
+            let
+                yesterday =
+                    subDays 1 today
+            in
+                mkEnabledDateRange Nothing (Just yesterday)
+
+        Future ->
+            let
+                tomorrow =
+                    addDays 1 today
+            in
+                mkEnabledDateRange (Just tomorrow) Nothing
+
+        Between start end ->
+            mkEnabledDateRange (Just start) (Just end)
+
+        To date ->
+            mkEnabledDateRange Nothing (Just date)
+
+        From date ->
+            mkEnabledDateRange (Just date) Nothing
+
+
+{-| An opaque function that makes an EnabledDateRange from two Maybe Dates
+-}
+mkEnabledDateRange : Maybe Date -> Maybe Date -> Maybe EnabledDateRange
+mkEnabledDateRange start end =
+    case ( start, end ) of
+        ( Just a, Just b ) ->
+            Just <|
+                { start = Just <| mkDate (year a) (month a) (day a)
+                , end = Just <| mkDate (year b) (month b) (day b)
+                }
+
+        ( Just a, Nothing ) ->
+            Just <|
+                { start = Just <| mkDate (year a) (month a) (day a)
+                , end = Nothing
+                }
+
+        ( Nothing, Just b ) ->
+            Just <|
+                { start = Nothing
+                , end = Just <| mkDate (year b) (month b) (day b)
+                }
+
+        ( Nothing, Nothing ) ->
+            Nothing
+
+
+mkPresets : Settings -> Date -> List Preset
+mkPresets settings date =
+    let
+        presetOptions =
+            settings.presetOptions
+
+        defaultPresets_ =
+            defaultPresets date
+
+        customPresetsFromSettings_ =
+            List.map (mkPresetFromSetting date) presetOptions.presetSettings
+    in
+        case presetOptions.presetOption of
+            DefaultPresets ->
+                defaultPresets_
+
+            CustomPresetsFromSettings ->
+                customPresetsFromSettings_
+
+            CustomPresets ->
+                presetOptions.presets
+
+            CustomOnly ->
+                customPresetsFromSettings_ ++ presetOptions.presets
+
+            AllPresets ->
+                defaultPresets_ ++ customPresetsFromSettings_
+
+            NoPresets ->
+                []
 
 
 {-| An opaque function that creates a Preset from a PresetSetting
@@ -418,6 +550,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
+    , restrictedDateRange = Future
     }
 
 
@@ -454,6 +587,7 @@ initModel =
     , endDate = Nothing
     , showPresets = False
     , presets = []
+    , enabledDateRange = Nothing
     }
 
 
@@ -462,7 +596,7 @@ initial state.
 -}
 initCmd : Cmd Msg
 initCmd =
-    Task.perform CurrentDate Date.now
+    Task.perform InitCurrentDate Date.now
 
 
 {-| The daterangepicker update function.
@@ -472,42 +606,19 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
     let
         ( newModel, cmds ) =
             case msg of
-                CurrentDate date ->
+                InitCurrentDate date ->
                     let
-                        presetOptions =
-                            settings.presetOptions
-
                         presets =
-                            let
-                                dp =
-                                    defaultPresets date
+                            mkPresets settings date
 
-                                cp =
-                                    List.map (mkPresetFromSetting date) presetOptions.presetSettings
-                            in
-                                case presetOptions.presetOption of
-                                    DefaultPresets ->
-                                        dp
-
-                                    CustomPresetsFromSettings ->
-                                        cp
-
-                                    CustomPresets ->
-                                        presetOptions.presets
-
-                                    CustomOnly ->
-                                        cp ++ presetOptions.presets
-
-                                    AllPresets ->
-                                        dp ++ cp
-
-                                    NoPresets ->
-                                        []
+                        enabledDateRange =
+                            mkEnabledDateRangeFromSettings settings date
                     in
                         { model
                             | today = date
                             , currentYear = prepareYear date
                             , presets = presets
+                            , enabledDateRange = enabledDateRange
                         }
                             ! []
 
@@ -928,19 +1039,16 @@ padMonth n =
 printDay : Model -> Date -> Html Msg
 printDay model date =
     let
-        className =
-            case model.dateRange of
-                Just a ->
-                    if (inRange date a) then
-                        "elm-daterangepicker--day elm-daterangepicker--selected-range"
-                    else
-                        "elm-daterangepicker--day"
+        isDisabledDate_ =
+            isDisabledDate model date
 
-                Nothing ->
-                    if isStartOrEnd date model then
-                        "elm-daterangepicker--day elm-daterangepicker--selected-range"
-                    else
-                        "elm-daterangepicker--day"
+        className =
+            String.join " " <|
+                List.filter (\x -> x /= "")
+                    [ "elm-daterangepicker--day"
+                    , mkClass "elm-daterangepicker--selected-range" <| isSelectedDateRange model date
+                    , mkClass "elm-daterangepicker--disabled-date" isDisabledDate_
+                    ]
 
         setDate =
             onClick <| SetDate date
@@ -950,6 +1058,45 @@ printDay model date =
                 toString <|
                     day date
             ]
+
+
+mkClass : String -> Bool -> String
+mkClass cls bool =
+    if bool then
+        cls
+    else
+        ""
+
+
+isDisabledDate : Model -> Date -> Bool
+isDisabledDate model date =
+    case model.enabledDateRange of
+        Nothing ->
+            False
+
+        Just dateRange ->
+            case ( dateRange.start, dateRange.end ) of
+                ( Just start, Just end ) ->
+                    inRange date <| mkDateRange start end
+
+                ( Just start, Nothing ) ->
+                    start $> date
+
+                ( Nothing, Just end ) ->
+                    end $< date
+
+                ( Nothing, Nothing ) ->
+                    False
+
+
+isSelectedDateRange : Model -> Date -> Bool
+isSelectedDateRange model date =
+    case model.dateRange of
+        Just a ->
+            inRange date a
+
+        Nothing ->
+            isStartOrEnd date model
 
 
 prepareYear : Date -> FullYear
@@ -1054,6 +1201,21 @@ chunksOfLeft k xs =
 ($<=) : Date -> Date -> Bool
 ($<=) a b =
     Date.toTime a <= Date.toTime b
+
+
+($>=) : Date -> Date -> Bool
+($>=) a b =
+    Date.toTime a >= Date.toTime b
+
+
+($<) : Date -> Date -> Bool
+($<) a b =
+    Date.toTime a < Date.toTime b
+
+
+($>) : Date -> Date -> Bool
+($>) a b =
+    Date.toTime a >= Date.toTime b
 
 
 (!) : Model -> List (Cmd Msg) -> ( Model, Cmd Msg )
