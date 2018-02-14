@@ -26,6 +26,7 @@ module DateRangePicker.Date
         , addYears
         , subMonths
         , addMonths
+        , monthToInt
         )
 
 import Date exposing (Date, Day(..), Month(..), year, month, day)

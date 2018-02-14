@@ -19,12 +19,14 @@ module DateRangePicker
         , isOpen
         , view
         , getDateRange
+        , setDateRange
+        , setSettings
         )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DateRangePicker, DateRange
-@docs init, update, isOpen, view, mkDateRange, getDateRange
+@docs init, update, isOpen, view, mkDateRange, getDateRange, setDateRange, setSettings
 
 
 # Settings
@@ -80,6 +82,7 @@ type alias Model =
     , showPresets : Bool
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
+    , settings : Settings
     }
 
 
@@ -602,6 +605,7 @@ initModel =
     , showPresets = False
     , presets = []
     , enabledDateRange = Nothing
+    , settings = defaultSettings
     }
 
 
@@ -615,8 +619,8 @@ initCmd =
 
 {-| The daterangepicker update function.
 -}
-update : Settings -> Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
-update settings msg (DateRangePicker ({ forceOpen } as model)) =
+update : Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
+update msg (DateRangePicker ({ forceOpen, settings } as model)) =
     let
         ( newModel, cmds ) =
             case msg of
@@ -787,7 +791,7 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
                 DoNothing ->
                     model ! []
     in
-        (updateInputText newModel settings) !> [ cmds ]
+        (updateInputText newModel) !> [ cmds ]
 
 
 {-| Expose if the daterange picker is open
@@ -804,10 +808,24 @@ getDateRange (DateRangePicker model) =
     model.dateRange
 
 
+{-| Sets the current daterange for the daterangepicker.
+-}
+setDateRange : Maybe DateRange -> DateRangePicker -> DateRangePicker
+setDateRange dateRange (DateRangePicker model) =
+    DateRangePicker { model | dateRange = dateRange }
+
+
+{-| Sets the settings for the daterange picker
+-}
+setSettings : Settings -> DateRangePicker -> DateRangePicker
+setSettings settings (DateRangePicker model) =
+    DateRangePicker { model | settings = settings }
+
+
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
-view : Maybe DateRange -> Settings -> DateRangePicker -> Html Msg
-view selectedDateRange settings (DateRangePicker ({ open } as model)) =
+view : DateRangePicker -> Html Msg
+view (DateRangePicker ({ open, settings } as model)) =
     let
         potentialInputId =
             settings.inputId
@@ -838,7 +856,7 @@ view selectedDateRange settings (DateRangePicker ({ open } as model)) =
         div [ class "elm-daterangepicker--container" ]
             [ dateInput
             , if open then
-                dateRangePicker model settings
+                dateRangePicker model
               else
                 text ""
             ]
@@ -846,8 +864,8 @@ view selectedDateRange settings (DateRangePicker ({ open } as model)) =
 
 {-| An opaque function to create the daterange picker view.
 -}
-dateRangePicker : Model -> Settings -> Html Msg
-dateRangePicker model settings =
+dateRangePicker : Model -> Html Msg
+dateRangePicker model =
     let
         onPicker ev =
             Json.succeed
@@ -862,7 +880,7 @@ dateRangePicker model settings =
                     getCalendar model
 
                 True ->
-                    getPresets model settings
+                    getPresets model
 
         header =
             getHeader
@@ -901,16 +919,16 @@ getHeader =
 
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
 -}
-getPresets : Model -> Settings -> Html Msg
-getPresets model settings =
+getPresets : Model -> Html Msg
+getPresets model =
     div [ class "elm-daterangepicker--presets" ] <|
-        List.map (getPreset model settings) model.presets
+        List.map (getPreset model) model.presets
 
 
 {-| An opaque function that gets the Html Msg for a given preset.
 -}
-getPreset : Model -> Settings -> Preset -> Html Msg
-getPreset model settings preset =
+getPreset : Model -> Preset -> Html Msg
+getPreset model preset =
     let
         isDisabledPreset =
             isDisabledDate model preset.dateRange.start
@@ -934,7 +952,7 @@ getPreset model settings preset =
     in
         div [ class className, setDateRange ]
             [ span [ class "elm-daterangepicker--preset-name" ] [ text preset.name ]
-            , span [ class "elm-daterangepicker--preset-range" ] [ text <| settings.formatDateRange preset.dateRange ]
+            , span [ class "elm-daterangepicker--preset-range" ] [ text <| model.settings.formatDateRange preset.dateRange ]
             ]
 
 
@@ -1383,11 +1401,11 @@ getNewDateRange model dateRange =
 {-| An opaque function that updates the inputText based on the
 model's selected dateRange
 -}
-updateInputText : Model -> Settings -> Model
-updateInputText model settings =
+updateInputText : Model -> Model
+updateInputText model =
     case model.dateRange of
         Just a ->
-            { model | inputText = Just <| settings.formatDateRange a }
+            { model | inputText = Just <| model.settings.formatDateRange a }
 
         Nothing ->
             { model | inputText = Nothing }

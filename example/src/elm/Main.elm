@@ -1,9 +1,10 @@
 module Main exposing (..)
 
-import Date exposing (Date, Day(..), day, dayOfWeek, month, year)
+import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (defaultSettings, DateRange, getDateRange)
+import DateRangePicker exposing (defaultSettings, DateRange, getDateRange, setSettings, setDateRange, mkDateRange)
+import DateRangePicker.Date exposing (mkDate, monthToInt)
 
 
 type Msg
@@ -19,8 +20,16 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     let
-        ( dateRangePicker, dateRangePickerFx ) =
+        ( dateRangePicker_, dateRangePickerFx ) =
             DateRangePicker.init
+
+        dateRangePicker =
+            dateRangePicker_
+                |> setDateRange
+                    (Just <|
+                        mkDateRange (mkDate 2017 Jan 1) (mkDate 2017 Feb 2)
+                    )
+                |> setSettings (getSettings True)
     in
         { dateRange = Nothing
         , dateRangePicker = dateRangePicker
@@ -42,7 +51,7 @@ update msg ({ dateRange, dateRangePicker } as model) =
         ToDateRangePicker msg ->
             let
                 ( newDateRangePicker, dateRangePickerFx ) =
-                    DateRangePicker.update (getSettings True) msg dateRangePicker
+                    DateRangePicker.update msg dateRangePicker
             in
                 { model | dateRangePicker = newDateRangePicker, dateRange = getDateRange newDateRangePicker } ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
@@ -50,18 +59,37 @@ update msg ({ dateRange, dateRangePicker } as model) =
 view : Model -> Html Msg
 view ({ dateRange, dateRangePicker } as model) =
     div [ class "date-wrapper" ]
-        [ DateRangePicker.view dateRange DateRangePicker.defaultSettings dateRangePicker |> Html.map ToDateRangePicker
+        [ div [] [ text <| printDateRange dateRange ]
+        , DateRangePicker.view dateRangePicker |> Html.map ToDateRangePicker
         ]
+
+
+printDateRange : Maybe DateRange -> String
+printDateRange dateRange =
+    case dateRange of
+        Nothing ->
+            "No date selected."
+
+        Just a ->
+            formatDateRange a
 
 
 formatDateRange : DateRangePicker.DateRange -> String
 formatDateRange dateRange =
     String.concat
-        [ "["
-        , toString dateRange.start
+        [ "[ "
+        , toString <| monthToInt <| month dateRange.start
+        , "/"
+        , toString <| day dateRange.start
+        , "/"
+        , toString <| year dateRange.start
         , " TO "
-        , toString dateRange.end
-        , "]"
+        , toString <| monthToInt <| month dateRange.end
+        , "/"
+        , toString <| day dateRange.end
+        , "/"
+        , toString <| year dateRange.end
+        , " ]"
         ]
 
 
