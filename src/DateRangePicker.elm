@@ -3,6 +3,15 @@ module DateRangePicker
         ( Msg
         , DateRangePicker
         , Settings
+        , PresetOption(..)
+        , DateRange
+        , PresetOptions
+        , Preset
+        , PresetSetting
+        , defaultPresets
+        , mkDateRange
+        , mkPresetFromDateRange
+        , mkPresetFromDates
         , init
         , update
         , defaultSettings
@@ -12,13 +21,18 @@ module DateRangePicker
 
 {-| A customizable daterangepicker component.
 
-@docs Msg, DateRangePicker
-@docs init, update, isOpen, view
+@docs Msg, DateRangePicker, DateRange
+@docs init, update, isOpen, view, mkDateRange
 
 
 # Settings
 
 @docs Settings, defaultSettings
+
+
+## Presets
+
+@docs PresetOptions, PresetOption, Preset, PresetSetting, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
 
 -}
 
@@ -50,27 +64,22 @@ type Msg
     | TogglePresets
 
 
+{-| A type representing a date range with a start date and end date.
+-}
 type alias DateRange =
     { start : Date
     , end : Date
     }
 
 
-type PresetOption
-    = DefaultPresets
-    | CustomPresets
-    | NoPresets
-
-
-{-| The settings that the DateRangePicker uses
+{-| The settings that the DateRangePicker uses.
 -}
 type alias Settings =
     { placeholder : String
     , inputName : Maybe String
     , inputId : Maybe String
     , inputAttributes : List (Html.Attribute Msg)
-    , presets : List PresetSetting
-    , presetOption : PresetOption
+    , presetOptions : PresetOptions
     }
 
 
@@ -105,7 +114,7 @@ type alias FullYear =
     }
 
 
-{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1
+{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1.
 -}
 type alias Quarter =
     { name : String
@@ -113,17 +122,77 @@ type alias Quarter =
     }
 
 
+{-| A type representing your preset options for your date range picker.
+-}
+type alias PresetOptions =
+    { presetOption : PresetOption
+    , presetSettings : List PresetSetting
+    , presets : List Preset
+    }
+
+
+{-| A type representing which presets to use.
+@DefaultPresets = Use the default presets from defaultPresets only.
+@CustomPresetsFromSettings = Use only your custom built presets from a list of PresetSetting only.
+@CustomPresets = Use only your custom built Presets.
+@CustomOnly = Use only your custom build presets build from PresetSetting and your custom presets.
+@AllPresets = Use all presets (default, customFromSettings, custom).
+@NoPresets = Turn off Presets.
+-}
+type PresetOption
+    = DefaultPresets
+    | CustomPresetsFromSettings
+    | CustomPresets
+    | CustomOnly
+    | AllPresets
+    | NoPresets
+
+
+{-| A type representing what the value in PresetSettings is measured in.
+
+
+## Ex. value = 1 and PresetInterval = Days, this is interpretted as 1 Days.
+
+
+## Ex. value = 4 and PresetI:nterval = Months, this is interpretted as 4 Months.
+
+-}
 type PresetInterval
     = Days
     | Months
     | Years
 
 
+{-| A type representing how the preset is relative to today.
+
+
+## If using ToToday, the preset daterange would use today as the end date, and the date from your PresetSettings as the end date.
+
+
+## If using FromToday, the preset daterange would use today as the start date and the date from your PresetSettings as the end date.
+
+-}
 type PresetRelativeToToday
     = ToToday
     | FromToday
 
 
+{-| A type used to generate preset dateranges.
+@name = The name that you want to give the preset. i.e. "Past Month"
+@interval = The interval in which you want to add/subtract the value from today.
+@presetRelativeToToday = whether it is a range from [past - present] (ToToday) or [present - future] (FromToday)
+@value = the number of your @interval that you are adding/subtracting.
+
+
+## Example
+
+{ name = "Past Month"
+, interval = Months
+, presetRelativeToday = ToToday
+, value = 1
+}
+
+-}
 type alias PresetSetting =
     { name : String
     , interval : PresetInterval
@@ -132,14 +201,20 @@ type alias PresetSetting =
     }
 
 
+{-| A type that represents a preset daterange.
+@name = Name of the preset. i.e. "Past Month"
+@dateRange = The daterange that is selected when selecting the preset.
+-}
 type alias Preset =
     { name : String
     , dateRange : DateRange
     }
 
 
-mkPreset : Date -> PresetSetting -> Preset
-mkPreset today { name, interval, presetRelativeToToday, value } =
+{-| An opaque function that creates a Preset from a PresetSetting
+-}
+mkPresetFromSetting : Date -> PresetSetting -> Preset
+mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
     let
         start =
             case presetRelativeToToday of
@@ -178,6 +253,30 @@ mkPreset today { name, interval, presetRelativeToToday, value } =
         }
 
 
+{-| A function that creates a Preset from a name and a dateRange
+-}
+mkPresetFromDateRange : String -> DateRange -> Preset
+mkPresetFromDateRange name dateRange =
+    { name = name
+    , dateRange = dateRange
+    }
+
+
+{-| A function that creates a Preset from a name, startDate, and endDate
+-}
+mkPresetFromDates : String -> Date -> Date -> Preset
+mkPresetFromDates name start end =
+    { name = name
+    , dateRange = mkDateRange start end
+    }
+
+
+{-| A function that creates a DateRange by taking in two dates (start and end).
+
+
+## This function assumes that start <= end
+
+-}
 mkDateRange : Date -> Date -> DateRange
 mkDateRange start end =
     { start = mkDate (year start) (month start) (day start)
@@ -185,6 +284,8 @@ mkDateRange start end =
     }
 
 
+{-| An opaque function used to make the default presets
+-}
 defaultPresets : Date -> List Preset
 defaultPresets today =
     [ presetToday today
@@ -197,6 +298,8 @@ defaultPresets today =
     ]
 
 
+{-| An opaque function for the default preset "Today"
+-}
 presetToday : Date -> Preset
 presetToday today =
     { name = "Today"
@@ -204,6 +307,8 @@ presetToday today =
     }
 
 
+{-| An opaque function for the default preset "Yesterday"
+-}
 presetYesterday : Date -> Preset
 presetYesterday today =
     let
@@ -218,6 +323,8 @@ presetYesterday today =
         }
 
 
+{-| An opaque function for the default preset "Past Week"
+-}
 presetPastWeek : Date -> Preset
 presetPastWeek today =
     let
@@ -232,6 +339,8 @@ presetPastWeek today =
         }
 
 
+{-| An opaque function for the default preset "Past Month"
+-}
 presetPastMonth : Date -> Preset
 presetPastMonth today =
     let
@@ -246,6 +355,8 @@ presetPastMonth today =
         }
 
 
+{-| An opaque function for the default preset "Past Year"
+-}
 presetPastYear : Date -> Preset
 presetPastYear today =
     let
@@ -260,6 +371,8 @@ presetPastYear today =
         }
 
 
+{-| An opaque function for the default preset "Last Year"
+-}
 presetLastYear : Date -> Preset
 presetLastYear today =
     let
@@ -277,6 +390,8 @@ presetLastYear today =
         }
 
 
+{-| An opaque function for the default preset "Last Month"
+-}
 presetLastMonth : Date -> Preset
 presetLastMonth today =
     let
@@ -302,8 +417,15 @@ defaultSettings =
     , inputName = Nothing
     , inputId = Nothing
     , inputAttributes = []
+    , presetOptions = defaultPresetOptions
+    }
+
+
+defaultPresetOptions : PresetOptions
+defaultPresetOptions =
+    { presetOption = DefaultPresets
+    , presetSettings = []
     , presets = []
-    , presetOption = DefaultPresets
     }
 
 
@@ -352,16 +474,35 @@ update settings msg (DateRangePicker ({ forceOpen } as model)) =
             case msg of
                 CurrentDate date ->
                     let
+                        presetOptions =
+                            settings.presetOptions
+
                         presets =
-                            case settings.presetOption of
-                                DefaultPresets ->
+                            let
+                                dp =
                                     defaultPresets date
 
-                                CustomPresets ->
-                                    List.map (mkPreset date) settings.presets
+                                cp =
+                                    List.map (mkPresetFromSetting date) presetOptions.presetSettings
+                            in
+                                case presetOptions.presetOption of
+                                    DefaultPresets ->
+                                        dp
 
-                                NoPresets ->
-                                    []
+                                    CustomPresetsFromSettings ->
+                                        cp
+
+                                    CustomPresets ->
+                                        presetOptions.presets
+
+                                    CustomOnly ->
+                                        cp ++ presetOptions.presets
+
+                                    AllPresets ->
+                                        dp ++ cp
+
+                                    NoPresets ->
+                                        []
                     in
                         { model
                             | today = date
