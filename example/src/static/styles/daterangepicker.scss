@@ -17,6 +17,12 @@
     }
     .elm-daterangepicker--date-input {
         width: 175px;
+        display:inline-block;
+        -webkit-appearance:button;
+        padding:3px 8px 3px 8px;
+        font-size:13px;
+        position:relative;
+        cursor:context-menu;
     }
     .elm-daterangepicker--wrapper {
         padding: 0px;

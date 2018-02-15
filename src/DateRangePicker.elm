@@ -846,26 +846,18 @@ view (DateRangePicker ({ open, settings } as model)) =
                 |> Maybe.map Attrs.id
                 |> (List.singleton >> List.filterMap identity)
 
-        inputCommon xs =
-            input
+        dateInput =
+            div
                 ([ Attrs.name (settings.inputName ?> "")
-                 , type_ "text"
                  , onBlur Blur
                  , onClick Focus
                  , onFocus Focus
+                 , class "elm-daterangepicker--date-input"
                  ]
                     ++ settings.inputAttributes
                     ++ potentialInputId
-                    ++ xs
                 )
-                []
-
-        dateInput =
-            inputCommon
-                [ placeholder settings.placeholder
-                , class "elm-daterangepicker--date-input"
-                , model.inputText ?> "" |> value
-                ]
+                [ model.inputText ?> settings.placeholder |> text ]
     in
         div [ class "elm-daterangepicker--container" ]
             [ dateInput
