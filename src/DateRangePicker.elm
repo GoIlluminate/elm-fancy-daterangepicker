@@ -112,12 +112,14 @@ type alias PresetOptions =
 
 
 {-| A type representing which presets to use.
-@DefaultPresets = Use the default presets from defaultPresets only.
-@CustomPresetsFromSettings = Use only your custom built presets from a list of PresetSetting only.
-@CustomPresets = Use only your custom built Presets.
-@CustomOnly = Use only your custom build presets build from PresetSetting and your custom presets.
-@AllPresets = Use all presets (default, customFromSettings, custom).
-@NoPresets = Turn off Presets.
+
+  - *DefaultPresets* = Use the default presets from defaultPresets only.
+  - *CustomPresetsFromSettings* = Use only your custom built presets from a list of PresetSetting only.
+  - *CustomPresets* = Use only your custom built Presets.
+  - *CustomOnly* = Use only your custom build presets build from PresetSetting and your custom presets.
+  - *AllPresets* = Use all presets (default, customFromSettings, custom).
+  - *NoPresets* = Turn off Presets.
+
 -}
 type PresetOption
     = DefaultPresets
@@ -130,11 +132,8 @@ type PresetOption
 
 {-| A type representing what the value in PresetSettings is measured in.
 
-
-## Ex. value = 1 and PresetInterval = Days, this is interpretted as 1 Days.
-
-
-## Ex. value = 4 and PresetI:nterval = Months, this is interpretted as 4 Months.
+  - Ex. value = 1 and PresetInterval = Days, this is interpretted as 1 Days.
+  - Ex. value = 4 and PresetI:nterval = Months, this is interpretted as 4 Months.
 
 -}
 type PresetInterval
@@ -145,11 +144,8 @@ type PresetInterval
 
 {-| A type representing how the preset is relative to today.
 
-
-## If using ToToday, the preset daterange would use today as the end date, and the date from your PresetSettings as the end date.
-
-
-## If using FromToday, the preset daterange would use today as the start date and the date from your PresetSettings as the end date.
+  - If using ToToday, the preset daterange would use today as the end date, and the date from your PresetSettings as the end date.
+  - If using FromToday, the preset daterange would use today as the start date and the date from your PresetSettings as the end date.
 
 -}
 type PresetRelativeToToday
@@ -158,19 +154,20 @@ type PresetRelativeToToday
 
 
 {-| A type used to generate preset dateranges.
-@name = The name that you want to give the preset. i.e. "Past Month"
-@interval = The interval in which you want to add/subtract the value from today.
-@presetRelativeToToday = whether it is a range from [past - present] (ToToday) or [present - future] (FromToday)
-@value = the number of your @interval that you are adding/subtracting.
+
+  - *name* = The name that you want to give the preset. i.e. "Past Month"
+  - *interval* = The interval in which you want to add/subtract the value from today.
+  - *presetRelativeToToday* = whether it is a range from [past - present] (ToToday) or [present - future] (FromToday)
+  - *value* = the number of your @interval that you are adding/subtracting.
 
 
 ## Example
 
-{ name = "Past Month"
-, interval = Months
-, presetRelativeToday = ToToday
-, value = 1
-}
+    { name = "Past Month"
+    , interval = Months
+    , presetRelativeToday = ToToday
+    , value = 1
+    }
 
 -}
 type alias PresetSetting =
@@ -182,8 +179,10 @@ type alias PresetSetting =
 
 
 {-| A type that represents a preset daterange.
-@name = Name of the preset. i.e. "Past Month"
-@dateRange = The daterange that is selected when selecting the preset.
+
+  - *name* = Name of the preset. i.e. "Past Month"
+  - *dateRange* = The daterange that is selected when selecting the preset.
+
 -}
 type alias Preset =
     { name : String
@@ -192,14 +191,16 @@ type alias Preset =
 
 
 {-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
-@Off = no restrictions, any date to any date can be chosen.
-@ToPresent = from any date in the past up to today (including today)
-@FromPresent = from today to any date in the future
-@Past = from any date in the past up to yesterday (excluding today)
-@Future = from tomorrow up to any date in the future
-@Between date date = only between the two given dates [start - end] (inclusive)
-@To date = from any date in the past up to the given date (inclusive)
-@From date = from the given date up to any date in the future (inclusive)
+
+  - *Off* = no restrictions, any date to any date can be chosen.
+  - *ToPresent* = from any date in the past up to today (including today)
+  - *FromPresent* = from today to any date in the future
+  - *Past* = from any date in the past up to yesterday (excluding today)
+  - *Future* = from tomorrow up to any date in the future
+  - *Between* date date = only between the two given dates [start - end] (inclusive)
+  - *To* date = from any date in the past up to the given date (inclusive)
+  - *From* date = from the given date up to any date in the future (inclusive)
+
 -}
 type RestrictedDateRange
     = Off
@@ -422,8 +423,7 @@ mkPresetFromDates name start end =
 
 {-| A function that creates a DateRange by taking in two dates (start and end).
 
-
-## This function assumes that start <= end
+This function assumes that start <= end
 
 -}
 mkDateRange : Date -> Date -> DateRange

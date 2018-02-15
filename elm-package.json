@@ -7,7 +7,8 @@
         "src"
     ],
     "exposed-modules": [
-        "DateRangePicker"
+        "DateRangePicker",
+        "DateRangePicker.Date"
     ],
     "dependencies": {
         "elm-community/elm-time": "1.0.10 <= v < 2.0.0",

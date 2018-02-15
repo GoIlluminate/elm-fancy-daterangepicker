@@ -24,11 +24,7 @@ module DateRangePicker.Date
 
 {-| A custom Date Helper Library.
 
-@docs initDate, mkDate, dateTuple,
-@docs formatDate, formatDay, formatMonth
-@docs dayToInt, dayFromInt, monthToInt, monthFromInt
-@docs daysInMonth, daysInRange, startOfMonth, endOfMonth
-@docs addDays, subDays, addMonths, subMonths, addYears, subYears
+@docs initDate, mkDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, dayFromInt, monthToInt, monthFromInt, daysInMonth, datesInRange, startOfMonth, endOfMonth, addDays, subDays, addMonths, subMonths, addYears, subYears
 
 -}
 
@@ -55,7 +51,9 @@ initDate =
 
 
 {-| A function to format a Date into a string.
-Ex. Feb 15, 2018
+
+  - Ex. Feb 15, 2018
+
 -}
 formatDate : Date -> String
 formatDate date =
@@ -69,7 +67,9 @@ formatDate date =
 
 
 {-| A function that takes a Date.Day and formats it into the abbreviated string.
-Ex. Mon -> "Mo"
+
+  - Ex. Mon -> "Mo"
+
 -}
 formatDay : Date.Day -> String
 formatDay day =
@@ -97,7 +97,9 @@ formatDay day =
 
 
 {-| A function that formats a Month into the full string.
-Ex. Jan -> "January"
+
+  - Ex. Jan -> "January"
+
 -}
 formatMonth : Month -> String
 formatMonth month =
@@ -164,8 +166,7 @@ dateTuple date =
     ( year date, monthToInt <| month date, day date )
 
 
-{-| An opaque function that takes a function f, and
-an integer n, then repeats f, n times.
+{-| An opaque function that takes a function f, and an integer n, then repeats f, n times.
 -}
 repeat : (a -> a) -> Int -> a -> a
 repeat f =
@@ -179,16 +180,14 @@ repeat f =
         go
 
 
-{-| A function that takes a Date and returns the date representing the first of
-that month.
+{-| A function that takes a Date and returns the date representing the first of that month.
 -}
 startOfMonth : Date -> Date
 startOfMonth date =
     mkDate (year date) (month date) 1
 
 
-{-| A function that takes a Date and returns the date representing the end of
-that month.
+{-| A function that takes a Date and returns the date representing the end of that month.
 -}
 endOfMonth : Date -> Date
 endOfMonth date =
@@ -202,9 +201,10 @@ endOfMonth date =
         mkDate y m (daysInMonth y m)
 
 
-{-| A function that returns a date given a starting date
-and the number of days to subtract from that starting date.
-Ex. subDays 7 Date
+{-| A function that returns a date given a starting date and the number of days to subtract from that starting date.
+
+  - Ex. subDays 7 Date
+
 -}
 subDays : Int -> Date -> Date
 subDays =
@@ -240,9 +240,10 @@ subDay date =
             mkDate year month day
 
 
-{-| A function that returns a date given a starting date
-and the number of days to add to that starting date.
-Ex. addDays 7 Date
+{-| A function that returns a date given a starting date and the number of days to add to that starting date.
+
+  - Ex. addDays 7 Date
+
 -}
 addDays : Int -> Date -> Date
 addDays =
@@ -281,9 +282,10 @@ addDay date =
             mkDate year month day
 
 
-{-| A function that returns a date given a starting date
-and the number of months to add to that starting date.
-Ex. addMonths 2 Date
+{-| A function that returns a date given a starting date and the number of months to add to that starting date.
+
+  - Ex. addMonths 2 Date
+
 -}
 addMonths : Int -> Date -> Date
 addMonths =
@@ -322,9 +324,10 @@ addMonth date =
         mkDate newYear newMonth newDay
 
 
-{-| A function that returns a date given a starting date
-and the number of months to subtract from that starting date.
-Ex. subMonths 2 Date
+{-| A function that returns a date given a starting date and the number of months to subtract from that starting date.
+
+  - Ex. subMonths 2 Date
+
 -}
 subMonths : Int -> Date -> Date
 subMonths =
@@ -363,9 +366,10 @@ subMonth date =
         mkDate newYear newMonth newDay
 
 
-{-| A function that returns a date given a starting date
-and the number of years to subtract from that starting date.
-Ex. subYears 2 Date
+{-| A function that returns a date given a starting date and the number of years to subtract from that starting date.
+
+  - Ex. subYears 2 Date
+
 -}
 subYears : Int -> Date -> Date
 subYears =
@@ -389,9 +393,10 @@ subYear date =
         mkDate year month day
 
 
-{-| A function that returns a date given a starting date
-and the number of years to add to that starting date.
-Ex. addYears 2 Date
+{-| A function that returns a date given a starting date and the number of years to add to that starting date.
+
+  - Ex. addYears 2 Date
+
 -}
 addYears : Int -> Date -> Date
 addYears =
@@ -415,10 +420,11 @@ addYear date =
         mkDate year month day
 
 
-{-| A function that takes an Int for the day and returns a string,
-padding single digit days.
-Ex. dayToString 2 -> "02"
-Ex. dayToString 11 -> "11"
+{-| A function that takes an Int for the day and returns a string, padding single digit days.
+
+  - Ex. dayToString 2 -> "02"
+  - Ex. dayToString 11 -> "11"
+
 -}
 dayToString : Int -> String
 dayToString day =
@@ -429,8 +435,10 @@ dayToString day =
 
 
 {-| A function that takes a Day and returns it as an integer.
-Sun - Sat
-1 - 7
+
+  - Sun - Sat
+  - 1 - 7
+
 -}
 dayToInt : Date.Day -> Int
 dayToInt day =
@@ -457,8 +465,7 @@ dayToInt day =
             7
 
 
-{-| A function that gets the day represented as an int and returns
-the day of the week.
+{-| A function that gets the day represented as an int and returns the day of the week.
 -}
 dayFromInt : Int -> Date.Day
 dayFromInt day =
@@ -488,10 +495,11 @@ dayFromInt day =
             Debug.crash ("dayFromInt: invalid day: " ++ toString day)
 
 
-{-| A function that takes a Month and returns a string represented as a number,
-padding single digit months.
-Ex. monthToString Jan -> "01"
-Ex. monthToString Dec -> "12"
+{-| A function that takes a Month and returns a string represented as a number, padding single digit months.
+
+  - Ex. monthToString Jan -> "01"
+  - Ex. monthToString Dec -> "12"
+
 -}
 monthToString : Month -> String
 monthToString month =
@@ -531,8 +539,10 @@ succMonth month =
 
 
 {-| A function that takes a Month and returns it as an Int.
-Ex. Jan -> 1
-Ex. Dec -> 12
+
+  - Ex. Jan -> 1
+  - Ex. Dec -> 12
+
 -}
 monthToInt : Month -> Int
 monthToInt month =
@@ -575,8 +585,10 @@ monthToInt month =
 
 
 {-| A function that takes an Int and returns the corresponding month.
-Ex. 1 -> Jan
-Ex. 12 -> Dec
+
+  - Ex. 1 -> Jan
+  - Ex. 12 -> Dec
+
 -}
 monthFromInt : Int -> Month
 monthFromInt month =
