@@ -46,7 +46,7 @@ import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, va
 import Html.Events exposing (onClick, onDoubleClick, on, onBlur, onInput, onFocus, onWithOptions)
 import Task
 import List.Extra as LE
-import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRangeIncl, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth, subDays, addDays, subMonths, addMonths, subYears, addYears)
+import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRange, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth, subDays, addDays, subMonths, addMonths, subYears, addYears)
 import Json.Decode as Json
 
 
@@ -1278,7 +1278,7 @@ prepareYear date =
             mkDate yr Dec 31
 
         dates =
-            datesInRangeIncl start end
+            datesInRange start end
     in
         { name = toString yr
         , year = yr
