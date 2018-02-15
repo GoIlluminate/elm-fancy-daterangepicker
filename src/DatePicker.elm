@@ -10,7 +10,7 @@ module DatePicker
         , Preset
         , RestrictedDateRange(..)
         , DateRange
-        , DateRangePicker
+        , DatePicker
         , mkPresetFromDateRange
         , mkPresetFromDates
         , mkDateRange
@@ -229,8 +229,8 @@ type alias EnabledDateRange =
 
 {-| The DateRangePicker model.
 -}
-type DateRangePicker
-    = DateRangePicker Model
+type DatePicker
+    = DatePicker Model
 
 
 {-| An opaque type to represent the full year that the daterangepicker is using.
@@ -584,9 +584,9 @@ defaultPresetOptions =
 the returned command in order to set the current date and for the
 daterangepicker to behave correctly.
 -}
-init : ( DateRangePicker, Cmd Msg )
+init : ( DatePicker, Cmd Msg )
 init =
-    ( DateRangePicker initModel
+    ( DatePicker initModel
     , initCmd
     )
 
@@ -618,8 +618,8 @@ initCmd =
 
 {-| The daterangepicker update function.
 -}
-update : Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
-update msg (DateRangePicker ({ forceOpen, settings } as model)) =
+update : Msg -> DatePicker -> ( DatePicker, Cmd Msg )
+update msg (DatePicker ({ forceOpen, settings } as model)) =
     let
         ( newModel, cmds ) =
             case msg of
@@ -724,36 +724,36 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
 {-| Expose if the daterange picker is open
 -}
-isOpen : DateRangePicker -> Bool
-isOpen (DateRangePicker model) =
+isOpen : DatePicker -> Bool
+isOpen (DatePicker model) =
     model.open
 
 
 {-| Expose the current selected daterange.
 -}
-getDate : DateRangePicker -> Maybe Date
-getDate (DateRangePicker model) =
+getDate : DatePicker -> Maybe Date
+getDate (DatePicker model) =
     model.date
 
 
 {-| Sets the current date for the datepicker.
 -}
-setDate : Date -> DateRangePicker -> DateRangePicker
-setDate date (DateRangePicker model) =
-    DateRangePicker { model | date = Just (getNewDate model date) }
+setDate : Date -> DatePicker -> DatePicker
+setDate date (DatePicker model) =
+    DatePicker { model | date = Just (getNewDate model date) }
 
 
 {-| Sets the settings for the daterange picker
 -}
-setSettings : Settings -> DateRangePicker -> DateRangePicker
-setSettings settings (DateRangePicker model) =
-    DateRangePicker { model | settings = settings }
+setSettings : Settings -> DatePicker -> DatePicker
+setSettings settings (DatePicker model) =
+    DatePicker { model | settings = settings }
 
 
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
-view : DateRangePicker -> Html Msg
-view (DateRangePicker ({ open, settings } as model)) =
+view : DatePicker -> Html Msg
+view (DatePicker ({ open, settings } as model)) =
     let
         potentialInputId =
             settings.inputId
@@ -1380,6 +1380,6 @@ formatDateRange dateRange =
     ( model, Cmd.batch cmds )
 
 
-(!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
+(!>) : Model -> List (Cmd Msg) -> ( DatePicker, Cmd Msg )
 (!>) model cmds =
-    ( DateRangePicker model, Cmd.batch cmds )
+    ( DatePicker model, Cmd.batch cmds )

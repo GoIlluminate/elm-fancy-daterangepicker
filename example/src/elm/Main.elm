@@ -5,15 +5,18 @@ import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
 import DateRangePicker exposing (defaultSettings, DateRange, getDateRange, setSettings, setDateRange, mkDateRange, RestrictedDateRange(Off, ToPresent, FromPresent, Past, Future, Between, To, From))
 import DateRangePicker.Date exposing (mkDate, monthToInt)
+import DatePicker
 
 
 type Msg
     = ToDateRangePicker DateRangePicker.Msg
+    | ToDatePicker DatePicker.Msg
 
 
 type alias Model =
     { dateRange : Maybe DateRange
     , dateRangePicker : DateRangePicker.DateRangePicker
+    , datePicker : DatePicker.DatePicker
     }
 
 
@@ -23,14 +26,21 @@ init =
         ( dateRangePicker_, dateRangePickerFx ) =
             DateRangePicker.init
 
+        ( datePicker_, datePickerFx ) =
+            DatePicker.init
+
         dateRangePicker =
             dateRangePicker_
                 |> setSettings (getSettings True)
+
+        datePicker =
+            datePicker_
     in
         { dateRange = Nothing
         , dateRangePicker = dateRangePicker
+        , datePicker = datePicker
         }
-            ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
+            ! [ Cmd.map ToDateRangePicker dateRangePickerFx, Cmd.map ToDatePicker datePickerFx ]
 
 
 getSettings : Bool -> DateRangePicker.Settings
@@ -45,7 +55,7 @@ getSettings useDefault =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ dateRange, dateRangePicker } as model) =
+update msg ({ dateRange, dateRangePicker, datePicker } as model) =
     case msg of
         ToDateRangePicker msg ->
             let
@@ -58,12 +68,23 @@ update msg ({ dateRange, dateRangePicker } as model) =
                 }
                     ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
+        ToDatePicker msg ->
+            let
+                ( newDatePicker, datePickerFx ) =
+                    DatePicker.update msg datePicker
+            in
+                { model
+                    | datePicker = newDatePicker
+                }
+                    ! [ Cmd.map ToDatePicker datePickerFx ]
+
 
 view : Model -> Html Msg
-view ({ dateRange, dateRangePicker } as model) =
+view ({ dateRange, dateRangePicker, datePicker } as model) =
     div [ class "date-wrapper" ]
         [ div [] [ text <| printDateRange dateRange ]
         , DateRangePicker.view dateRangePicker |> Html.map ToDateRangePicker
+        , DatePicker.view datePicker |> Html.map ToDatePicker
         ]
 
 
