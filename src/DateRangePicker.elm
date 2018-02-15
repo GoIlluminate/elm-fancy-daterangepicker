@@ -1,26 +1,29 @@
 module DateRangePicker
     exposing
         ( Msg
-        , DateRangePicker
         , Settings
-        , PresetOption(..)
-        , DateRange
         , PresetOptions
-        , Preset
+        , PresetOption(..)
+        , PresetInterval(..)
+        , PresetRelativeToToday(..)
         , PresetSetting
-        , defaultPresetOptions
-        , defaultPresets
-        , mkDateRange
+        , Preset
+        , RestrictedDateRange(..)
+        , DateRange
+        , DateRangePicker
         , mkPresetFromDateRange
         , mkPresetFromDates
+        , mkDateRange
+        , defaultPresets
+        , defaultSettings
+        , defaultPresetOptions
         , init
         , update
-        , defaultSettings
         , isOpen
-        , view
         , getDateRange
         , setDateRange
         , setSettings
+        , view
         )
 
 {-| A customizable daterangepicker component.
@@ -31,12 +34,12 @@ module DateRangePicker
 
 # Settings
 
-@docs Settings, defaultSettings
+@docs Settings, RestrictedDateRange, defaultSettings
 
 
 ## Presets
 
-@docs PresetOptions, PresetOption, Preset, PresetSetting, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
+@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
 
 -}
 
@@ -68,7 +71,7 @@ type Msg
     | TogglePresets
 
 
-{-| The model to be used within the DateRangePicker.
+{-| The opaque model to be used within the DateRangePicker.
 -}
 type alias Model =
     { today : Date
@@ -590,7 +593,7 @@ init =
     )
 
 
-{-| The inital model used within the inital state.
+{-| The opaque inital model used within the inital state.
 -}
 initModel : Model
 initModel =
@@ -609,7 +612,7 @@ initModel =
     }
 
 
-{-| The initial command to get the current date, used within the
+{-| The opaque initial command to get the current date, used within the
 initial state.
 -}
 initCmd : Cmd Msg
@@ -1437,6 +1440,17 @@ chunksOfLeft k xs =
             [ xs ]
 
 
+{-| An opaque function that formats a daterange to a string.
+-}
+formatDateRange : DateRange -> String
+formatDateRange dateRange =
+    String.concat
+        [ formatDate dateRange.start
+        , " - "
+        , formatDate dateRange.end
+        ]
+
+
 (?>) : Maybe a -> a -> a
 (?>) =
     flip Maybe.withDefault
@@ -1470,12 +1484,3 @@ chunksOfLeft k xs =
 (!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
 (!>) model cmds =
     ( DateRangePicker model, Cmd.batch cmds )
-
-
-formatDateRange : DateRange -> String
-formatDateRange dateRange =
-    String.concat
-        [ formatDate dateRange.start
-        , " - "
-        , formatDate dateRange.end
-        ]
