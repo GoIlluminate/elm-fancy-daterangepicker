@@ -857,7 +857,9 @@ view (DateRangePicker ({ open, settings } as model)) =
                     ++ settings.inputAttributes
                     ++ potentialInputId
                 )
-                [ model.inputText ?> settings.placeholder |> text ]
+                [ i [ class "fa fa-calendar" ] []
+                , model.inputText ?> settings.placeholder |> text
+                ]
     in
         div [ class "elm-daterangepicker--container" ]
             [ dateInput
@@ -917,9 +919,9 @@ getCalendar model =
 getHeader : Html Msg
 getHeader =
     div [ class "elm-daterangepicker--header" ]
-        [ button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
+        [ button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ i [ class "fa fa-check" ] [], text "Done" ]
+        , button [ onClick TogglePresets, class "elm-daterangepicker--presets-btn" ] [ i [ class "fa fa-cog" ] [], text "Presets" ]
         , button [ onClick Reset, class "elm-daterangepicker--reset-btn" ] [ i [ class "fa fa-ban" ] [], text "Reset" ]
-        , button [ onClick Done, class "elm-daterangepicker--done-btn" ] [ i [ class "fa fa-check" ] [], text "Done" ]
         ]
 
 

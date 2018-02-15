@@ -69,12 +69,15 @@ view ({ dateRange, dateRangePicker } as model) =
 
 printDateRange : Maybe DateRange -> String
 printDateRange dateRange =
-    case dateRange of
-        Nothing ->
-            "No date selected."
+    ""
 
-        Just a ->
-            formatDateRange a
+
+
+-- case dateRange of
+--     Nothing ->
+--         "No date selected."
+--     Just a ->
+--         formatDateRange2 a
 
 
 formatDateRange : DateRangePicker.DateRange -> String
