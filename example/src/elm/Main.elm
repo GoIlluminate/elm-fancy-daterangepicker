@@ -3,7 +3,7 @@ module Main exposing (..)
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (defaultSettings, DateRange, getDateRange, setSettings, setDateRange, mkDateRange)
+import DateRangePicker exposing (defaultSettings, DateRange, getDateRange, setSettings, setDateRange, mkDateRange, RestrictedDateRange(Off, ToPresent, FromPresent, Past, Future, Between, To, From))
 import DateRangePicker.Date exposing (mkDate, monthToInt)
 
 
@@ -42,7 +42,10 @@ getSettings useDefault =
     if useDefault then
         DateRangePicker.defaultSettings
     else
-        { defaultSettings | formatDateRange = formatDateRange }
+        { defaultSettings
+            | formatDateRange = formatDateRange
+            , restrictedDateRange = Off
+        }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -53,7 +56,11 @@ update msg ({ dateRange, dateRangePicker } as model) =
                 ( newDateRangePicker, dateRangePickerFx ) =
                     DateRangePicker.update msg dateRangePicker
             in
-                { model | dateRangePicker = newDateRangePicker, dateRange = getDateRange newDateRangePicker } ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
+                { model
+                    | dateRangePicker = newDateRangePicker
+                    , dateRange = getDateRange newDateRangePicker
+                }
+                    ! [ Cmd.map ToDateRangePicker dateRangePickerFx ]
 
 
 view : Model -> Html Msg
