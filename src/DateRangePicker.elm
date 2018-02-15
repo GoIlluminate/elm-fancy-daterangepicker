@@ -634,13 +634,24 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
                         enabledDateRange =
                             mkEnabledDateRangeFromSettings settings date
+
+                        newModel_ =
+                            { model
+                                | today = date
+                                , currentYear = prepareYear date
+                                , presets = presets
+                                , enabledDateRange = enabledDateRange
+                            }
+
+                        newDateRange =
+                            case model.dateRange of
+                                Just a ->
+                                    Just <| getNewDateRange newModel_ a
+
+                                Nothing ->
+                                    Nothing
                     in
-                        { model
-                            | today = date
-                            , currentYear = prepareYear date
-                            , presets = presets
-                            , enabledDateRange = enabledDateRange
-                        }
+                        { newModel_ | dateRange = newDateRange }
                             ! []
 
                 PrevYear ->
@@ -813,9 +824,9 @@ getDateRange (DateRangePicker model) =
 
 {-| Sets the current daterange for the daterangepicker.
 -}
-setDateRange : Maybe DateRange -> DateRangePicker -> DateRangePicker
+setDateRange : DateRange -> DateRangePicker -> DateRangePicker
 setDateRange dateRange (DateRangePicker model) =
-    DateRangePicker { model | dateRange = dateRange }
+    DateRangePicker { model | dateRange = Just (getNewDateRange model dateRange) }
 
 
 {-| Sets the settings for the daterange picker
@@ -1381,18 +1392,30 @@ getNewDateRange model dateRange =
                                 dateRange.start
                             else
                                 start
+
+                        newEnd =
+                            if dateRange.end $>= start then
+                                dateRange.end
+                            else
+                                start
                     in
-                        mkDateRange newStart dateRange.end
+                        mkDateRange newStart newEnd
 
                 ( Nothing, Just end ) ->
                     let
+                        newStart =
+                            if dateRange.start $<= end then
+                                dateRange.start
+                            else
+                                end
+
                         newEnd =
                             if dateRange.end $<= end then
                                 dateRange.end
                             else
                                 end
                     in
-                        mkDateRange dateRange.start newEnd
+                        mkDateRange newStart newEnd
 
                 ( Nothing, Nothing ) ->
                     dateRange

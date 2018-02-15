@@ -25,11 +25,9 @@ init =
 
         dateRangePicker =
             dateRangePicker_
+                |> setSettings (getSettings False)
                 |> setDateRange
-                    (Just <|
-                        mkDateRange (mkDate 2017 Jan 1) (mkDate 2017 Feb 2)
-                    )
-                |> setSettings (getSettings True)
+                    (mkDateRange (mkDate 2019 Jan 1) (mkDate 2019 Feb 2))
     in
         { dateRange = Nothing
         , dateRangePicker = dateRangePicker
@@ -44,7 +42,7 @@ getSettings useDefault =
     else
         { defaultSettings
             | formatDateRange = formatDateRange
-            , restrictedDateRange = Off
+            , restrictedDateRange = Past
         }
 
 
