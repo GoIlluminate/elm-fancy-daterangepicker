@@ -41,6 +41,9 @@ module DatePicker
 
 -}
 
+import Html.Attributes as Attrs
+import Html.Events as Events
+import Task
 import Date
     exposing
         ( Date
@@ -56,23 +59,11 @@ import Html
         ( Html
         , div
         , text
-        , table
-        , thead
-        , th
-        , tbody
-        , tr
-        , td
-        , p
-        , h1
         , input
         , button
-        , a
         , i
         , span
         )
-import Html.Attributes as Attrs
-import Html.Events as Events
-import Task
 import DateRangePicker.Date
     exposing
         ( initDate
@@ -118,6 +109,10 @@ import DateRangePicker.Common.Internal
         , padMonthLeft
         , padMonthRight
         , onPicker
+        , mkEnabledDateRangeFromRestrictedDateRange
+        , mkClass
+        , isDisabledDate
+        , getDaysOfWeek
         )
 
 
@@ -268,75 +263,6 @@ type alias DateRange =
 -}
 type DatePicker
     = DatePicker Model
-
-
-{-| An opaque function that makes the EnabledDateRange from settings.
-
-
-## EnabledDateRange is Nothing if RestrictedDateRange is Off
-
--}
-mkEnabledDateRangeFromSettings : Settings -> Date -> Maybe EnabledDateRange
-mkEnabledDateRangeFromSettings settings today =
-    case settings.restrictedDateRange of
-        Off ->
-            mkEnabledDateRange Nothing Nothing
-
-        ToPresent ->
-            mkEnabledDateRange Nothing (Just today)
-
-        FromPresent ->
-            mkEnabledDateRange (Just today) Nothing
-
-        Past ->
-            let
-                yesterday =
-                    subDays 1 today
-            in
-                mkEnabledDateRange Nothing (Just yesterday)
-
-        Future ->
-            let
-                tomorrow =
-                    addDays 1 today
-            in
-                mkEnabledDateRange (Just tomorrow) Nothing
-
-        Between start end ->
-            mkEnabledDateRange (Just start) (Just end)
-
-        To date ->
-            mkEnabledDateRange Nothing (Just date)
-
-        From date ->
-            mkEnabledDateRange (Just date) Nothing
-
-
-{-| An opaque function that makes an EnabledDateRange from two Maybe Dates
--}
-mkEnabledDateRange : Maybe Date -> Maybe Date -> Maybe EnabledDateRange
-mkEnabledDateRange start end =
-    case ( start, end ) of
-        ( Just a, Just b ) ->
-            Just <|
-                { start = Just <| mkDate (year a) (month a) (day a)
-                , end = Just <| mkDate (year b) (month b) (day b)
-                }
-
-        ( Just a, Nothing ) ->
-            Just <|
-                { start = Just <| mkDate (year a) (month a) (day a)
-                , end = Nothing
-                }
-
-        ( Nothing, Just b ) ->
-            Just <|
-                { start = Nothing
-                , end = Just <| mkDate (year b) (month b) (day b)
-                }
-
-        ( Nothing, Nothing ) ->
-            Nothing
 
 
 {-| An opaque function to make presets from settings and a date
@@ -637,7 +563,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                             mkPresets settings date
 
                         enabledDateRange =
-                            mkEnabledDateRangeFromSettings settings date
+                            mkEnabledDateRangeFromRestrictedDateRange settings.restrictedDateRange date
 
                         newModel_ =
                             { model
@@ -786,7 +712,7 @@ view (DatePicker ({ open, settings } as model)) =
         div [ Attrs.class "elm-daterangepicker--container" ]
             [ dateInput
             , if open then
-                dateRangePicker model
+                datePicker model
               else
                 text ""
             ]
@@ -794,8 +720,8 @@ view (DatePicker ({ open, settings } as model)) =
 
 {-| An opaque function to create the daterange picker view.
 -}
-dateRangePicker : Model -> Html Msg
-dateRangePicker model =
+datePicker : Model -> Html Msg
+datePicker model =
     let
         content =
             case model.showPresets of
@@ -854,8 +780,8 @@ getPreset : Model -> Preset -> Html Msg
 getPreset model preset =
     let
         isDisabledPreset =
-            isDisabledDate model preset.dateRange.start
-                && isDisabledDate model preset.dateRange.end
+            isDisabledDate model.enabledDateRange preset.dateRange.start
+                && isDisabledDate model.enabledDateRange preset.dateRange.end
 
         setDateRange =
             case isDisabledPreset of
@@ -891,8 +817,8 @@ getYearHeader model =
             mkDate model.currentYear.year Dec 31
 
         isDisabledYear =
-            isDisabledDate model start
-                && isDisabledDate model end
+            isDisabledDate model.enabledDateRange start
+                && isDisabledDate model.enabledDateRange end
 
         setYearRange =
             case isDisabledYear of
@@ -958,8 +884,8 @@ getQuarter model qtr =
                             ( Just start, Just end ) ->
                                 let
                                     isDisabledQtr =
-                                        isDisabledDate model start
-                                            && isDisabledDate model end
+                                        isDisabledDate model.enabledDateRange start
+                                            && isDisabledDate model.enabledDateRange end
 
                                     setQtrDateRange =
                                         case isDisabledQtr of
@@ -1020,8 +946,8 @@ getMonth model m =
                         endOfMonth a
 
                     isDisabledMonth =
-                        isDisabledDate model startOfMonth_
-                            && isDisabledDate model endOfMonth_
+                        isDisabledDate model.enabledDateRange startOfMonth_
+                            && isDisabledDate model.enabledDateRange endOfMonth_
 
                     setMonthDateRange =
                         case isDisabledMonth of
@@ -1059,31 +985,13 @@ getMonth model m =
                 text ""
 
 
-{-| An opaque function that gets the Days of the Week Html Msg for the calendar.
--}
-getDaysOfWeek : List (Html Msg)
-getDaysOfWeek =
-    let
-        days =
-            List.range 1 7
-
-        go n =
-            div [ Attrs.class "elm-daterangepicker--dow" ]
-                [ text <|
-                    formatDay <|
-                        dayFromInt n
-                ]
-    in
-        List.map go days
-
-
 {-| An opaque function that gets the Html Msg for a Day.
 -}
 getDay : Model -> Date -> Html Msg
 getDay model date =
     let
         isDisabledDate_ =
-            isDisabledDate model date
+            isDisabledDate model.enabledDateRange date
 
         className =
             String.join " " <|
@@ -1106,40 +1014,6 @@ getDay model date =
                 toString <|
                     day date
             ]
-
-
-{-| An opaque function that returns a class name or an empty string
-if the bool is true or not
--}
-mkClass : String -> Bool -> String
-mkClass cls bool =
-    if bool then
-        cls
-    else
-        ""
-
-
-{-| An opaque function to check if the given date is a disabled date.
--}
-isDisabledDate : Model -> Date -> Bool
-isDisabledDate model date =
-    case model.enabledDateRange of
-        Nothing ->
-            False
-
-        Just dateRange ->
-            case ( dateRange.start, dateRange.end ) of
-                ( Just start, Just end ) ->
-                    not <| inRange date <| mkDateRange start end
-
-                ( Just start, Nothing ) ->
-                    date $< start
-
-                ( Nothing, Just end ) ->
-                    date $> (addDays 1 end)
-
-                ( Nothing, Nothing ) ->
-                    False
 
 
 {-| An opaque function the check if the given date is in the selected range.
