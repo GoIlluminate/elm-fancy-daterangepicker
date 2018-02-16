@@ -81,10 +81,15 @@ update msg ({ dateRange, dateRangePicker, datePicker } as model) =
 
 view : Model -> Html Msg
 view ({ dateRange, dateRangePicker, datePicker } as model) =
-    div [ class "date-wrapper" ]
-        [ div [] [ text <| printDateRange dateRange ]
-        , DateRangePicker.view dateRangePicker |> Html.map ToDateRangePicker
-        , DatePicker.view datePicker |> Html.map ToDatePicker
+    div [ class "main" ]
+        [ div [ class "date-range-picker-wrapper" ]
+            [ div [] [ text "Date Range Picker" ]
+            , DateRangePicker.view dateRangePicker |> Html.map ToDateRangePicker
+            ]
+        , div [ class "single-date-picker-wrapper" ]
+            [ div [] [ text "Single Date Picker" ]
+            , DatePicker.view datePicker |> Html.map ToDatePicker
+            ]
         ]
 
 

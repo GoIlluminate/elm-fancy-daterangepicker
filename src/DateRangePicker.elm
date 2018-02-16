@@ -562,7 +562,7 @@ presetLastMonth today =
 -}
 defaultSettings : Settings
 defaultSettings =
-    { placeholder = "Select a date..."
+    { placeholder = "Select a date range..."
     , inputName = Nothing
     , inputId = Nothing
     , inputAttributes = []
