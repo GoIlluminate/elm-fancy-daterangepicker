@@ -3,9 +3,10 @@ module Main exposing (..)
 import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (defaultSettings, DateRange, getDateRange, setSettings, setDateRange, mkDateRange, RestrictedDateRange(Off, ToPresent, FromPresent, Past, Future, Between, To, From))
+import DateRangePicker exposing (defaultSettings, getDateRange, setSettings, setDateRange)
 import DateRangePicker.Date exposing (mkDate, monthToInt)
 import DatePicker
+import DateRangePicker.Common exposing (DateRange, mkDateRange, RestrictedDateRange(Off, ToPresent, FromPresent, Past, Future, Between, To, From))
 
 
 type Msg
@@ -106,7 +107,7 @@ printDateRange dateRange =
 --         formatDateRange2 a
 
 
-formatDateRange : DateRangePicker.DateRange -> String
+formatDateRange : DateRange -> String
 formatDateRange dateRange =
     String.concat
         [ "[ "

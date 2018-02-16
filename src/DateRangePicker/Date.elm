@@ -20,6 +20,11 @@ module DateRangePicker.Date
         , subMonths
         , addYears
         , subYears
+        , ($==)
+        , ($<=)
+        , ($>=)
+        , ($<)
+        , ($>)
         )
 
 {-| A custom Date Helper Library.
@@ -707,3 +712,28 @@ unsafeDate date =
 
         Ok date ->
             date
+
+
+($==) : Date -> Date -> Bool
+($==) a b =
+    Date.toTime a == Date.toTime b
+
+
+($<=) : Date -> Date -> Bool
+($<=) a b =
+    Date.toTime a <= Date.toTime b
+
+
+($>=) : Date -> Date -> Bool
+($>=) a b =
+    Date.toTime a >= Date.toTime b
+
+
+($<) : Date -> Date -> Bool
+($<) a b =
+    Date.toTime a < Date.toTime b
+
+
+($>) : Date -> Date -> Bool
+($>) a b =
+    Date.toTime a >= Date.toTime b

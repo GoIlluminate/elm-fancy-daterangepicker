@@ -8,12 +8,10 @@ module DatePicker
         , PresetRelativeToToday(..)
         , PresetSetting
         , Preset
-        , RestrictedDateRange(..)
         , DateRange
         , DatePicker
         , mkPresetFromDateRange
         , mkPresetFromDates
-        , mkDateRange
         , defaultPresets
         , defaultSettings
         , defaultPresetOptions
@@ -28,8 +26,8 @@ module DatePicker
 
 {-| A customizable daterangepicker component.
 
-@docs Msg, DateRangePicker, DateRange
-@docs init, update, isOpen, view, mkDateRange, getDate, setDate, setSettings
+@docs Msg, DateRangePicker
+@docs init, update, isOpen, view, getDate, setDate, setSettings
 
 
 # Settings
@@ -43,14 +41,97 @@ module DatePicker
 
 -}
 
-import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
-import Html exposing (Html, div, text, table, thead, th, tbody, tr, td, p, h1, input, button, a, i, span)
-import Html.Attributes as Attrs exposing (class, colspan, type_, placeholder, value, href)
-import Html.Events exposing (onClick, onDoubleClick, on, onBlur, onInput, onFocus, onWithOptions)
+import Date
+    exposing
+        ( Date
+        , Day(..)
+        , Month(..)
+        , day
+        , dayOfWeek
+        , month
+        , year
+        )
+import Html
+    exposing
+        ( Html
+        , div
+        , text
+        , table
+        , thead
+        , th
+        , tbody
+        , tr
+        , td
+        , p
+        , h1
+        , input
+        , button
+        , a
+        , i
+        , span
+        )
+import Html.Attributes as Attrs
+    exposing
+        ( class
+        , colspan
+        , type_
+        , placeholder
+        , value
+        , href
+        )
+import Html.Events
+    exposing
+        ( onClick
+        , onDoubleClick
+        , on
+        , onBlur
+        , onInput
+        , onFocus
+        , onWithOptions
+        )
 import Task
 import List.Extra as LE
-import DateRangePicker.Date exposing (initDate, mkDate, startOfMonth, endOfMonth, datesInRange, dayToInt, dayFromInt, formatDay, formatDate, formatMonth, daysInMonth, subDays, addDays, subMonths, addMonths, subYears, addYears)
+import DateRangePicker.Date
+    exposing
+        ( initDate
+        , mkDate
+        , startOfMonth
+        , endOfMonth
+        , datesInRange
+        , dayToInt
+        , dayFromInt
+        , formatDay
+        , formatDate
+        , formatMonth
+        , daysInMonth
+        , subDays
+        , addDays
+        , subMonths
+        , addMonths
+        , subYears
+        , addYears
+        , ($==)
+        , ($<=)
+        , ($>=)
+        , ($<)
+        , ($>)
+        )
 import Json.Decode as Json
+import DateRangePicker.Common
+    exposing
+        ( RestrictedDateRange(..)
+        , DateRange
+        , mkDateRange
+        )
+import DateRangePicker.Common.Internal
+    exposing
+        ( FullYear
+        , Quarter
+        , EnabledDateRange
+        , (?>)
+        , ($!)
+        , chunksOfLeft
+        )
 
 
 {-| An opaque type representing messages that are passed within the DateRangePicker.
@@ -188,29 +269,6 @@ type alias Preset =
     }
 
 
-{-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
-
-  - *Off* = no restrictions, any date to any date can be chosen.
-  - *ToPresent* = from any date in the past up to today (including today)
-  - *FromPresent* = from today to any date in the future
-  - *Past* = from any date in the past up to yesterday (excluding today)
-  - *Future* = from tomorrow up to any date in the future
-  - *Between* date date = only between the two given dates [start - end] (inclusive)
-  - *To* date = from any date in the past up to the given date (inclusive)
-  - *From* date = from the given date up to any date in the future (inclusive)
-
--}
-type RestrictedDateRange
-    = Off
-    | ToPresent
-    | FromPresent
-    | Past
-    | Future
-    | Between Date.Date Date.Date
-    | To Date.Date
-    | From Date.Date
-
-
 {-| A type representing a date range with a start date and end date.
 -}
 type alias DateRange =
@@ -219,35 +277,10 @@ type alias DateRange =
     }
 
 
-{-| An opaque type representing the enabled dates for the datepicker
--}
-type alias EnabledDateRange =
-    { start : Maybe Date
-    , end : Maybe Date
-    }
-
-
 {-| The DateRangePicker model.
 -}
 type DatePicker
     = DatePicker Model
-
-
-{-| An opaque type to represent the full year that the daterangepicker is using.
--}
-type alias FullYear =
-    { name : String
-    , year : Int
-    , quarters : List Quarter
-    }
-
-
-{-| An opaque type representing a quarter within the FullYear. Ex. (Jan, Feb, March) represents Q1.
--}
-type alias Quarter =
-    { name : String
-    , months : List (List Date)
-    }
 
 
 {-| An opaque function that makes the EnabledDateRange from settings.
@@ -416,18 +449,6 @@ mkPresetFromDates : String -> Date -> Date -> Preset
 mkPresetFromDates name start end =
     { name = name
     , dateRange = mkDateRange start end
-    }
-
-
-{-| A function that creates a DateRange by taking in two dates (start and end).
-
-This function assumes that start <= end
-
--}
-mkDateRange : Date -> Date -> DateRange
-mkDateRange start end =
-    { start = mkDate (year start) (month start) (day start)
-    , end = mkDate (year end) (month end) (day end)
     }
 
 
@@ -648,7 +669,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                                     Nothing
                     in
                         { newModel_ | date = newDate }
-                            ! []
+                            $! []
 
                 PrevYear ->
                     let
@@ -656,7 +677,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year - 1) Jan 1
                     in
-                        { model | currentYear = prevYear } ! []
+                        { model | currentYear = prevYear } $! []
 
                 NextYear ->
                     let
@@ -664,10 +685,10 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year + 1) Jan 1
                     in
-                        { model | currentYear = nextYear } ! []
+                        { model | currentYear = nextYear } $! []
 
                 SetDate date ->
-                    { model | date = Just date } ! []
+                    { model | date = Just date } $! []
 
                 Focus ->
                     let
@@ -684,16 +705,16 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                             , forceOpen = False
                             , currentYear = newYear
                         }
-                            ! []
+                            $! []
 
                 Blur ->
-                    { model | open = forceOpen } ! []
+                    { model | open = forceOpen } $! []
 
                 MouseDown ->
-                    { model | forceOpen = True } ! []
+                    { model | forceOpen = True } $! []
 
                 MouseUp ->
-                    { model | forceOpen = False } ! []
+                    { model | forceOpen = False } $! []
 
                 Done ->
                     let
@@ -702,22 +723,22 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                     in
                         case newModel.date of
                             Just a ->
-                                { newModel | currentYear = prepareYear a } ! []
+                                { newModel | currentYear = prepareYear a } $! []
 
                             Nothing ->
-                                newModel ! []
+                                newModel $! []
 
                 Reset ->
-                    initModel ! [ initCmd ]
+                    initModel $! [ initCmd ]
 
                 TogglePresets ->
-                    { model | showPresets = not model.showPresets } ! []
+                    { model | showPresets = not model.showPresets } $! []
 
                 DoNothing ->
-                    model ! []
+                    model $! []
 
                 _ ->
-                    model ! []
+                    model $! []
     in
         (updateInputText newModel) !> [ cmds ]
 
@@ -1308,32 +1329,6 @@ updateInputText model =
             { model | inputText = Nothing }
 
 
-{-| An opaque recursive function that chunks a list of a into a
-list of lists of a of equal chunks.
-
-
-## Example:
-
-    chunksOfLeft 3 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ] =
-        [ [ 1, 2, 3 ]
-        , [ 4.5, 6 ]
-        , [ 7, 8, 9 ]
-        , [ 10, 11, 12 ]
-        ]
-
--}
-chunksOfLeft : Int -> List a -> List (List a)
-chunksOfLeft k xs =
-    let
-        len =
-            List.length xs
-    in
-        if len > k then
-            List.take k xs :: chunksOfLeft k (List.drop k xs)
-        else
-            [ xs ]
-
-
 {-| An opaque function that formats a daterange to a string.
 -}
 formatDateRange : DateRange -> String
@@ -1343,41 +1338,6 @@ formatDateRange dateRange =
         , " - "
         , formatDate dateRange.end
         ]
-
-
-(?>) : Maybe a -> a -> a
-(?>) =
-    flip Maybe.withDefault
-
-
-($==) : Date -> Date -> Bool
-($==) a b =
-    Date.toTime a == Date.toTime b
-
-
-($<=) : Date -> Date -> Bool
-($<=) a b =
-    Date.toTime a <= Date.toTime b
-
-
-($>=) : Date -> Date -> Bool
-($>=) a b =
-    Date.toTime a >= Date.toTime b
-
-
-($<) : Date -> Date -> Bool
-($<) a b =
-    Date.toTime a < Date.toTime b
-
-
-($>) : Date -> Date -> Bool
-($>) a b =
-    Date.toTime a >= Date.toTime b
-
-
-(!) : Model -> List (Cmd Msg) -> ( Model, Cmd Msg )
-(!) model cmds =
-    ( model, Cmd.batch cmds )
 
 
 (!>) : Model -> List (Cmd Msg) -> ( DatePicker, Cmd Msg )
