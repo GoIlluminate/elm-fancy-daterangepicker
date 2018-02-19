@@ -24,6 +24,8 @@ module DatePicker
         , setInputName
         , setInputId
         , setInputAttributes
+        , setPresetOptions
+        , setRestrictedDateRange
         , view
         )
 
@@ -35,7 +37,7 @@ module DatePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputAttributes
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange
 
 
 ## Presets
@@ -673,6 +675,34 @@ setInputAttributes inputAttributes (DatePicker model) =
 
         newSettings =
             { settings | inputAttributes = inputAttributes }
+    in
+        DatePicker { model | settings = newSettings }
+
+
+{-| Sets the preset options for the datepicker.
+-}
+setPresetOptions : PresetOptions -> DatePicker -> DatePicker
+setPresetOptions presetOptions (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | presetOptions = presetOptions }
+    in
+        DatePicker { model | settings = newSettings }
+
+
+{-| Sets the restricted date range for the datepicker.
+-}
+setRestrictedDateRange : RestrictedDateRange -> DatePicker -> DatePicker
+setRestrictedDateRange restrictedDateRange (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | restrictedDateRange = restrictedDateRange }
     in
         DatePicker { model | settings = newSettings }
 
