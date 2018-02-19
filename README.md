@@ -341,4 +341,5 @@ This will:
 ## References
 
 When this package was first created, the [elm-community/elm-datepicker][elm-community-datepicker] package was referenced and some of the code/ideas were used.
+
 [elm-community-datepicker]: https://github.com/elm-community/elm-datepicker
