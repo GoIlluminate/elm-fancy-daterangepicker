@@ -1096,17 +1096,6 @@ updateInputText model =
             { model | inputText = Nothing }
 
 
-{-| An opaque function that formats a daterange to a string.
--}
-formatDateRange : DateRange -> String
-formatDateRange dateRange =
-    String.concat
-        [ formatDate dateRange.start
-        , " - "
-        , formatDate dateRange.end
-        ]
-
-
 (!>) : Model -> List (Cmd Msg) -> ( DatePicker, Cmd Msg )
 (!>) model cmds =
     ( DatePicker model, Cmd.batch cmds )

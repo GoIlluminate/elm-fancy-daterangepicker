@@ -27,6 +27,7 @@ module DateRangePicker
         , setInputAttributes
         , setPresetOptions
         , setRestrictedDateRange
+        , formatDateRange
         , view
         )
 
@@ -38,7 +39,7 @@ module DateRangePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange
 
 
 ## Presets
@@ -1318,7 +1319,7 @@ updateInputText model =
             { model | inputText = Nothing }
 
 
-{-| An opaque function that formats a daterange to a string.
+{-| A function that formats a daterange to a string.
 -}
 formatDateRange : DateRange -> String
 formatDateRange dateRange =
