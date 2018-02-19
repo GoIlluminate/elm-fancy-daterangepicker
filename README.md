@@ -322,3 +322,23 @@ from [here][scss].
 
 [compiled]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/css/daterangepicker.css
 [scss]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/css/daterangepicker.scss
+
+## Example
+
+### Prerequisites
+- [Ruby][ruby-link]
+- Rake `gem install rake`
+
+[ruby-link]: https://www.ruby-lang.org/en/documentation/installation/
+
+### Running the example
+To run the example run `rake`.
+This will:
+    - install all node modules
+    - install all elm packages
+    - run the webpack dev server with hmr on `localhost:8080`
+
+## References
+
+When this package was first created, the [elm-community/elm-datepicker][elm-community-datepicker] package was referenced and some of the code/ideas were used.
+[elm-community-datepicker]: https://github.com/elm-community/elm-datepicker
