@@ -20,6 +20,10 @@ module DatePicker
         , setDate
         , setSettings
         , setDateFormat
+        , setPlaceholder
+        , setInputName
+        , setInputId
+        , setInputAttributes
         , view
         )
 
@@ -31,7 +35,7 @@ module DatePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputAttributes
 
 
 ## Presets
@@ -615,6 +619,62 @@ setDateFormat dateFormat (DatePicker model) =
 setSettings : Settings -> DatePicker -> DatePicker
 setSettings settings (DatePicker model) =
     DatePicker { model | settings = settings }
+
+
+{-| Sets the placeholder for the datepicker.
+-}
+setPlaceholder : String -> DatePicker -> DatePicker
+setPlaceholder placeholder (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | placeholder = placeholder }
+    in
+        DatePicker { model | settings = newSettings }
+
+
+{-| Sets the name for the datepicker.
+-}
+setInputName : Maybe String -> DatePicker -> DatePicker
+setInputName inputName (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputName = inputName }
+    in
+        DatePicker { model | settings = newSettings }
+
+
+{-| Sets the id for the datepicker.
+-}
+setInputId : Maybe String -> DatePicker -> DatePicker
+setInputId inputId (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputId = inputId }
+    in
+        DatePicker { model | settings = newSettings }
+
+
+{-| Sets the input attributes for the datepicker.
+-}
+setInputAttributes : List (Html.Attribute Msg) -> DatePicker -> DatePicker
+setInputAttributes inputAttributes (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputAttributes = inputAttributes }
+    in
+        DatePicker { model | settings = newSettings }
 
 
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.

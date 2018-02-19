@@ -1,21 +1,25 @@
 $dp-ns: elm-daterangepicker-- !default;
-$bg-clr-hover: #ccc;
-$clr-disabled: grey;
-$clr-main: darkblue;
-$clr-secondary: white;
-$bg-clr-selected: grey;
+$dp-bg-clr-hover: #ccc;
+$dp-clr-disabled: grey;
+$dp-clr-main: darkblue;
+$dp-clr-secondary: white;
+$dp-bg-clr-selected: grey;
+$dp-arrow-left: '◄';
+$dp-arrow-right: '►';
+
+
 
 .#{$dp-ns}hover-date {
     cursor: pointer;
     &:hover {
-        background: $bg-clr-hover;
+        background: $dp-bg-clr-hover;
     }
 }
 
 .#{$dp-ns}disabled {
     text-decoration: line-through !important;
     cursor: not-allowed !important;
-    color: $clr-disabled !important;
+    color: $dp-clr-disabled !important;
 }
 
 .#{$dp-ns}container {
@@ -38,7 +42,7 @@ $bg-clr-selected: grey;
         font-size: 12px;
         display: grid;
         width: 500px;
-        background: $clr-main;
+        background: $dp-clr-main;
         padding: 5px;
         .#{$dp-ns}calendar {
             -webkit-touch-callout: none; /* iOS Safari */
@@ -57,18 +61,18 @@ $bg-clr-selected: grey;
                 display: grid;
                 grid-template-columns: 25px auto 25px;
                 text-align: center;
-                background: $clr-secondary;
-                color: $clr-main;
+                background: $dp-clr-secondary;
+                color: $dp-clr-main;
                 .#{$dp-ns}yr-btn {
                     @extend .#{$dp-ns}hover-date;
                     font-weight: bold;
                 }
                 .#{$dp-ns}yr-prev:before {
-                    content: '◄';
+                    content: $dp-arrow-left;
                 }
                 
                 .#{$dp-ns}yr-next:before {
-                    content: '►';
+                    content: $dp-arrow-right;
                 }
             }
             .#{$dp-ns}qtr-row {
@@ -81,9 +85,9 @@ $bg-clr-selected: grey;
                 .#{$dp-ns}qtr-label {
                     display: grid;
                     align-items: center;
-                    background: $clr-secondary;
+                    background: $dp-clr-secondary;
                     text-align: center;
-                    color: $clr-main;
+                    color: $dp-clr-main;
                     &:not(.#{$dp-ns}disabled) {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -100,35 +104,35 @@ $bg-clr-selected: grey;
                         grid-column-end: 8;
                     }
                     > div.dow:not(:first-child) {
-                        border-left: solid 1px $clr-secondary;
+                        border-left: solid 1px $dp-clr-secondary;
                     }
                     .#{$dp-ns}month-label {
-                        background: $clr-secondary;
-                        border-bottom: solid 1px $clr-main;
-                        color: $clr-main;
+                        background: $dp-clr-secondary;
+                        border-bottom: solid 1px $dp-clr-main;
+                        color: $dp-clr-main;
                         &:not(.#{$dp-ns}disabled) {
                             @extend .#{$dp-ns}hover-date;
                         }
                     }
                     .#{$dp-ns}dow {
-                        background: $clr-secondary;
-                        border-bottom: solid 1px $clr-main;
-                        color: $clr-main;
+                        background: $dp-clr-secondary;
+                        border-bottom: solid 1px $dp-clr-main;
+                        color: $dp-clr-main;
                     }
                     .#{$dp-ns}day-filler {
-                        background: $clr-secondary;
+                        background: $dp-clr-secondary;
                         opacity: 0.5;
                     }
                     .#{$dp-ns}day {
-                        color: $clr-main;
-                        background: $clr-secondary;
+                        color: $dp-clr-main;
+                        background: $dp-clr-secondary;
                         &:not(.#{$dp-ns}disabled) {
                             @extend .#{$dp-ns}hover-date;
                         }
                     }
                     .#{$dp-ns}selected-range {
-                        background: $bg-clr-selected;
-                        color: $clr-secondary;
+                        background: $dp-bg-clr-selected;
+                        color: $dp-clr-secondary;
                     }
                 }
             }
@@ -136,7 +140,7 @@ $bg-clr-selected: grey;
         .#{$dp-ns}header {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            color: $clr-main;
+            color: $dp-clr-main;
             padding-bottom: 5px;
         }
         .#{$dp-ns}presets {
@@ -156,8 +160,8 @@ $bg-clr-selected: grey;
                 @extend .#{$dp-ns}hover-date;
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                background: $clr-secondary;
-                color: $clr-main;
+                background: $dp-clr-secondary;
+                color: $dp-clr-main;
                 grid-gap: 5px;
                 padding: 5px;
                 font-weight: bold;

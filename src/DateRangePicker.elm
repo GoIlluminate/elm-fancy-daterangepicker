@@ -21,6 +21,10 @@ module DateRangePicker
         , setDateRange
         , setSettings
         , setDateRangeFormat
+        , setPlaceholder
+        , setInputName
+        , setInputId
+        , setInputAttributes
         , view
         )
 
@@ -32,7 +36,7 @@ module DateRangePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes
 
 
 ## Presets
@@ -773,7 +777,7 @@ setDateRange dateRange (DateRangePicker model) =
     DateRangePicker { model | dateRange = Just (getNewDateRange model dateRange) }
 
 
-{-| Sets the date range formatter for the datepicker.
+{-| Sets the date range formatter for the daterangepicker.
 -}
 setDateRangeFormat : (DateRange -> String) -> DateRangePicker -> DateRangePicker
 setDateRangeFormat dateRangeFormat (DateRangePicker model) =
@@ -783,6 +787,62 @@ setDateRangeFormat dateRangeFormat (DateRangePicker model) =
 
         newSettings =
             { settings | formatDateRange = dateRangeFormat }
+    in
+        DateRangePicker { model | settings = newSettings }
+
+
+{-| Sets the placeholder for the daterangepicker.
+-}
+setPlaceholder : String -> DateRangePicker -> DateRangePicker
+setPlaceholder placeholder (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | placeholder = placeholder }
+    in
+        DateRangePicker { model | settings = newSettings }
+
+
+{-| Sets the name for the daterangepicker.
+-}
+setInputName : Maybe String -> DateRangePicker -> DateRangePicker
+setInputName inputName (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputName = inputName }
+    in
+        DateRangePicker { model | settings = newSettings }
+
+
+{-| Sets the id for the daterangepicker.
+-}
+setInputId : Maybe String -> DateRangePicker -> DateRangePicker
+setInputId inputId (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputId = inputId }
+    in
+        DateRangePicker { model | settings = newSettings }
+
+
+{-| Sets the input attributes for the daterangepicker.
+-}
+setInputAttributes : List (Html.Attribute Msg) -> DateRangePicker -> DateRangePicker
+setInputAttributes inputAttributes (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputAttributes = inputAttributes }
     in
         DateRangePicker { model | settings = newSettings }
 
