@@ -320,5 +320,5 @@ The CSS for the date pickers are distributed separately.  You can grab
 the compiled CSS from [here][compiled] or you can grab the SCSS source
 from [here][scss].
 
-[compiled]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/example/src/static/styles/daterangepicker.css
-[scss]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/example/src/static/styles/daterangepicker.scss
+[compiled]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/css/daterangepicker.css
+[scss]: https://github.com/goilluminate/elm-daterangepicker/blob/initial/css/daterangepicker.scss
