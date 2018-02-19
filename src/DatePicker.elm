@@ -122,7 +122,6 @@ type Msg
     = InitCurrentDate Date
     | PrevYear
     | NextYear
-    | SetDateRange DateRange
     | SetDate Date
     | DoNothing
     | Focus
@@ -572,9 +571,6 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
 
                 DoNothing ->
                     model $! []
-
-                _ ->
-                    model $! []
     in
         (updateInputText newModel) !> [ cmds ]
 
@@ -745,25 +741,20 @@ getPreset model preset =
 getYearHeader : Model -> List (Html Msg)
 getYearHeader model =
     let
-        start =
+        date =
             mkDate model.currentYear.year Jan 1
 
-        end =
-            mkDate model.currentYear.year Dec 31
-
         isDisabledYear =
-            isDisabledDate model.enabledDateRange start
-                && isDisabledDate model.enabledDateRange end
+            isDisabledDate model.enabledDateRange date
 
-        setYearRange =
+        setDate =
             case isDisabledYear of
                 True ->
                     Events.onClick DoNothing
 
                 False ->
                     Events.onClick <|
-                        SetDateRange <|
-                            mkDateRange start end
+                        SetDate date
 
         yrLabelClassString =
             mkClassString
@@ -774,7 +765,7 @@ getYearHeader model =
     in
         [ div [ Attrs.class "elm-daterangepicker--yr-label-wrapper" ]
             [ div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", Events.onClick PrevYear ] []
-            , div [ Attrs.class yrLabelClassString, setYearRange ] [ text model.currentYear.name ]
+            , div [ Attrs.class yrLabelClassString, setDate ] [ text model.currentYear.name ]
             , div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-next", Events.onClick NextYear ] []
             ]
         ]
@@ -821,15 +812,14 @@ getQuarter model qtr =
                                         isDisabledDate model.enabledDateRange start
                                             && isDisabledDate model.enabledDateRange end
 
-                                    setQtrDateRange =
+                                    setQtrDate =
                                         case isDisabledQtr of
                                             True ->
                                                 Events.onClick DoNothing
 
                                             False ->
                                                 Events.onClick <|
-                                                    SetDateRange <|
-                                                        mkDateRange start end
+                                                    SetDate start
 
                                     classString =
                                         mkClassString
@@ -838,7 +828,7 @@ getQuarter model qtr =
                                             ]
 
                                     qtrLabel =
-                                        div [ Attrs.class classString, setQtrDateRange ] [ text qtr.name ]
+                                        div [ Attrs.class classString, setQtrDate ] [ text qtr.name ]
                                 in
                                     div [ Attrs.class "elm-daterangepicker--qtr-row" ] <|
                                         List.concat
@@ -882,15 +872,14 @@ getMonth model m =
                         isDisabledDate model.enabledDateRange startOfMonth_
                             && isDisabledDate model.enabledDateRange endOfMonth_
 
-                    setMonthDateRange =
+                    setMonthDate =
                         case isDisabledMonth of
                             True ->
                                 Events.onClick DoNothing
 
                             False ->
                                 Events.onClick <|
-                                    SetDateRange <|
-                                        mkDateRange (startOfMonth a) (endOfMonth a)
+                                    SetDate startOfMonth_
 
                     classString =
                         mkClassString
@@ -899,7 +888,7 @@ getMonth model m =
                             ]
 
                     monthDiv =
-                        div [ Attrs.class classString, setMonthDateRange ]
+                        div [ Attrs.class classString, setMonthDate ]
                             [ text <|
                                 formatMonth <|
                                     month a
