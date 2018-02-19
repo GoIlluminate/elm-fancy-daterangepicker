@@ -20,9 +20,6 @@ module DateRangePicker.Common.Internal
         )
 
 {-| A common internal library between DatePicker and DateRangePicker
-
-@docs FullYear, Quarter
-
 -}
 
 import List.Extra as LE
