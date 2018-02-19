@@ -1004,10 +1004,13 @@ getDay model date =
         isDisabledDate_ =
             isDisabledDate model.enabledDateRange date
 
+        isSelectedDate_ =
+            isSelectedDate model date
+
         classString =
             mkClassString
                 [ "elm-daterangepicker--day"
-                , mkClass "elm-daterangepicker--selected-range" <| isSelectedDate model date
+                , mkClass "elm-daterangepicker--selected-range" isSelectedDate_
                 , mkClass "elm-daterangepicker--disabled" isDisabledDate_
                 ]
 
@@ -1026,7 +1029,7 @@ getDay model date =
             ]
 
 
-{-| An opaque function the check if the given date is in the selected range.
+{-| An opaque function that checks if the given date is in the selected range.
 -}
 isSelectedDate : Model -> Date -> Bool
 isSelectedDate model date =

@@ -129,6 +129,9 @@ $dp-arrow-right: '►';
                         &:not(.#{$dp-ns}disabled) {
                             @extend .#{$dp-ns}hover-date;
                         }
+                        &.#{$dp-ns}hovered-range {
+                            background: $dp-bg-clr-hover;
+                        }
                     }
                     .#{$dp-ns}selected-range {
                         background: $dp-bg-clr-selected;

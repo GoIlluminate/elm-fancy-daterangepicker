@@ -140,6 +140,7 @@ type Msg
     | Done
     | Reset
     | TogglePresets
+    | HoverDay Date
 
 
 {-| The opaque model to be used within the DateRangePicker.
@@ -153,6 +154,7 @@ type alias Model =
     , dateRange : Maybe DateRange
     , startDate : Maybe Date
     , endDate : Maybe Date
+    , hoveredDate : Maybe Date
     , showPresets : Bool
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
@@ -500,7 +502,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = Off
+    , restrictedDateRange = ToPresent
     , formatDateRange = formatDateRange
     }
 
@@ -538,6 +540,7 @@ initModel =
     , dateRange = Nothing
     , startDate = Nothing
     , endDate = Nothing
+    , hoveredDate = Nothing
     , showPresets = False
     , presets = []
     , enabledDateRange = Nothing
@@ -616,6 +619,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                             , currentYear = prepareYear newDateRange.end
                             , open = False
                             , forceOpen = False
+                            , hoveredDate = Nothing
                         }
                             $! []
 
@@ -659,6 +663,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                             , dateRange = dateRange
                                             , open = False
                                             , forceOpen = False
+                                            , hoveredDate = Nothing
                                         }
                                             $! []
 
@@ -726,6 +731,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                                 | dateRange = Just newDateRange
                                                 , startDate = Nothing
                                                 , endDate = Nothing
+                                                , hoveredDate = Nothing
                                                 , currentYear = prepareYear newDateRange.end
                                                 , showPresets = False
                                             }
@@ -739,6 +745,9 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
                 TogglePresets ->
                     { model | showPresets = not model.showPresets } $! []
+
+                HoverDay date ->
+                    { model | hoveredDate = Just date } ! []
 
                 DoNothing ->
                     model $! []
@@ -1180,10 +1189,19 @@ getDay model date =
         isDisabledDate_ =
             isDisabledDate model.enabledDateRange date
 
+        isSelectedDateRange_ =
+            isSelectedDateRange model date
+
+        isHoveredDateRange_ =
+            isHoveredDateRange model date
+                && not isDisabledDate_
+                && not isSelectedDateRange_
+
         classString =
             mkClassString
                 [ "elm-daterangepicker--day"
-                , mkClass "elm-daterangepicker--selected-range" <| isSelectedDateRange model date
+                , mkClass "elm-daterangepicker--selected-range" isSelectedDateRange_
+                , mkClass "elm-daterangepicker--hovered-range" isHoveredDateRange_
                 , mkClass "elm-daterangepicker--disabled" isDisabledDate_
                 ]
 
@@ -1194,8 +1212,11 @@ getDay model date =
 
                 False ->
                     Events.onClick <| SetDate date
+
+        hoverDate =
+            Events.onMouseOver <| HoverDay date
     in
-        div [ Attrs.class classString, setDate ]
+        div [ Attrs.class classString, setDate, hoverDate ]
             [ text <|
                 toString <|
                     day date
@@ -1212,6 +1233,30 @@ isSelectedDateRange model date =
 
         Nothing ->
             isStartOrEnd date model
+
+
+{-| An opaque function that checks if the given date is between the start date and hovered date.
+-}
+isHoveredDateRange : Model -> Date -> Bool
+isHoveredDateRange model date =
+    let
+        hoveredDateRange =
+            case ( model.startDate, model.hoveredDate ) of
+                ( Just startDate, Just hoveredDate ) ->
+                    if hoveredDate $>= startDate then
+                        Just <| mkDateRange startDate hoveredDate
+                    else
+                        Nothing
+
+                ( _, _ ) ->
+                    Nothing
+    in
+        case hoveredDateRange of
+            Just a ->
+                inRange date a
+
+            Nothing ->
+                False
 
 
 {-| An opaque function that checks if the passed in date is equal

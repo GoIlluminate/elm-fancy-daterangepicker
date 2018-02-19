@@ -115,6 +115,9 @@
   color: darkblue;
   background: white;
 }
+.elm-daterangepicker--container .elm-daterangepicker--wrapper .elm-daterangepicker--calendar .elm-daterangepicker--qtr-row .elm-daterangepicker--month .elm-daterangepicker--day.elm-daterangepicker--hovered-range {
+  background: #ccc;
+}
 .elm-daterangepicker--container .elm-daterangepicker--wrapper .elm-daterangepicker--calendar .elm-daterangepicker--qtr-row .elm-daterangepicker--month .elm-daterangepicker--selected-range {
   background: grey;
   color: white;
