@@ -1200,13 +1200,13 @@ isStartOrEnd : Date -> Model -> Bool
 isStartOrEnd date model =
     case ( model.startDate, model.endDate ) of
         ( Just a, Just b ) ->
-            Date.toTime a == Date.toTime date || Date.toTime b == Date.toTime date
+            a $== date || b $== date
 
         ( Just a, _ ) ->
-            Date.toTime a == Date.toTime date
+            a $== date
 
         ( _, Just b ) ->
-            Date.toTime b == Date.toTime date
+            b $== date
 
         ( _, _ ) ->
             False
