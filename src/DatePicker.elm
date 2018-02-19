@@ -8,10 +8,8 @@ module DatePicker
         , PresetRelativeToToday(..)
         , PresetSetting
         , Preset
-        , DateRange
         , DatePicker
-        , mkPresetFromDateRange
-        , mkPresetFromDates
+        , mkPresetFromDate
         , defaultPresets
         , defaultSettings
         , defaultPresetOptions
@@ -21,23 +19,24 @@ module DatePicker
         , getDate
         , setDate
         , setSettings
+        , setDateFormat
         , view
         )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DatePicker
-@docs init, update, isOpen, view, getDate, setDate, setSettings
+@docs init, update, isOpen, view, getDate, setDate
 
 
 # Settings
 
-@docs Settings, RestrictedDateRange, defaultSettings
+@docs Settings, defaultSettings, setSettings, setDateFormat
 
 
 ## Presets
 
-@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates
+@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDate
 
 -}
 
@@ -159,7 +158,7 @@ type alias Settings =
     , inputAttributes : List (Html.Attribute Msg)
     , presetOptions : PresetOptions
     , restrictedDateRange : RestrictedDateRange
-    , formatDateRange : DateRange -> String
+    , formatDate : Date -> String
     }
 
 
@@ -205,13 +204,19 @@ type PresetInterval
 
 {-| A type representing how the preset is relative to today.
 
-  - If using ToToday, the preset daterange would use today as the end date, and the date from your PresetSettings as the end date.
-  - If using FromToday, the preset daterange would use today as the start date and the date from your PresetSettings as the end date.
+  - BeforeToday will subtract any value from today and use that date.
+  - AfterToday will add any value form today and use that date.
+  - Today will use today.
+  - Tomorrow will use tomorrow.
+  - Yesterday will use yesterday.
 
 -}
 type PresetRelativeToToday
-    = ToToday
-    | FromToday
+    = BeforeToday
+    | AfterToday
+    | Today
+    | Tomorrow
+    | Yesterday
 
 
 {-| A type used to generate preset dateranges.
@@ -224,9 +229,9 @@ type PresetRelativeToToday
 
 ## Example
 
-    { name = "Past Month"
+    { name = "1 Month Ago"
     , interval = Months
-    , presetRelativeToday = ToToday
+    , presetRelativeToday = BeforeToday
     , value = 1
     }
 
@@ -239,23 +244,15 @@ type alias PresetSetting =
     }
 
 
-{-| A type that represents a preset daterange.
+{-| A type that represents a preset date.
 
   - *name* = Name of the preset. i.e. "Past Month"
-  - *dateRange* = The daterange that is selected when selecting the preset.
+  - *date* = The date that is selected when selecting the preset.
 
 -}
 type alias Preset =
     { name : String
-    , dateRange : DateRange
-    }
-
-
-{-| A type representing a date range with a start date and end date.
--}
-type alias DateRange =
-    { start : Date
-    , end : Date
+    , date : Date
     }
 
 
@@ -310,12 +307,9 @@ mkPresets settings date =
 mkPresetFromSetting : Date -> PresetSetting -> Preset
 mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
     let
-        start =
+        date =
             case presetRelativeToToday of
-                FromToday ->
-                    today
-
-                ToToday ->
+                BeforeToday ->
                     case interval of
                         Days ->
                             subDays value today
@@ -326,9 +320,7 @@ mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
                         Years ->
                             subYears value today
 
-        end =
-            case presetRelativeToToday of
-                FromToday ->
+                AfterToday ->
                     case interval of
                         Days ->
                             addDays value today
@@ -339,29 +331,24 @@ mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
                         Years ->
                             addYears value today
 
-                ToToday ->
+                Today ->
                     today
+
+                Tomorrow ->
+                    addDays 1 today
+
+                Yesterday ->
+                    subDays 1 today
     in
-        { name = name
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDate name date
 
 
-{-| A function that creates a Preset from a name and a dateRange
+{-| A function that creates a Preset from a name and a date
 -}
-mkPresetFromDateRange : String -> DateRange -> Preset
-mkPresetFromDateRange name dateRange =
+mkPresetFromDate : String -> Date -> Preset
+mkPresetFromDate name date =
     { name = name
-    , dateRange = dateRange
-    }
-
-
-{-| A function that creates a Preset from a name, startDate, and endDate
--}
-mkPresetFromDates : String -> Date -> Date -> Preset
-mkPresetFromDates name start end =
-    { name = name
-    , dateRange = mkDateRange start end
+    , date = mkDate (year date) (month date) (day date)
     }
 
 
@@ -369,13 +356,9 @@ mkPresetFromDates name start end =
 -}
 defaultPresets : Date -> List Preset
 defaultPresets today =
-    [ presetToday today
+    [ presetTomorrow today
+    , presetToday today
     , presetYesterday today
-    , presetPastWeek today
-    , presetPastMonth today
-    , presetPastYear today
-    , presetLastYear today
-    , presetLastMonth today
     ]
 
 
@@ -384,7 +367,7 @@ defaultPresets today =
 presetToday : Date -> Preset
 presetToday today =
     { name = "Today"
-    , dateRange = mkDateRange today today
+    , date = mkDate (year today) (month today) (day today)
     }
 
 
@@ -393,100 +376,24 @@ presetToday today =
 presetYesterday : Date -> Preset
 presetYesterday today =
     let
-        start =
-            subDays 1 today
-
-        end =
+        yesterday =
             subDays 1 today
     in
         { name = "Yesterday"
-        , dateRange = mkDateRange start end
+        , date = mkDate (year yesterday) (month yesterday) (day yesterday)
         }
 
 
-{-| An opaque function for the default preset "Past Week"
+{-| An opaque function for the default preset "Tomorrow"
 -}
-presetPastWeek : Date -> Preset
-presetPastWeek today =
+presetTomorrow : Date -> Preset
+presetTomorrow today =
     let
-        start =
-            subDays 7 today
-
-        end =
-            today
+        tomorrow =
+            addDays 1 today
     in
-        { name = "Past Week"
-        , dateRange = mkDateRange start end
-        }
-
-
-{-| An opaque function for the default preset "Past Month"
--}
-presetPastMonth : Date -> Preset
-presetPastMonth today =
-    let
-        start =
-            addDays 1 <| subMonths 1 today
-
-        end =
-            today
-    in
-        { name = "Past Month"
-        , dateRange = mkDateRange start end
-        }
-
-
-{-| An opaque function for the default preset "Past Year"
--}
-presetPastYear : Date -> Preset
-presetPastYear today =
-    let
-        start =
-            addDays 1 <| subYears 1 today
-
-        end =
-            today
-    in
-        { name = "Past Year"
-        , dateRange = mkDateRange start end
-        }
-
-
-{-| An opaque function for the default preset "Last Year"
--}
-presetLastYear : Date -> Preset
-presetLastYear today =
-    let
-        newYear =
-            year <| subYears 1 today
-
-        start =
-            mkDate newYear Jan 1
-
-        end =
-            mkDate newYear Dec 31
-    in
-        { name = "Last Year"
-        , dateRange = mkDateRange start end
-        }
-
-
-{-| An opaque function for the default preset "Last Month"
--}
-presetLastMonth : Date -> Preset
-presetLastMonth today =
-    let
-        newMonth =
-            subMonths 1 today
-
-        start =
-            startOfMonth newMonth
-
-        end =
-            endOfMonth newMonth
-    in
-        { name = "Last Month"
-        , dateRange = mkDateRange start end
+        { name = "Tomorrow"
+        , date = mkDate (year tomorrow) (month tomorrow) (day tomorrow)
         }
 
 
@@ -499,8 +406,8 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = ToPresent
-    , formatDateRange = formatDateRange
+    , restrictedDateRange = Off
+    , formatDate = formatDate
     }
 
 
@@ -601,7 +508,18 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                         { model | currentYear = nextYear } $! []
 
                 SetDate date ->
-                    { model | date = Just date } $! []
+                    let
+                        newDate =
+                            getNewDate model date
+                    in
+                        { model
+                            | date = Just newDate
+                            , showPresets = False
+                            , currentYear = prepareYear date
+                            , open = False
+                            , forceOpen = False
+                        }
+                            $! []
 
                 Focus ->
                     let
@@ -632,7 +550,11 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                 Done ->
                     let
                         newModel =
-                            { model | open = False, forceOpen = False }
+                            { model
+                                | open = False
+                                , forceOpen = False
+                                , showPresets = False
+                            }
                     in
                         case newModel.date of
                             Just a ->
@@ -675,6 +597,20 @@ getDate (DatePicker model) =
 setDate : Date -> DatePicker -> DatePicker
 setDate date (DatePicker model) =
     DatePicker { model | date = Just (getNewDate model date) }
+
+
+{-| Sets the date formatter for the datepicker.
+-}
+setDateFormat : (Date -> String) -> DatePicker -> DatePicker
+setDateFormat dateFormat (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | formatDate = dateFormat }
+    in
+        DatePicker { model | settings = newSettings }
 
 
 {-| Sets the settings for the daterange picker
@@ -780,17 +716,16 @@ getPreset : Model -> Preset -> Html Msg
 getPreset model preset =
     let
         isDisabledPreset =
-            isDisabledDate model.enabledDateRange preset.dateRange.start
-                && isDisabledDate model.enabledDateRange preset.dateRange.end
+            isDisabledDate model.enabledDateRange preset.date
 
-        setDateRange =
+        setDate =
             case isDisabledPreset of
                 True ->
                     Events.onClick DoNothing
 
                 False ->
                     Events.onClick <|
-                        SetDateRange preset.dateRange
+                        SetDate preset.date
 
         className =
             String.join " " <|
@@ -799,9 +734,9 @@ getPreset model preset =
                     , mkClass "elm-daterangepicker--disabled" isDisabledPreset
                     ]
     in
-        div [ Attrs.class className, setDateRange ]
+        div [ Attrs.class className, setDate ]
             [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text preset.name ]
-            , span [ Attrs.class "elm-daterangepicker--preset-range" ] [ text <| model.settings.formatDateRange preset.dateRange ]
+            , span [ Attrs.class "elm-daterangepicker--preset-range" ] [ text <| model.settings.formatDate preset.date ]
             ]
 
 

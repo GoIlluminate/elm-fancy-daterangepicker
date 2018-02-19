@@ -30,6 +30,7 @@ module DateRangePicker.Date
 {-| A custom Date Helper Library.
 
 @docs initDate, mkDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, dayFromInt, monthToInt, monthFromInt, daysInMonth, datesInRange, startOfMonth, endOfMonth, addDays, subDays, addMonths, subMonths, addYears, subYears
+@docs ($<), ($<=), ($==), ($>), ($>=)
 
 -}
 
@@ -714,26 +715,36 @@ unsafeDate date =
             date
 
 
+{-| An opaque function that checks if date a is equal to date b
+-}
 ($==) : Date -> Date -> Bool
 ($==) a b =
     Date.toTime a == Date.toTime b
 
 
+{-| An opaque function that checks if date a is less than or equal to date b
+-}
 ($<=) : Date -> Date -> Bool
 ($<=) a b =
     Date.toTime a <= Date.toTime b
 
 
+{-| An opaque function that checks if date a is greater than or equal to date b
+-}
 ($>=) : Date -> Date -> Bool
 ($>=) a b =
     Date.toTime a >= Date.toTime b
 
 
+{-| An opaque function that checks if date a is less than to date b
+-}
 ($<) : Date -> Date -> Bool
 ($<) a b =
     Date.toTime a < Date.toTime b
 
 
+{-| An opaque function that checks if date a is greater than to date b
+-}
 ($>) : Date -> Date -> Bool
 ($>) a b =
     Date.toTime a >= Date.toTime b

@@ -20,18 +20,19 @@ module DateRangePicker
         , getDateRange
         , setDateRange
         , setSettings
+        , setDateRangeFormat
         , view
         )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DateRangePicker
-@docs init, update, isOpen, view, getDateRange, setDateRange, setSettings
+@docs init, update, isOpen, view, getDateRange, setDateRange
 
 
 # Settings
 
-@docs Settings, defaultSettings
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat
 
 
 ## Presets
@@ -618,6 +619,8 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                             , endDate = Nothing
                             , showPresets = False
                             , currentYear = prepareYear newDateRange.end
+                            , open = False
+                            , forceOpen = False
                         }
                             $! []
 
@@ -659,6 +662,8 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                             | endDate = Nothing
                                             , startDate = Nothing
                                             , dateRange = dateRange
+                                            , open = False
+                                            , forceOpen = False
                                         }
                                             $! []
 
@@ -727,6 +732,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                                 , startDate = Nothing
                                                 , endDate = Nothing
                                                 , currentYear = prepareYear newDateRange.end
+                                                , showPresets = False
                                             }
                                                 $! []
 
@@ -764,6 +770,20 @@ getDateRange (DateRangePicker model) =
 setDateRange : DateRange -> DateRangePicker -> DateRangePicker
 setDateRange dateRange (DateRangePicker model) =
     DateRangePicker { model | dateRange = Just (getNewDateRange model dateRange) }
+
+
+{-| Sets the date range formatter for the datepicker.
+-}
+setDateRangeFormat : (DateRange -> String) -> DateRangePicker -> DateRangePicker
+setDateRangeFormat dateRangeFormat (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | formatDateRange = dateRangeFormat }
+    in
+        DateRangePicker { model | settings = newSettings }
 
 
 {-| Sets the settings for the daterange picker
