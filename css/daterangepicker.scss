@@ -157,11 +157,16 @@ $dp-arrow-right: '►';
             grid-auto-flow: dense;
             grid-gap: 5px;
             .#{$dp-ns}preset {
-                @extend .#{$dp-ns}hover-date;
+                &:not(.#{$dp-ns}no-presets) {
+                    @extend .#{$dp-ns}hover-date;
+                    color: $dp-clr-main;
+                }
+                &.#{$dp-ns}no-presets {
+                    color: $dp-clr-disabled;
+                }
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 background: $dp-clr-secondary;
-                color: $dp-clr-main;
                 grid-gap: 5px;
                 padding: 5px;
                 font-weight: bold;

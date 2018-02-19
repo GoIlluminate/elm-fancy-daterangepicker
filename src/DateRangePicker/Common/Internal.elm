@@ -17,6 +17,7 @@ module DateRangePicker.Common.Internal
         , isDisabledDate
         , getDaysOfWeek
         , mkClassString
+        , noPresets
         )
 
 {-| A common internal library between DatePicker and DateRangePicker
@@ -30,6 +31,7 @@ import Html
     exposing
         ( Html
         , div
+        , span
         , text
         )
 import Date
@@ -330,6 +332,17 @@ mkClassString lst =
     String.join " " <|
         List.filter (\x -> x /= "")
             lst
+
+
+{-| An opaque function that returns a no presets available Html msg
+-}
+noPresets : List (Html msg)
+noPresets =
+    [ div [ Attrs.class "elm-daterangepicker--preset elm-daterangepicker--no-presets" ]
+        [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text "No presets available..." ]
+        , span [ Attrs.class "elm-daterangepicker--preset-value" ] []
+        ]
+    ]
 
 
 onPicker : String -> msg -> Html.Attribute msg

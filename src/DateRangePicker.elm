@@ -120,6 +120,7 @@ import DateRangePicker.Common.Internal
         , isDisabledDate
         , getDaysOfWeek
         , mkClassString
+        , noPresets
         )
 
 
@@ -958,7 +959,10 @@ getHeader =
 getPresets : Model -> Html Msg
 getPresets model =
     div [ Attrs.class "elm-daterangepicker--presets" ] <|
-        List.map (getPreset model) model.presets
+        if List.length model.presets > 0 then
+            List.map (getPreset model) model.presets
+        else
+            noPresets
 
 
 {-| An opaque function that gets the Html Msg for a given preset.
@@ -987,7 +991,7 @@ getPreset model preset =
     in
         div [ Attrs.class classString, setDateRange ]
             [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text preset.name ]
-            , span [ Attrs.class "elm-daterangepicker--preset-range" ] [ text <| model.settings.formatDateRange preset.dateRange ]
+            , span [ Attrs.class "elm-daterangepicker--preset-value" ] [ text <| model.settings.formatDateRange preset.dateRange ]
             ]
 
 
