@@ -112,6 +112,7 @@ import DateRangePicker.Common.Internal
         , mkClass
         , isDisabledDate
         , getDaysOfWeek
+        , mkClassString
         )
 
 
@@ -727,14 +728,13 @@ getPreset model preset =
                     Events.onClick <|
                         SetDate preset.date
 
-        className =
-            String.join " " <|
-                List.filter (\x -> x /= "")
-                    [ "elm-daterangepicker--preset"
-                    , mkClass "elm-daterangepicker--disabled" isDisabledPreset
-                    ]
+        classString =
+            mkClassString
+                [ "elm-daterangepicker--preset"
+                , mkClass "elm-daterangepicker--disabled" isDisabledPreset
+                ]
     in
-        div [ Attrs.class className, setDate ]
+        div [ Attrs.class classString, setDate ]
             [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text preset.name ]
             , span [ Attrs.class "elm-daterangepicker--preset-range" ] [ text <| model.settings.formatDate preset.date ]
             ]
@@ -765,17 +765,16 @@ getYearHeader model =
                         SetDateRange <|
                             mkDateRange start end
 
-        yrLabelClass =
-            String.join " " <|
-                List.filter (\x -> x /= "")
-                    [ "elm-daterangepicker--yr-btn"
-                    , "elm-daterangepicker--yr-label"
-                    , mkClass "elm-daterangepicker--disabled" isDisabledYear
-                    ]
+        yrLabelClassString =
+            mkClassString
+                [ "elm-daterangepicker--yr-btn"
+                , "elm-daterangepicker--yr-label"
+                , mkClass "elm-daterangepicker--disabled" isDisabledYear
+                ]
     in
         [ div [ Attrs.class "elm-daterangepicker--yr-label-wrapper" ]
             [ div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", Events.onClick PrevYear ] []
-            , div [ Attrs.class yrLabelClass, setYearRange ] [ text model.currentYear.name ]
+            , div [ Attrs.class yrLabelClassString, setYearRange ] [ text model.currentYear.name ]
             , div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-next", Events.onClick NextYear ] []
             ]
         ]
@@ -832,15 +831,14 @@ getQuarter model qtr =
                                                     SetDateRange <|
                                                         mkDateRange start end
 
-                                    className =
-                                        String.join " " <|
-                                            List.filter (\x -> x /= "")
-                                                [ "elm-daterangepicker--qtr-label"
-                                                , mkClass "elm-daterangepicker--disabled" isDisabledQtr
-                                                ]
+                                    classString =
+                                        mkClassString
+                                            [ "elm-daterangepicker--qtr-label"
+                                            , mkClass "elm-daterangepicker--disabled" isDisabledQtr
+                                            ]
 
                                     qtrLabel =
-                                        div [ Attrs.class className, setQtrDateRange ] [ text qtr.name ]
+                                        div [ Attrs.class classString, setQtrDateRange ] [ text qtr.name ]
                                 in
                                     div [ Attrs.class "elm-daterangepicker--qtr-row" ] <|
                                         List.concat
@@ -894,15 +892,14 @@ getMonth model m =
                                     SetDateRange <|
                                         mkDateRange (startOfMonth a) (endOfMonth a)
 
-                    className =
-                        String.join " " <|
-                            List.filter (\x -> x /= "")
-                                [ "elm-daterangepicker--month-label"
-                                , mkClass "elm-daterangepicker--disabled" isDisabledMonth
-                                ]
+                    classString =
+                        mkClassString
+                            [ "elm-daterangepicker--month-label"
+                            , mkClass "elm-daterangepicker--disabled" isDisabledMonth
+                            ]
 
                     monthDiv =
-                        div [ Attrs.class className, setMonthDateRange ]
+                        div [ Attrs.class classString, setMonthDateRange ]
                             [ text <|
                                 formatMonth <|
                                     month a
@@ -928,13 +925,12 @@ getDay model date =
         isDisabledDate_ =
             isDisabledDate model.enabledDateRange date
 
-        className =
-            String.join " " <|
-                List.filter (\x -> x /= "")
-                    [ "elm-daterangepicker--day"
-                    , mkClass "elm-daterangepicker--selected-range" <| isSelectedDate model date
-                    , mkClass "elm-daterangepicker--disabled" isDisabledDate_
-                    ]
+        classString =
+            mkClassString
+                [ "elm-daterangepicker--day"
+                , mkClass "elm-daterangepicker--selected-range" <| isSelectedDate model date
+                , mkClass "elm-daterangepicker--disabled" isDisabledDate_
+                ]
 
         setDate =
             case isDisabledDate_ of
@@ -944,7 +940,7 @@ getDay model date =
                 False ->
                     Events.onClick <| SetDate date
     in
-        div [ Attrs.class className, setDate ]
+        div [ Attrs.class classString, setDate ]
             [ text <|
                 toString <|
                     day date

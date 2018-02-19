@@ -16,6 +16,7 @@ module DateRangePicker.Common.Internal
         , mkClass
         , isDisabledDate
         , getDaysOfWeek
+        , mkClassString
         )
 
 {-| A common internal library between DatePicker and DateRangePicker
@@ -331,6 +332,15 @@ mkClass cls bool =
         cls
     else
         ""
+
+
+{-| An opaque function that returns a class string from a list of string.
+-}
+mkClassString : List String -> String
+mkClassString lst =
+    String.join " " <|
+        List.filter (\x -> x /= "")
+            lst
 
 
 onPicker : String -> msg -> Html.Attribute msg
