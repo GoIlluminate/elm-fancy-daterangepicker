@@ -397,9 +397,7 @@ defaultPresets today =
 -}
 presetToday : Date -> Preset
 presetToday today =
-    { name = "Today"
-    , dateRange = mkDateRange today today
-    }
+    mkPresetFromDates "Today" today today
 
 
 {-| An opaque function for the default preset "Yesterday"
@@ -413,9 +411,7 @@ presetYesterday today =
         end =
             subDays 1 today
     in
-        { name = "Yesterday"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Yesterday" start end
 
 
 {-| An opaque function for the default preset "Past Week"
@@ -429,9 +425,7 @@ presetPastWeek today =
         end =
             today
     in
-        { name = "Past Week"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Past Week" start end
 
 
 {-| An opaque function for the default preset "Past Month"
@@ -445,9 +439,7 @@ presetPastMonth today =
         end =
             today
     in
-        { name = "Past Month"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Past Month" start end
 
 
 {-| An opaque function for the default preset "Past Year"
@@ -461,9 +453,7 @@ presetPastYear today =
         end =
             today
     in
-        { name = "Past Year"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Past Year" start end
 
 
 {-| An opaque function for the default preset "Last Year"
@@ -480,9 +470,7 @@ presetLastYear today =
         end =
             mkDate newYear Dec 31
     in
-        { name = "Last Year"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Last Year" start end
 
 
 {-| An opaque function for the default preset "Last Month"
@@ -499,9 +487,7 @@ presetLastMonth today =
         end =
             endOfMonth newMonth
     in
-        { name = "Last Month"
-        , dateRange = mkDateRange start end
-        }
+        mkPresetFromDates "Last Month" start end
 
 
 {-| A record of default settings for the daterangepicker.
