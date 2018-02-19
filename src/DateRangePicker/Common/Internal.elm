@@ -59,6 +59,8 @@ import DateRangePicker.Date
         , dayFromInt
         , ($<)
         , ($>)
+        , ($>=)
+        , ($<=)
         )
 
 
@@ -92,17 +94,7 @@ given dateRange.
 -}
 inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
-    let
-        ( timeDate, timeStart, timeEnd ) =
-            ( Date.toTime date
-            , Date.toTime start
-            , Date.toTime end
-            )
-    in
-        if timeStart <= timeDate && timeEnd >= timeDate then
-            True
-        else
-            False
+    start $<= date && end $>= date
 
 
 {-| An opaque function to check if the given date is a disabled date.
@@ -302,7 +294,7 @@ list of lists of a of equal chunks.
 
     chunksOfLeft 3 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ] =
         [ [ 1, 2, 3 ]
-        , [ 4.5, 6 ]
+        , [ 4, 5, 6 ]
         , [ 7, 8, 9 ]
         , [ 10, 11, 12 ]
         ]

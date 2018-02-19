@@ -107,7 +107,6 @@ import DateRangePicker.Common.Internal
         , EnabledDateRange
         , (?>)
         , ($!)
-        , chunksOfLeft
         , inRange
         , prepareQuarters
         , prepareYear
@@ -302,6 +301,7 @@ mkPresets settings date =
                 List.concat
                     [ defaultPresets_
                     , customPresetsFromSettings_
+                    , presetOptions.presets
                     ]
 
             NoPresets ->
@@ -385,9 +385,7 @@ presetYesterday today =
         yesterday =
             subDays 1 today
     in
-        { name = "Yesterday"
-        , date = mkDate (year yesterday) (month yesterday) (day yesterday)
-        }
+        mkPresetFromDate "Yesterday" yesterday
 
 
 {-| An opaque function for the default preset "Tomorrow"
@@ -398,9 +396,7 @@ presetTomorrow today =
         tomorrow =
             addDays 1 today
     in
-        { name = "Tomorrow"
-        , date = mkDate (year tomorrow) (month tomorrow) (day tomorrow)
-        }
+        mkPresetFromDate "Yesterday" tomorrow
 
 
 {-| A record of default settings for the datepicker.

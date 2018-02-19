@@ -322,8 +322,8 @@ addMonth date =
             Date.day date
 
         newDay =
-            if day >= 29 && isLeapYear newYear then
-                29
+            if day > daysInMonth newYear newMonth then
+                daysInMonth newYear newMonth
             else
                 day
     in
@@ -364,8 +364,8 @@ subMonth date =
             Date.day date
 
         newDay =
-            if day >= 29 && isLeapYear newYear then
-                29
+            if day > daysInMonth newYear newMonth then
+                daysInMonth newYear newMonth
             else
                 day
     in
@@ -395,8 +395,14 @@ subYear date =
 
         day =
             Date.day date
+
+        newDay =
+            if day > daysInMonth year month then
+                daysInMonth year month
+            else
+                day
     in
-        mkDate year month day
+        mkDate year month newDay
 
 
 {-| A function that returns a date given a starting date and the number of years to add to that starting date.
@@ -422,8 +428,14 @@ addYear date =
 
         day =
             Date.day date
+
+        newDay =
+            if day > daysInMonth year month then
+                daysInMonth year month
+            else
+                day
     in
-        mkDate year month day
+        mkDate year month newDay
 
 
 {-| A function that takes an Int for the day and returns a string, padding single digit days.

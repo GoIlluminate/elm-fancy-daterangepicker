@@ -109,7 +109,6 @@ import DateRangePicker.Common.Internal
         , EnabledDateRange
         , (?>)
         , ($!)
-        , chunksOfLeft
         , inRange
         , prepareQuarters
         , prepareYear
@@ -301,6 +300,7 @@ mkPresets settings date =
                 List.concat
                     [ defaultPresets_
                     , customPresetsFromSettings_
+                    , presetOptions.presets
                     ]
 
             NoPresets ->
@@ -513,7 +513,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = ToPresent
+    , restrictedDateRange = Off
     , formatDateRange = formatDateRange
     }
 
