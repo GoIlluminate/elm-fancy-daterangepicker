@@ -33,6 +33,7 @@ init =
         dateRangePicker =
             dateRangePicker_
                 |> setSettings (getSettings True)
+                |> DateRangePicker.setInputId "myDateRangePicker"
 
         datePicker =
             datePicker_

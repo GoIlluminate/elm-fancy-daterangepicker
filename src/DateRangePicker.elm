@@ -809,28 +809,28 @@ setPlaceholder placeholder (DateRangePicker model) =
 
 {-| Sets the name for the daterangepicker.
 -}
-setInputName : Maybe String -> DateRangePicker -> DateRangePicker
+setInputName : String -> DateRangePicker -> DateRangePicker
 setInputName inputName (DateRangePicker model) =
     let
         settings =
             model.settings
 
         newSettings =
-            { settings | inputName = inputName }
+            { settings | inputName = Just inputName }
     in
         DateRangePicker { model | settings = newSettings }
 
 
 {-| Sets the id for the daterangepicker.
 -}
-setInputId : Maybe String -> DateRangePicker -> DateRangePicker
+setInputId : String -> DateRangePicker -> DateRangePicker
 setInputId inputId (DateRangePicker model) =
     let
         settings =
             model.settings
 
         newSettings =
-            { settings | inputId = inputId }
+            { settings | inputId = Just inputId }
     in
         DateRangePicker { model | settings = newSettings }
 

@@ -639,28 +639,28 @@ setPlaceholder placeholder (DatePicker model) =
 
 {-| Sets the name for the datepicker.
 -}
-setInputName : Maybe String -> DatePicker -> DatePicker
+setInputName : String -> DatePicker -> DatePicker
 setInputName inputName (DatePicker model) =
     let
         settings =
             model.settings
 
         newSettings =
-            { settings | inputName = inputName }
+            { settings | inputName = Just inputName }
     in
         DatePicker { model | settings = newSettings }
 
 
 {-| Sets the id for the datepicker.
 -}
-setInputId : Maybe String -> DatePicker -> DatePicker
+setInputId : String -> DatePicker -> DatePicker
 setInputId inputId (DatePicker model) =
     let
         settings =
             model.settings
 
         newSettings =
-            { settings | inputId = inputId }
+            { settings | inputId = Just inputId }
     in
         DatePicker { model | settings = newSettings }
 
