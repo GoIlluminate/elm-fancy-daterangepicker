@@ -1,12 +1,12 @@
 {
-  "name": "elm-daterangepicker-example",
-  "description": "Example using elm-daterangepicker",
+  "name": "elm-fancy-daterangepicker-example",
+  "description": "Example using elm-fancy-daterangepicker",
   "version": "1.0.0",
   "license": "BSD3",
   "author": "Tyler Lentz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/goilluminate/elm-daterangepicker"
+    "url": "https://github.com/goilluminate/elm-fancy-daterangepicker"
   },
   "scripts": {
     "start": "webpack-dev-server --hot --inline",

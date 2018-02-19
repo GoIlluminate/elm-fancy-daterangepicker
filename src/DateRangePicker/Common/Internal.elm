@@ -183,7 +183,7 @@ padMonthLeft d =
             dd - 1
 
         go =
-            div [ Attrs.class "elm-daterangepicker--day-filler" ] []
+            div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
         List.repeat n go
 
@@ -196,7 +196,7 @@ padMonthRight : Int -> List (Html msg)
 padMonthRight n =
     let
         go =
-            div [ Attrs.class "elm-daterangepicker--day-filler" ] []
+            div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
         List.repeat n go
 
@@ -279,7 +279,7 @@ getDaysOfWeek =
             List.range 1 7
 
         go n =
-            div [ Attrs.class "elm-daterangepicker--dow" ]
+            div [ Attrs.class "elm-fancy-daterangepicker--dow" ]
                 [ text <|
                     formatDay <|
                         dayFromInt n
@@ -338,9 +338,9 @@ mkClassString lst =
 -}
 noPresets : List (Html msg)
 noPresets =
-    [ div [ Attrs.class "elm-daterangepicker--preset elm-daterangepicker--no-presets" ]
-        [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text "No presets available..." ]
-        , span [ Attrs.class "elm-daterangepicker--preset-value" ] []
+    [ div [ Attrs.class "elm-fancy-daterangepicker--preset elm-fancy-daterangepicker--no-presets" ]
+        [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text "No presets available..." ]
+        , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] []
         ]
     ]
 

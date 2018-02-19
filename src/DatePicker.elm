@@ -720,7 +720,7 @@ view (DatePicker ({ open, settings } as model)) =
                  , Events.onBlur Blur
                  , Events.onClick Focus
                  , Events.onFocus Focus
-                 , Attrs.class "elm-daterangepicker--date-input"
+                 , Attrs.class "elm-fancy-daterangepicker--date-input"
                  ]
                     ++ settings.inputAttributes
                     ++ potentialInputId
@@ -729,7 +729,7 @@ view (DatePicker ({ open, settings } as model)) =
                 , model.inputText ?> settings.placeholder |> text
                 ]
     in
-        div [ Attrs.class "elm-daterangepicker--container" ]
+        div [ Attrs.class "elm-fancy-daterangepicker--container" ]
             [ dateInput
             , if open then
                 datePicker model
@@ -755,7 +755,7 @@ datePicker model =
             getHeader
     in
         div
-            [ Attrs.class "elm-daterangepicker--wrapper"
+            [ Attrs.class "elm-fancy-daterangepicker--wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
@@ -768,7 +768,7 @@ datePicker model =
 -}
 getCalendar : Model -> Html Msg
 getCalendar model =
-    div [ Attrs.class "elm-daterangepicker--calendar" ] <|
+    div [ Attrs.class "elm-fancy-daterangepicker--calendar" ] <|
         List.concat
             [ getYearHeader model
             , getQuarters model
@@ -779,10 +779,10 @@ getCalendar model =
 -}
 getHeader : Html Msg
 getHeader =
-    div [ Attrs.class "elm-daterangepicker--header" ]
-        [ button [ Events.onClick Done, Attrs.class "elm-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
-        , button [ Events.onClick TogglePresets, Attrs.class "elm-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
-        , button [ Events.onClick Reset, Attrs.class "elm-daterangepicker--reset-btn" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
+    div [ Attrs.class "elm-fancy-daterangepicker--header" ]
+        [ button [ Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
+        , button [ Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
+        , button [ Events.onClick Reset, Attrs.class "elm-fancy-daterangepicker--reset-btn" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
         ]
 
 
@@ -790,7 +790,7 @@ getHeader =
 -}
 getPresets : Model -> Html Msg
 getPresets model =
-    div [ Attrs.class "elm-daterangepicker--presets" ] <|
+    div [ Attrs.class "elm-fancy-daterangepicker--presets" ] <|
         if List.length model.presets > 0 then
             List.map (getPreset model) model.presets
         else
@@ -816,13 +816,13 @@ getPreset model preset =
 
         classString =
             mkClassString
-                [ "elm-daterangepicker--preset"
-                , mkClass "elm-daterangepicker--disabled" isDisabledPreset
+                [ "elm-fancy-daterangepicker--preset"
+                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledPreset
                 ]
     in
         div [ Attrs.class classString, setDate ]
-            [ span [ Attrs.class "elm-daterangepicker--preset-name" ] [ text preset.name ]
-            , span [ Attrs.class "elm-daterangepicker--preset-value" ] [ text <| model.settings.formatDate preset.date ]
+            [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text preset.name ]
+            , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] [ text <| model.settings.formatDate preset.date ]
             ]
 
 
@@ -848,15 +848,15 @@ getYearHeader model =
 
         yrLabelClassString =
             mkClassString
-                [ "elm-daterangepicker--yr-btn"
-                , "elm-daterangepicker--yr-label"
-                , mkClass "elm-daterangepicker--disabled" isDisabledYear
+                [ "elm-fancy-daterangepicker--yr-btn"
+                , "elm-fancy-daterangepicker--yr-label"
+                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledYear
                 ]
     in
-        [ div [ Attrs.class "elm-daterangepicker--yr-label-wrapper" ]
-            [ div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-prev", Events.onClick PrevYear ] []
+        [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
+            [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Events.onClick PrevYear ] []
             , div [ Attrs.class yrLabelClassString, setDate ] [ text model.currentYear.name ]
-            , div [ Attrs.class "elm-daterangepicker--yr-btn elm-daterangepicker--yr-next", Events.onClick NextYear ] []
+            , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", Events.onClick NextYear ] []
             ]
         ]
 
@@ -913,14 +913,14 @@ getQuarter model qtr =
 
                                     classString =
                                         mkClassString
-                                            [ "elm-daterangepicker--qtr-label"
-                                            , mkClass "elm-daterangepicker--disabled" isDisabledQtr
+                                            [ "elm-fancy-daterangepicker--qtr-label"
+                                            , mkClass "elm-fancy-daterangepicker--disabled" isDisabledQtr
                                             ]
 
                                     qtrLabel =
                                         div [ Attrs.class classString, setQtrDate ] [ text qtr.name ]
                                 in
-                                    div [ Attrs.class "elm-daterangepicker--qtr-row" ] <|
+                                    div [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                         List.concat
                                             [ [ qtrLabel ]
                                             , List.map (getMonth model) qtr.months
@@ -973,8 +973,8 @@ getMonth model m =
 
                     classString =
                         mkClassString
-                            [ "elm-daterangepicker--month-label"
-                            , mkClass "elm-daterangepicker--disabled" isDisabledMonth
+                            [ "elm-fancy-daterangepicker--month-label"
+                            , mkClass "elm-fancy-daterangepicker--disabled" isDisabledMonth
                             ]
 
                     monthDiv =
@@ -984,7 +984,7 @@ getMonth model m =
                                     month a
                             ]
                 in
-                    div [ Attrs.class "elm-daterangepicker--month" ] <|
+                    div [ Attrs.class "elm-fancy-daterangepicker--month" ] <|
                         List.concat
                             [ [ monthDiv ]
                             , getDaysOfWeek
@@ -1009,9 +1009,9 @@ getDay model date =
 
         classString =
             mkClassString
-                [ "elm-daterangepicker--day"
-                , mkClass "elm-daterangepicker--selected-range" isSelectedDate_
-                , mkClass "elm-daterangepicker--disabled" isDisabledDate_
+                [ "elm-fancy-daterangepicker--day"
+                , mkClass "elm-fancy-daterangepicker--selected-range" isSelectedDate_
+                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDate_
                 ]
 
         setDate =

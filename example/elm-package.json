@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
-    "summary": "Example using `elm-daterangepicker`.",
-    "repository": "https://github.com/goilluminate/elm-daterangepicker.git",
+    "summary": "Example using `elm-fancy-daterangepicker`.",
+    "repository": "https://github.com/goilluminate/elm-fancy-daterangepicker.git",
     "license": "BSD3",
     "source-directories": [
         "src/elm",
