@@ -1,5 +1,5 @@
 
-task :default => [:npm, :elm, :watch]
+task :default => [:npm, :elm, :test, :watch]
 
 task :npm do
     sh("cd example && npm install")
