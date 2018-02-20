@@ -149,7 +149,7 @@ init : (Model, Cmd Msg)
         dateRangePicker =
             dateRangePicker_
                 |> setSettings defaultSettings
-                |> setInputId (Just "myDateRangePicker")
+                |> setInputId "myDateRangePicker"
                 |> setPresetOptions somePresetOptions
                 |> setPlaceholder "No date selected"
                 |> setDateRange (mkDateRange startDate endDate)
@@ -303,7 +303,7 @@ init : (Model, Cmd Msg)
         datePicker =
             datePicker_
                 |> setSettings defaultSettings
-                |> setInputId (Just "myDatePicker")
+                |> setInputId "myDatePicker"
                 |> setPresetOptions somePresetOptions
                 |> setPlaceholder "No date selected"
                 |> setDate (mkDate someDate)
