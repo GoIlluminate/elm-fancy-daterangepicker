@@ -25,10 +25,10 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     let
-        ( dateRangePicker_, dateRangePickerFx ) =
+        ( dateRangePicker_, dateRangePickerCmd ) =
             DateRangePicker.init
 
-        ( datePicker_, datePickerFx ) =
+        ( datePicker_, datePickerCmd ) =
             DatePicker.init
 
         dateRangePicker =
@@ -44,7 +44,7 @@ init =
         , datePicker = datePicker
         , date = Nothing
         }
-            ! [ Cmd.map SetDateRangePicker dateRangePickerFx, Cmd.map SetDatePicker datePickerFx ]
+            ! [ Cmd.map SetDateRangePicker dateRangePickerCmd, Cmd.map SetDatePicker datePickerCmd ]
 
 
 getSettings : Bool -> DateRangePicker.Settings
@@ -63,25 +63,25 @@ update msg ({ dateRange, dateRangePicker, datePicker } as model) =
     case msg of
         SetDateRangePicker msg ->
             let
-                ( newDateRangePicker, dateRangePickerFx ) =
+                ( newDateRangePicker, dateRangePickerCmd ) =
                     DateRangePicker.update msg dateRangePicker
             in
                 { model
                     | dateRangePicker = newDateRangePicker
                     , dateRange = getDateRange newDateRangePicker
                 }
-                    ! [ Cmd.map SetDateRangePicker dateRangePickerFx ]
+                    ! [ Cmd.map SetDateRangePicker dateRangePickerCmd ]
 
         SetDatePicker msg ->
             let
-                ( newDatePicker, datePickerFx ) =
+                ( newDatePicker, datePickerCmd ) =
                     DatePicker.update msg datePicker
             in
                 { model
                     | datePicker = newDatePicker
                     , date = getDate newDatePicker
                 }
-                    ! [ Cmd.map SetDatePicker datePickerFx ]
+                    ! [ Cmd.map SetDatePicker datePickerCmd ]
 
 
 view : Model -> Html Msg
