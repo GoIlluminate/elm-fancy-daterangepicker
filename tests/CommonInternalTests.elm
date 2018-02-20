@@ -15,9 +15,9 @@ import Expect
         , Expectation
         )
 import Date exposing (Date, Month(..))
-import DateRangePicker.Common as Common exposing (DateRange, mkDateRange)
-import DateRangePicker.Common.Internal as CI exposing (EnabledDateRange)
-import DateRangePicker.Date exposing (mkDate)
+import DateRangePicker.Common as Common exposing (DateRange, RestrictedDateRange(..), mkDateRange)
+import DateRangePicker.Common.Internal as CI exposing (EnabledDateRange, mkEnabledDateRangeFromRestrictedDateRange)
+import DateRangePicker.Date exposing (mkDate, subDays, addDays)
 
 
 commonInternalTestSuite : Test
@@ -99,7 +99,162 @@ commonInternalTestSuite =
                         (mkDate 2017 Dec 31)
                         True
             ]
+        , describe "isDisabledDate From RestrictedDateRange Tests"
+            [ test "Off -> No disabled dates before" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Off
+                        (mkDate 2018 Feb 19)
+                        False
+            , test "Off -> No disabled dates after" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Off
+                        (mkDate 2018 Feb 21)
+                        False
+            , test "ToPresent -> yesterday is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        ToPresent
+                        yesterday
+                        False
+            , test "ToPresent -> today is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        ToPresent
+                        today
+                        False
+            , test "ToPresent -> tomorrow is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        ToPresent
+                        tomorrow
+                        True
+            , test "FromPresent -> yesterday is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        FromPresent
+                        yesterday
+                        True
+            , test "FromPresent -> today is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        FromPresent
+                        today
+                        False
+            , test "FromPresent -> tomorrow is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        FromPresent
+                        tomorrow
+                        False
+            , test "Past -> yesterday is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Past
+                        yesterday
+                        False
+            , test "Past -> today is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Past
+                        today
+                        True
+            , test "Past -> tomorrow is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Past
+                        tomorrow
+                        True
+            , test "Future -> yesterday is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Future
+                        yesterday
+                        True
+            , test "Future -> today is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Future
+                        today
+                        True
+            , test "Future -> tomorrow is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        Future
+                        tomorrow
+                        False
+            , test "Between yesterday tomorrow -> today is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (Between yesterday tomorrow)
+                        today
+                        False
+            , test "Between today tomorrow -> yesterday is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (Between today tomorrow)
+                        yesterday
+                        True
+            , test "Between yesterday today -> tomorrow is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (Between yesterday today)
+                        tomorrow
+                        True
+            , test "To (2018 Jan 1) -> (2018 Jan 1) is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (To (mkDate 2018 Jan 1))
+                        (mkDate 2018 Jan 1)
+                        False
+            , test "To (2018 Jan 1) -> (2017 Dec 31) is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (To (mkDate 2018 Jan 1))
+                        (mkDate 2017 Dec 31)
+                        False
+            , test "To (2018 Jan 1) -> (2018 Jan 2) is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (To (mkDate 2018 Jan 1))
+                        (mkDate 2018 Jan 2)
+                        True
+            , test "From (2018 Jan 1) -> (2018 Jan 1) is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (From (mkDate 2018 Jan 1))
+                        (mkDate 2018 Jan 1)
+                        False
+            , test "From (2018 Jan 1) -> (2017 Dec 31) is disabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (From (mkDate 2018 Jan 1))
+                        (mkDate 2017 Dec 31)
+                        True
+            , test "From (2018 Jan 1) -> (2018 Jan 2) is enabled" <|
+                \_ ->
+                    testIsDisabledDateFromRestrictedDateRange
+                        (From (mkDate 2018 Jan 1))
+                        (mkDate 2018 Jan 2)
+                        False
+            ]
         ]
+
+
+today : Date
+today =
+    mkDate 2018 Feb 20
+
+
+yesterday : Date
+yesterday =
+    subDays 1 today
+
+
+tomorrow : Date
+tomorrow =
+    addDays 1 today
 
 
 tEnabledDateRange : EnabledDateRange
@@ -145,3 +300,19 @@ testIsDisabledDate enabledDateRange date output =
         enabledDateRange
         date
         |> equal output
+
+
+testIsDisabledDateFromRestrictedDateRange :
+    RestrictedDateRange
+    -> Date
+    -> Bool
+    -> Expectation
+testIsDisabledDateFromRestrictedDateRange restrictedDateRange date output =
+    let
+        enabledDateRange =
+            mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today
+    in
+        CI.isDisabledDate
+            enabledDateRange
+            date
+            |> equal output
