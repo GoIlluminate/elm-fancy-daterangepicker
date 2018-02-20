@@ -502,7 +502,7 @@ defaultSettings =
     , inputId = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
-    , restrictedDateRange = ToPresent
+    , restrictedDateRange = Off
     , formatDateRange = formatDateRange
     }
 
