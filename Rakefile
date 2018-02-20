@@ -12,3 +12,8 @@ end
 task :watch do
     sh("cd example && npm run start")
 end
+
+task :test do
+    sh("cd tests && elm package install --yes")
+    sh("elm-test")
+end
