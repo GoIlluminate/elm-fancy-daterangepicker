@@ -53,7 +53,7 @@ type alias Day =
 -}
 initDate : Date
 initDate =
-    mkDate 1992 May 29
+    mkDate 1994 Dec 6
 
 
 {-| A function to format a Date into a string.
@@ -307,7 +307,7 @@ addMonth date =
             Date.month date
 
         newMonth =
-            monthFromInt <| monthToInt month + 1
+            succMonth month
 
         year =
             Date.year date
@@ -321,9 +321,12 @@ addMonth date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth newYear newMonth
+
         newDay =
-            if day > daysInMonth newYear newMonth then
-                daysInMonth newYear newMonth
+            if day > dim then
+                dim
             else
                 day
     in
@@ -349,7 +352,7 @@ subMonth date =
             Date.month date
 
         newMonth =
-            monthFromInt <| monthToInt month - 1
+            predMonth month
 
         year =
             Date.year date
@@ -363,9 +366,12 @@ subMonth date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth newYear newMonth
+
         newDay =
-            if day > daysInMonth newYear newMonth then
-                daysInMonth newYear newMonth
+            if day > dim then
+                dim
             else
                 day
     in
@@ -396,9 +402,12 @@ subYear date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth year month
+
         newDay =
-            if day > daysInMonth year month then
-                daysInMonth year month
+            if day > dim then
+                dim
             else
                 day
     in
@@ -429,9 +438,12 @@ addYear date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth year month
+
         newDay =
-            if day > daysInMonth year month then
-                daysInMonth year month
+            if day > dim then
+                dim
             else
                 day
     in
@@ -759,4 +771,4 @@ unsafeDate date =
 -}
 ($>) : Date -> Date -> Bool
 ($>) a b =
-    Date.toTime a >= Date.toTime b
+    Date.toTime a > Date.toTime b

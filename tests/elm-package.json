@@ -1,17 +1,14 @@
 {
     "version": "1.0.0",
-    "summary": "A fancy daterangepicker in elm.",
+    "summary": "Test Suites",
     "repository": "https://github.com/goilluminate/elm-fancy-daterangepicker.git",
-    "license": "BSD3",
+    "license": "BSD-3-Clause",
     "source-directories": [
-        "src"
+        ".",
+        "../src"
     ],
-    "exposed-modules": [
-        "DateRangePicker",
-        "DatePicker",
-        "DateRangePicker.Date",
-        "DateRangePicker.Common"
-    ],
+    "exposed-modules": [],
+    "native-modules": true,
     "dependencies": {
         "elm-community/elm-time": "1.0.10 <= v < 2.0.0",
         "elm-community/list-extra": "7.0.1 <= v < 8.0.0",
