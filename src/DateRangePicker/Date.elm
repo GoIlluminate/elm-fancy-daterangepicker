@@ -306,8 +306,14 @@ addMonth date =
         month =
             Date.month date
 
+        newMonthInt =
+            monthToInt month + 1
+
         newMonth =
-            monthFromInt <| monthToInt month + 1
+            if newMonthInt == 13 then
+                Jan
+            else
+                monthFromInt newMonthInt
 
         year =
             Date.year date
@@ -348,8 +354,14 @@ subMonth date =
         month =
             Date.month date
 
+        newMonthInt =
+            monthToInt month - 1
+
         newMonth =
-            monthFromInt <| monthToInt month - 1
+            if newMonthInt == 0 then
+                Dec
+            else
+                monthFromInt newMonthInt
 
         year =
             Date.year date
