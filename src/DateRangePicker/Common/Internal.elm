@@ -116,7 +116,7 @@ isDisabledDate enabledDateRange date =
                     date $< start
 
                 ( Nothing, Just end ) ->
-                    date $> (addDays 1 end)
+                    date $> end
 
                 ( Nothing, Nothing ) ->
                     False

@@ -53,7 +53,7 @@ type alias Day =
 -}
 initDate : Date
 initDate =
-    mkDate 1992 May 29
+    mkDate 1994 Dec 6
 
 
 {-| A function to format a Date into a string.
@@ -306,14 +306,8 @@ addMonth date =
         month =
             Date.month date
 
-        newMonthInt =
-            monthToInt month + 1
-
         newMonth =
-            if newMonthInt == 13 then
-                Jan
-            else
-                monthFromInt newMonthInt
+            succMonth month
 
         year =
             Date.year date
@@ -327,9 +321,12 @@ addMonth date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth newYear newMonth
+
         newDay =
-            if day > daysInMonth newYear newMonth then
-                daysInMonth newYear newMonth
+            if day > dim then
+                dim
             else
                 day
     in
@@ -354,14 +351,8 @@ subMonth date =
         month =
             Date.month date
 
-        newMonthInt =
-            monthToInt month - 1
-
         newMonth =
-            if newMonthInt == 0 then
-                Dec
-            else
-                monthFromInt newMonthInt
+            predMonth month
 
         year =
             Date.year date
@@ -375,9 +366,12 @@ subMonth date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth newYear newMonth
+
         newDay =
-            if day > daysInMonth newYear newMonth then
-                daysInMonth newYear newMonth
+            if day > dim then
+                dim
             else
                 day
     in
@@ -408,9 +402,12 @@ subYear date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth year month
+
         newDay =
-            if day > daysInMonth year month then
-                daysInMonth year month
+            if day > dim then
+                dim
             else
                 day
     in
@@ -441,9 +438,12 @@ addYear date =
         day =
             Date.day date
 
+        dim =
+            daysInMonth year month
+
         newDay =
-            if day > daysInMonth year month then
-                daysInMonth year month
+            if day > dim then
+                dim
             else
                 day
     in
@@ -771,4 +771,4 @@ unsafeDate date =
 -}
 ($>) : Date -> Date -> Bool
 ($>) a b =
-    Date.toTime a >= Date.toTime b
+    Date.toTime a > Date.toTime b

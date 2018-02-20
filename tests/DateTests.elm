@@ -15,7 +15,7 @@ import Expect
         , Expectation
         )
 import Date exposing (Date, Month(..))
-import DateRangePicker.Date exposing (mkDate, daysInMonth, datesInRange, addDays, subDays, addMonths, subMonths, addYears, subYears)
+import DateRangePicker.Date exposing (mkDate, daysInMonth, datesInRange, addDays, subDays, addMonths, subMonths, addYears, subYears, ($==), ($>=), ($<=), ($>), ($<))
 
 
 dateTestSuite : Test
@@ -104,9 +104,9 @@ dateTestSuite =
             , test "addMonths 12 (2018 Jan 1) -> (2019 Jan 1)" <|
                 \_ ->
                     testAddMonths
-                        12
+                        24
                         (mkDate 2018 Jan 1)
-                        (mkDate 2019 Jan 1)
+                        (mkDate 2020 Jan 1)
             , test "addMonths 1 (2020 Jan 29) -> (2020 Feb 29)" <|
                 \_ ->
                     testAddMonths
@@ -134,8 +134,8 @@ dateTestSuite =
             , test "subMonths 12 (2019 Jan 1) -> (2018 Jan 1)" <|
                 \_ ->
                     testSubMonths
-                        12
-                        (mkDate 2019 Jan 1)
+                        24
+                        (mkDate 2020 Jan 1)
                         (mkDate 2018 Jan 1)
             , test "subMonths 1 (2020 Feb 29) -> (2020 Jan 29)" <|
                 \_ ->
@@ -199,6 +199,50 @@ dateTestSuite =
             , test "addYears and subYears together: today -> addYears 10 <| subYears 10 today" <|
                 \_ ->
                     equal today <| addYears 10 <| subYears 10 today
+            ]
+        , describe "Date Comparison Tests"
+            [ test "Equal: True" <|
+                \_ ->
+                    equal True <| (mkDate 2018 Jan 1) $== (mkDate 2018 Jan 1)
+            , test "Equal: False" <|
+                \_ ->
+                    equal False <| (mkDate 2018 Jan 2) $== (mkDate 2018 Jan 1)
+            , test "Less than or equal to, same date: True" <|
+                \_ ->
+                    equal True <| (mkDate 2018 Jan 1) $<= (mkDate 2018 Jan 1)
+            , test "Less than or equal to: True" <|
+                \_ ->
+                    equal True <| (mkDate 2017 Dec 31) $<= (mkDate 2018 Jan 1)
+            , test "Less than or equal to: False" <|
+                \_ ->
+                    equal False <| (mkDate 2018 Dec 31) $<= (mkDate 2018 Jan 1)
+            , test "Less than, same date: False" <|
+                \_ ->
+                    equal False <| (mkDate 2018 Jan 1) $< (mkDate 2018 Jan 1)
+            , test "Less than: True" <|
+                \_ ->
+                    equal True <| (mkDate 2017 Dec 31) $< (mkDate 2018 Jan 1)
+            , test "Less than: False" <|
+                \_ ->
+                    equal False <| (mkDate 2018 Dec 31) $< (mkDate 2018 Jan 1)
+            , test "Greater than or equal to, same date: True" <|
+                \_ ->
+                    equal True <| (mkDate 2018 Jan 1) $>= (mkDate 2018 Jan 1)
+            , test "Greater than or equal to: True" <|
+                \_ ->
+                    equal True <| (mkDate 2019 Jan 1) $>= (mkDate 2018 Jan 1)
+            , test "Greater than or equal: False" <|
+                \_ ->
+                    equal False <| (mkDate 2017 Jan 1) $>= (mkDate 2018 Jan 1)
+            , test "Greater than, same date: False" <|
+                \_ ->
+                    equal False <| (mkDate 2018 Jan 1) $> (mkDate 2018 Jan 1)
+            , test "Greater than: True" <|
+                \_ ->
+                    equal True <| (mkDate 2019 Jan 1) $> (mkDate 2018 Jan 1)
+            , test "Greater than: False" <|
+                \_ ->
+                    equal False <| (mkDate 2017 Jan 1) $> (mkDate 2018 Jan 1)
             ]
         ]
 
