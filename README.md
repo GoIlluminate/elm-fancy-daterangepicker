@@ -338,6 +338,18 @@ This will:
     - install all elm packages
     - run the webpack dev server with hmr on `localhost:8080`
 
+## Tests
+
+To run the tests run `rake test`.
+This will:
+    - install all elm packages in the tests folder
+    - run `elm-test`
+
+**Note** you need to have `elm-test` installed globally
+```shell
+npm install elm-test -g
+```
+
 ## References
 
 When this package was first created, the [elm-community/elm-datepicker][elm-community-datepicker] package was referenced and some of the code/ideas were used.
