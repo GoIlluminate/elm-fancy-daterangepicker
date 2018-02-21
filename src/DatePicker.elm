@@ -600,9 +600,14 @@ getDate (DatePicker model) =
 
 {-| Sets the current date for the datepicker.
 -}
-setDate : Date -> DatePicker -> DatePicker
+setDate : Maybe Date -> DatePicker -> DatePicker
 setDate date (DatePicker model) =
-    DatePicker { model | date = Just (getNewDate model date) }
+    case date of
+        Just a ->
+            DatePicker { model | date = Just (getNewDate model a) }
+
+        Nothing ->
+            DatePicker { model | date = Nothing }
 
 
 {-| Sets the date formatter for the datepicker.
