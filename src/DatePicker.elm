@@ -567,7 +567,13 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                                 newModel $! []
 
                 Reset ->
-                    initModel $! [ initCmd ]
+                    { model
+                        | date = Nothing
+                        , showPresets = False
+                        , open = False
+                        , forceOpen = False
+                    }
+                        $! [ initCmd ]
 
                 TogglePresets ->
                     { model | showPresets = not model.showPresets } $! []

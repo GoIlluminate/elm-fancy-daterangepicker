@@ -741,7 +741,16 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                         newModel $! []
 
                 Reset ->
-                    initModel $! [ initCmd ]
+                    { model
+                        | dateRange = Nothing
+                        , startDate = Nothing
+                        , endDate = Nothing
+                        , hoveredDate = Nothing
+                        , showPresets = False
+                        , open = False
+                        , forceOpen = False
+                    }
+                        $! [ initCmd ]
 
                 TogglePresets ->
                     { model | showPresets = not model.showPresets } $! []
