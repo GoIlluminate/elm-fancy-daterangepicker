@@ -602,12 +602,16 @@ getDate (DatePicker model) =
 -}
 setDate : Maybe Date -> DatePicker -> DatePicker
 setDate date (DatePicker model) =
-    case date of
-        Just a ->
-            DatePicker { model | date = Just (getNewDate model a) }
+    let
+        newDate =
+            case date of
+                Just a ->
+                    Just <| getNewDate model a
 
-        Nothing ->
-            DatePicker { model | date = Nothing }
+                Nothing ->
+                    Nothing
+    in
+        DatePicker ({ model | date = newDate } |> updateInputText)
 
 
 {-| Sets the date formatter for the datepicker.
