@@ -782,12 +782,16 @@ getDateRange (DateRangePicker model) =
 -}
 setDateRange : Maybe DateRange -> DateRangePicker -> DateRangePicker
 setDateRange dateRange (DateRangePicker model) =
-    case dateRange of
-        Just a ->
-            DateRangePicker { model | dateRange = Just (getNewDateRange model a) }
+    let
+        newDateRange =
+            case dateRange of
+                Just a ->
+                    Just <| getNewDateRange model a
 
-        Nothing ->
-            DateRangePicker { model | dateRange = Nothing }
+                Nothing ->
+                    Nothing
+    in
+        DateRangePicker ({ model | dateRange = newDateRange } |> updateInputText)
 
 
 {-| Sets the date range formatter for the daterangepicker.
