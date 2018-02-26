@@ -29,6 +29,8 @@ module DateRangePicker
         , setRestrictedDateRange
         , formatDateRange
         , view
+        , getMinDate
+        , getMaxDate
         )
 
 {-| A customizable daterangepicker component.
@@ -39,7 +41,7 @@ module DateRangePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
 
 
 ## Presets
@@ -775,6 +777,40 @@ isOpen (DateRangePicker model) =
 getDateRange : DateRangePicker -> Maybe DateRange
 getDateRange (DateRangePicker model) =
     model.dateRange
+
+
+{-| Expose the min date in the enabled date range.
+-}
+getMinDate : DateRangePicker -> Maybe Date
+getMinDate (DateRangePicker model) =
+    case model.enabledDateRange of
+        Just a ->
+            case ( a.start, a.end ) of
+                ( Just start, _ ) ->
+                    Just start
+
+                ( _, _ ) ->
+                    Nothing
+
+        Nothing ->
+            Nothing
+
+
+{-| Expose the max date in the enabled date range.
+-}
+getMaxDate : DateRangePicker -> Maybe Date
+getMaxDate (DateRangePicker model) =
+    case model.enabledDateRange of
+        Just a ->
+            case ( a.start, a.end ) of
+                ( _, Just end ) ->
+                    Just end
+
+                ( _, _ ) ->
+                    Nothing
+
+        Nothing ->
+            Nothing
 
 
 {-| Sets the current daterange for the daterangepicker.
