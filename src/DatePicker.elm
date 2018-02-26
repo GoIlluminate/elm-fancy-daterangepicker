@@ -130,8 +130,7 @@ type Msg
     | NextYear
     | SetDate Date
     | DoNothing
-    | Focus
-    | Blur
+    | Click
     | MouseDown
     | MouseUp
     | Done
@@ -524,7 +523,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                         }
                             $! []
 
-                Focus ->
+                Click ->
                     let
                         newYear =
                             case model.date of
@@ -533,16 +532,16 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
 
                                 Nothing ->
                                     model.currentYear
+
+                        newOpen =
+                            not model.open
                     in
                         { model
-                            | open = True
+                            | open = newOpen
                             , forceOpen = False
                             , currentYear = newYear
                         }
                             $! []
-
-                Blur ->
-                    { model | open = forceOpen } $! []
 
                 MouseDown ->
                     { model | forceOpen = True } $! []
@@ -732,9 +731,7 @@ view (DatePicker ({ open, settings } as model)) =
         dateInput =
             div
                 ([ Attrs.name (settings.inputName ?> "")
-                 , Events.onBlur Blur
-                 , Events.onClick Focus
-                 , Events.onFocus Focus
+                 , Events.onClick Click
                  , Attrs.class "elm-fancy-daterangepicker--date-input"
                  ]
                     ++ settings.inputAttributes
