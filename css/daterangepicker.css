@@ -9,6 +9,10 @@
   cursor: not-allowed !important;
   color: grey !important;
 }
+.elm-fancy-daterangepicker--today {
+  background: darkblue !important;
+  color: white !important;
+}
 .elm-fancy-daterangepicker--container i.fa {
   margin-right: 5px;
 }

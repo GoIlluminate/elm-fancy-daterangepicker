@@ -476,7 +476,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
 
                         newModel_ =
                             { model
-                                | today = date
+                                | today = mkDate (year date) (month date) (day date)
                                 , currentYear = prepareYear date
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
@@ -1019,9 +1019,13 @@ getDay model date =
         isSelectedDate_ =
             isSelectedDate model date
 
+        isToday_ =
+            isToday model date
+
         classString =
             mkClassString
                 [ "elm-fancy-daterangepicker--day"
+                , mkClass "elm-fancy-daterangepicker--today" isToday_
                 , mkClass "elm-fancy-daterangepicker--selected-range" isSelectedDate_
                 , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDate_
                 ]
@@ -1051,6 +1055,13 @@ isSelectedDate model date =
 
         Nothing ->
             False
+
+
+{-| An opaque function that checks if the passed in date is today.
+-}
+isToday : Model -> Date -> Bool
+isToday model date =
+    date $== model.today
 
 
 {-| An opaque function that gets the new date range from a selected date range

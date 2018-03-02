@@ -574,7 +574,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
                         newModel_ =
                             { model
-                                | today = date
+                                | today = mkDate (year date) (month date) (day date)
                                 , currentYear = prepareYear date
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
@@ -1248,9 +1248,13 @@ getDay model date =
                 && not isDisabledDate_
                 && not isSelectedDateRange_
 
+        isToday_ =
+            isToday model date
+
         classString =
             mkClassString
                 [ "elm-fancy-daterangepicker--day"
+                , mkClass "elm-fancy-daterangepicker--today" isToday_
                 , mkClass "elm-fancy-daterangepicker--selected-range" isSelectedDateRange_
                 , mkClass "elm-fancy-daterangepicker--hovered-range" isHoveredDateRange_
                 , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDate_
@@ -1283,7 +1287,7 @@ isSelectedDateRange model date =
             inRange date a
 
         Nothing ->
-            isStartOrEnd date model
+            isStartOrEnd model date
 
 
 {-| An opaque function that checks if the given date is between the start date and hovered date.
@@ -1313,8 +1317,8 @@ isHoveredDateRange model date =
 {-| An opaque function that checks if the passed in date is equal
 to the model's startDate or endDate
 -}
-isStartOrEnd : Date -> Model -> Bool
-isStartOrEnd date model =
+isStartOrEnd : Model -> Date -> Bool
+isStartOrEnd model date =
     case ( model.startDate, model.endDate ) of
         ( Just a, Just b ) ->
             a $== date || b $== date
@@ -1327,6 +1331,13 @@ isStartOrEnd date model =
 
         ( _, _ ) ->
             False
+
+
+{-| An opaque function that checks if the passed in date is today.
+-}
+isToday : Model -> Date -> Bool
+isToday model date =
+    date $== model.today
 
 
 {-| An opaque function that gets the new date range from a selected date range

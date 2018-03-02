@@ -22,6 +22,11 @@ $dp-arrow-right: '►';
     color: $dp-clr-disabled !important;
 }
 
+.#{$dp-ns}today {
+    background: $dp-clr-main !important;
+    color: $dp-clr-secondary !important;
+}
+
 .#{$dp-ns}container {
     i.fa {
         margin-right: 5px;
