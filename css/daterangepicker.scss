@@ -22,6 +22,16 @@ $dp-arrow-right: '►';
     color: $dp-clr-disabled !important;
 }
 
+.#{dp-ns}btn {
+    -webkit-appearance: button;
+    -moz-appearance: button;
+    appearance: button;
+    background: $dp-clr-main;
+    color: $dp-clr-secondary;
+    padding:3px 8px 3px 8px;
+    cursor: pointer;
+}
+
 .#{$dp-ns}today {
     background: $dp-clr-main !important;
     color: $dp-clr-secondary !important;
@@ -32,14 +42,11 @@ $dp-arrow-right: '►';
         margin-right: 5px;
     }
     .#{$dp-ns}date-input {
+        @extend .#{dp-ns}btn;
         width: 175px;
         display:inline-block;
-        -webkit-appearance:button;
-        -moz-appearance: button;
-        padding:3px 8px 3px 8px;
         font-size:13px;
         position:relative;
-        cursor:context-menu;
     }
     .#{$dp-ns}wrapper {
         padding: 0px;
@@ -150,6 +157,12 @@ $dp-arrow-right: '►';
             grid-template-columns: repeat(3, 1fr);
             color: $dp-clr-main;
             padding-bottom: 5px;
+            >div {
+                @extend .#{dp-ns}btn;
+                background: $dp-clr-secondary;
+                color: $dp-clr-main;
+                text-align: center;
+            }
         }
         .#{$dp-ns}presets {
             -webkit-touch-callout: none; /* iOS Safari */

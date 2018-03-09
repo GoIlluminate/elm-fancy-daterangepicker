@@ -9,6 +9,15 @@
   cursor: not-allowed !important;
   color: grey !important;
 }
+.dp-nsbtn, .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--date-input, .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--header > div {
+  -webkit-appearance: button;
+  -moz-appearance: button;
+  appearance: button;
+  background: darkblue;
+  color: white;
+  padding: 3px 8px 3px 8px;
+  cursor: pointer;
+}
 .elm-fancy-daterangepicker--today {
   background: darkblue !important;
   color: white !important;
@@ -19,12 +28,8 @@
 .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--date-input {
   width: 175px;
   display: inline-block;
-  -webkit-appearance: button;
-  -moz-appearance: button;
-  padding: 3px 8px 3px 8px;
   font-size: 13px;
   position: relative;
-  cursor: context-menu;
 }
 .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper {
   padding: 0px;
@@ -131,6 +136,11 @@
   grid-template-columns: repeat(3, 1fr);
   color: darkblue;
   padding-bottom: 5px;
+}
+.elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--header > div {
+  background: white;
+  color: darkblue;
+  text-align: center;
 }
 .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--presets {
   -webkit-touch-callout: none;
