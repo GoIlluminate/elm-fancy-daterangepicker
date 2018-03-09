@@ -792,9 +792,9 @@ getCalendar model =
 getHeader : Html Msg
 getHeader =
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
-        [ button [ Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn", Attrs.type_ "button" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
-        , button [ Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn", Attrs.type_ "button" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
-        , button [ Events.onClick Reset, Attrs.class "elm-fancy-daterangepicker--reset-btn", Attrs.type_ "button" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
+        [ div [ Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
+        , div [ Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
+        , div [ Events.onClick Reset, Attrs.class "elm-fancy-daterangepicker--reset-btn" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
         ]
 
 
