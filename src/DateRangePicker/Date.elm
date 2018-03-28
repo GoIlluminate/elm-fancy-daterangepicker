@@ -34,7 +34,7 @@ module DateRangePicker.Date
 
 -}
 
-import Date exposing (Date, Day(..), Month(..), year, month, day)
+import Date exposing (Date, Day(..), Month(..))
 
 
 {-| An opaque type to represent year as an Int.
@@ -64,11 +64,11 @@ initDate =
 formatDate : Date -> String
 formatDate date =
     String.concat
-        [ toString (month date)
+        [ toString (Date.month date)
         , " "
-        , dayToString (day date)
+        , dayToString (Date.day date)
         , ", "
-        , toString (year date)
+        , toString (Date.year date)
         ]
 
 
@@ -169,7 +169,7 @@ datesInRange min max =
 -}
 dateTuple : Date -> ( Int, Int, Int )
 dateTuple date =
-    ( year date, monthToInt <| month date, day date )
+    ( Date.year date, monthToInt <| Date.month date, Date.day date )
 
 
 {-| An opaque function that takes a function f, and an integer n, then repeats f, n times.
@@ -190,7 +190,7 @@ repeat f =
 -}
 startOfMonth : Date -> Date
 startOfMonth date =
-    mkDate (year date) (month date) 1
+    mkDate (Date.year date) (Date.month date) 1
 
 
 {-| A function that takes a Date and returns the date representing the end of that month.
@@ -199,10 +199,10 @@ endOfMonth : Date -> Date
 endOfMonth date =
     let
         y =
-            year date
+            Date.year date
 
         m =
-            month date
+            Date.month date
     in
         mkDate y m (daysInMonth y m)
 
@@ -711,8 +711,8 @@ daysInMonth year month =
 {-| An opaque function to determine whether a given year is a leap year.
 -}
 isLeapYear : Year -> Bool
-isLeapYear y =
-    y % 400 == 0 || y % 100 /= 0 && y % 4 == 0
+isLeapYear year =
+    year % 400 == 0 || year % 100 /= 0 && year % 4 == 0
 
 
 {-| A function that takes a Year, Month, Day and returns a Date.
@@ -735,8 +735,8 @@ unsafeDate date =
         Err e ->
             Debug.crash ("unsafeDate: failed to parse date:" ++ e)
 
-        Ok date ->
-            date
+        Ok d ->
+            d
 
 
 {-| An opaque function that checks if date a is equal to date b

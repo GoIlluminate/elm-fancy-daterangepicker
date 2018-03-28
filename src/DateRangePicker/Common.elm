@@ -16,7 +16,7 @@ module DateRangePicker.Common
 
 -}
 
-import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
+import Date exposing (Date, Day(..), Month(..), day, month, year)
 import DateRangePicker.Date exposing (mkDate)
 
 

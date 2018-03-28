@@ -143,7 +143,7 @@ prepareYear date =
         , year = yr
         , quarters =
             prepareQuarters <|
-                LE.groupWhile (\x y -> (month x) == (month y)) dates
+                LE.groupWhile (\x y -> month x == month y) dates
         }
 
 
