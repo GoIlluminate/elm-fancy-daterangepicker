@@ -59,7 +59,6 @@ import Date
         , Day(..)
         , Month(..)
         , day
-        , dayOfWeek
         , month
         , year
         )
@@ -68,8 +67,6 @@ import Html
         ( Html
         , div
         , text
-        , input
-        , button
         , i
         , span
         )
@@ -79,13 +76,8 @@ import DateRangePicker.Date
         , mkDate
         , startOfMonth
         , endOfMonth
-        , datesInRange
-        , dayToInt
-        , dayFromInt
-        , formatDay
         , formatDate
         , formatMonth
-        , daysInMonth
         , subDays
         , addDays
         , subMonths
@@ -95,8 +87,6 @@ import DateRangePicker.Date
         , ($==)
         , ($<=)
         , ($>=)
-        , ($<)
-        , ($>)
         )
 import DateRangePicker.Common
     exposing
@@ -112,7 +102,6 @@ import DateRangePicker.Common.Internal
         , (?>)
         , ($!)
         , inRange
-        , prepareQuarters
         , prepareYear
         , padMonthLeft
         , padMonthRight
@@ -371,18 +360,6 @@ mkPresetFromDates name start end =
     }
 
 
-{-| A function that creates a DateRange by taking in two dates (start and end).
-
-This function assumes that start <= end
-
--}
-mkDateRange : Date -> Date -> DateRange
-mkDateRange start end =
-    { start = mkDate (year start) (month start) (day start)
-    , end = mkDate (year end) (month end) (day end)
-    }
-
-
 {-| An opaque function used to make the default presets
 -}
 defaultPresets : Date -> List Preset
@@ -560,9 +537,9 @@ initCmd =
 {-| The daterangepicker update function.
 -}
 update : Msg -> DateRangePicker -> ( DateRangePicker, Cmd Msg )
-update msg (DateRangePicker ({ forceOpen, settings } as model)) =
+update msg (DateRangePicker ({ settings } as model)) =
     let
-        ( newModel, cmds ) =
+        ( updatedModel, cmds ) =
             case msg of
                 InitCurrentDate date ->
                     let
@@ -572,7 +549,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                         enabledDateRange =
                             mkEnabledDateRangeFromRestrictedDateRange settings.restrictedDateRange date
 
-                        newModel_ =
+                        newModel =
                             { model
                                 | today = mkDate (year date) (month date) (day date)
                                 , currentYear = prepareYear date
@@ -583,13 +560,12 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                         newDateRange =
                             case model.dateRange of
                                 Just a ->
-                                    Just <| getNewDateRange newModel_ a
+                                    Just <| getNewDateRange newModel a
 
                                 Nothing ->
                                     Nothing
                     in
-                        { newModel_ | dateRange = newDateRange }
-                            $! []
+                        { newModel | dateRange = newDateRange } $! []
 
                 PrevYear ->
                     let
@@ -626,7 +602,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
-                        ( Just a, Just b ) ->
+                        ( Just _, Just _ ) ->
                             { model
                                 | startDate = Just date
                                 , endDate = Nothing
@@ -634,7 +610,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                             }
                                 $! []
 
-                        ( Just a, Nothing ) ->
+                        ( Just _, Nothing ) ->
                             let
                                 start =
                                     model.startDate
@@ -644,12 +620,9 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
 
                                 dateRange =
                                     case ( start, end ) of
-                                        ( Just aa, Just bb ) ->
-                                            if aa $<= bb then
-                                                Just <|
-                                                    mkDateRange
-                                                        aa
-                                                        bb
+                                        ( Just a, Just b ) ->
+                                            if a $<= b then
+                                                Just <| mkDateRange a b
                                             else
                                                 Nothing
 
@@ -657,7 +630,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                                             Nothing
                             in
                                 case dateRange of
-                                    Just a ->
+                                    Just _ ->
                                         { model
                                             | endDate = Nothing
                                             , startDate = Nothing
@@ -718,7 +691,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                             { model | open = False, forceOpen = False }
                     in
                         case newModel.dateRange of
-                            Just a ->
+                            Just _ ->
                                 newModel $! []
 
                             Nothing ->
@@ -762,7 +735,7 @@ update msg (DateRangePicker ({ forceOpen, settings } as model)) =
                 DoNothing ->
                     model $! []
     in
-        (updateInputText newModel) !> [ cmds ]
+        updateInputText updatedModel !> [ cmds ]
 
 
 {-| Expose if the daterange picker is open

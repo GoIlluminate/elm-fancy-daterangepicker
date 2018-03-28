@@ -1,12 +1,29 @@
 module Main exposing (..)
 
-import Date exposing (Date, Day(..), Month(..), day, dayOfWeek, month, year)
+import Date
+    exposing
+        ( Date
+        , Day(..)
+        , Month(..)
+        )
 import Html exposing (Html, div, h2, h4, text)
 import Html.Attributes exposing (class)
-import DateRangePicker exposing (defaultSettings, getDateRange, setSettings, setDateRange)
-import DateRangePicker.Date exposing (mkDate, monthToInt, formatDate)
+import DateRangePicker
+    exposing
+        ( defaultSettings
+        , getDateRange
+        , setSettings
+        )
+import DateRangePicker.Date
+    exposing
+        ( formatDate
+        )
 import DatePicker exposing (getDate)
-import DateRangePicker.Common exposing (DateRange, mkDateRange, RestrictedDateRange(Off, ToPresent, FromPresent, Past, Future, Between, To, From))
+import DateRangePicker.Common
+    exposing
+        ( DateRange
+        , RestrictedDateRange(ToPresent)
+        )
 
 
 type Msg
@@ -59,12 +76,12 @@ getSettings useDefault =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ dateRange, dateRangePicker, datePicker } as model) =
+update msg ({ dateRangePicker, datePicker } as model) =
     case msg of
-        SetDateRangePicker msg ->
+        SetDateRangePicker msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg dateRangePicker
+                    DateRangePicker.update msg_ dateRangePicker
             in
                 { model
                     | dateRangePicker = newDateRangePicker
@@ -72,10 +89,10 @@ update msg ({ dateRange, dateRangePicker, datePicker } as model) =
                 }
                     ! [ Cmd.map SetDateRangePicker dateRangePickerCmd ]
 
-        SetDatePicker msg ->
+        SetDatePicker msg_ ->
             let
                 ( newDatePicker, datePickerCmd ) =
-                    DatePicker.update msg datePicker
+                    DatePicker.update msg_ datePicker
             in
                 { model
                     | datePicker = newDatePicker
@@ -85,16 +102,16 @@ update msg ({ dateRange, dateRangePicker, datePicker } as model) =
 
 
 view : Model -> Html Msg
-view ({ dateRange, dateRangePicker, datePicker, date } as model) =
+view { dateRange, dateRangePicker, datePicker, date } =
     div [ class "main" ]
         [ div [ class "date-range-picker-wrapper" ]
             [ h2 [] [ text "Date Range Picker" ]
-            , h4 [] [ text <| "Selected DateRange: " ++ (printDateRange dateRange) ]
+            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
             , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
             ]
         , div [ class "single-date-picker-wrapper" ]
             [ h2 [] [ text "Single Date Picker" ]
-            , h4 [] [ text <| "Selected Date: " ++ (printDate date) ]
+            , h4 [] [ text <| "Selected Date: " ++ printDate date ]
             , DatePicker.view datePicker |> Html.map SetDatePicker
             ]
         ]

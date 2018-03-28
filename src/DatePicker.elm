@@ -55,7 +55,6 @@ import Date
         , Day(..)
         , Month(..)
         , day
-        , dayOfWeek
         , month
         , year
         )
@@ -64,8 +63,6 @@ import Html
         ( Html
         , div
         , text
-        , input
-        , button
         , i
         , span
         )
@@ -75,13 +72,8 @@ import DateRangePicker.Date
         , mkDate
         , startOfMonth
         , endOfMonth
-        , datesInRange
-        , dayToInt
-        , dayFromInt
-        , formatDay
         , formatDate
         , formatMonth
-        , daysInMonth
         , subDays
         , addDays
         , subMonths
@@ -91,13 +83,10 @@ import DateRangePicker.Date
         , ($==)
         , ($<=)
         , ($>=)
-        , ($<)
-        , ($>)
         )
 import DateRangePicker.Common
     exposing
         ( RestrictedDateRange(..)
-        , DateRange
         , mkDateRange
         )
 import DateRangePicker.Common.Internal
@@ -108,7 +97,6 @@ import DateRangePicker.Common.Internal
         , (?>)
         , ($!)
         , inRange
-        , prepareQuarters
         , prepareYear
         , padMonthLeft
         , padMonthRight
@@ -462,9 +450,9 @@ initCmd =
 {-| The datepicker update function.
 -}
 update : Msg -> DatePicker -> ( DatePicker, Cmd Msg )
-update msg (DatePicker ({ forceOpen, settings } as model)) =
+update msg (DatePicker ({ settings } as model)) =
     let
-        ( newModel, cmds ) =
+        ( updatedModel, cmds ) =
             case msg of
                 InitCurrentDate date ->
                     let
@@ -474,7 +462,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                         enabledDateRange =
                             mkEnabledDateRangeFromRestrictedDateRange settings.restrictedDateRange date
 
-                        newModel_ =
+                        newModel =
                             { model
                                 | today = mkDate (year date) (month date) (day date)
                                 , currentYear = prepareYear date
@@ -485,13 +473,12 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                         newDate =
                             case model.date of
                                 Just a ->
-                                    Just <| getNewDate newModel_ a
+                                    Just <| getNewDate newModel a
 
                                 Nothing ->
                                     Nothing
                     in
-                        { newModel_ | date = newDate }
-                            $! []
+                        { newModel | date = newDate } $! []
 
                 PrevYear ->
                     let
@@ -580,7 +567,7 @@ update msg (DatePicker ({ forceOpen, settings } as model)) =
                 DoNothing ->
                     model $! []
     in
-        (updateInputText newModel) !> [ cmds ]
+        updateInputText updatedModel !> [ cmds ]
 
 
 {-| Expose if the daterange picker is open
