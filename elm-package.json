@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "summary": "A fancy daterangepicker in elm.",
     "repository": "https://github.com/goilluminate/elm-fancy-daterangepicker.git",
     "license": "BSD3",
