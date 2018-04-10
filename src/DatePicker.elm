@@ -23,6 +23,7 @@ module DatePicker
         , setPlaceholder
         , setInputName
         , setInputId
+        , setInputIcon
         , setInputAttributes
         , setPresetOptions
         , setRestrictedDateRange
@@ -37,7 +38,7 @@ module DatePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange
 
 
 ## Presets
@@ -148,6 +149,7 @@ type alias Settings =
     { placeholder : String
     , inputName : Maybe String
     , inputId : Maybe String
+    , inputIcon : Maybe (Html Msg)
     , inputAttributes : List (Html.Attribute Msg)
     , presetOptions : PresetOptions
     , restrictedDateRange : RestrictedDateRange
@@ -394,6 +396,7 @@ defaultSettings =
     { placeholder = "Select a date..."
     , inputName = Nothing
     , inputId = Nothing
+    , inputIcon = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
     , restrictedDateRange = Off
@@ -663,6 +666,20 @@ setInputId inputId (DatePicker model) =
         DatePicker { model | settings = newSettings }
 
 
+{-| Sets the input icon for the datepicker.
+-}
+setInputIcon : Html Msg -> DatePicker -> DatePicker
+setInputIcon inputIcon (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputIcon = Just inputIcon }
+    in
+        DatePicker { model | settings = newSettings }
+
+
 {-| Sets the input attributes for the datepicker.
 -}
 setInputAttributes : List (Html.Attribute Msg) -> DatePicker -> DatePicker
@@ -715,6 +732,14 @@ view (DatePicker ({ open, settings } as model)) =
                 |> Maybe.map Attrs.id
                 |> (List.singleton >> List.filterMap identity)
 
+        icon =
+            case settings.inputIcon of
+                Just icn ->
+                    icn
+
+                Nothing ->
+                    i [] []
+
         dateInput =
             div
                 ([ Attrs.name (settings.inputName ?> "")
@@ -724,7 +749,7 @@ view (DatePicker ({ open, settings } as model)) =
                     ++ settings.inputAttributes
                     ++ potentialInputId
                 )
-                [ i [ Attrs.class "fa fa-calendar" ] []
+                [ icon
                 , model.inputText ?> settings.placeholder |> text
                 ]
     in

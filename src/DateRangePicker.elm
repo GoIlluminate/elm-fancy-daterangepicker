@@ -24,6 +24,7 @@ module DateRangePicker
         , setPlaceholder
         , setInputName
         , setInputId
+        , setInputIcon
         , setInputAttributes
         , setPresetOptions
         , setRestrictedDateRange
@@ -41,7 +42,7 @@ module DateRangePicker
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
 
 
 ## Presets
@@ -158,6 +159,7 @@ type alias Settings =
     { placeholder : String
     , inputName : Maybe String
     , inputId : Maybe String
+    , inputIcon : Maybe (Html Msg)
     , inputAttributes : List (Html.Attribute Msg)
     , presetOptions : PresetOptions
     , restrictedDateRange : RestrictedDateRange
@@ -478,6 +480,7 @@ defaultSettings =
     { placeholder = "Select a date range..."
     , inputName = Nothing
     , inputId = Nothing
+    , inputIcon = Nothing
     , inputAttributes = []
     , presetOptions = defaultPresetOptions
     , restrictedDateRange = Off
@@ -872,6 +875,20 @@ setInputAttributes inputAttributes (DateRangePicker model) =
         DateRangePicker { model | settings = newSettings }
 
 
+{-| Sets the input icon for the daterangepicker.
+-}
+setInputIcon : Html Msg -> DateRangePicker -> DateRangePicker
+setInputIcon inputIcon (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputIcon = Just inputIcon }
+    in
+        DateRangePicker { model | settings = newSettings }
+
+
 {-| Sets the preset options for the daterangepicker.
 -}
 setPresetOptions : PresetOptions -> DateRangePicker -> DateRangePicker
@@ -917,6 +934,14 @@ view (DateRangePicker ({ open, settings } as model)) =
                 |> Maybe.map Attrs.id
                 |> (List.singleton >> List.filterMap identity)
 
+        icon =
+            case settings.inputIcon of
+                Just icn ->
+                    icn
+
+                Nothing ->
+                    i [] []
+
         dateInput =
             div
                 ([ Attrs.name (settings.inputName ?> "")
@@ -926,7 +951,7 @@ view (DateRangePicker ({ open, settings } as model)) =
                     ++ settings.inputAttributes
                     ++ potentialInputId
                 )
-                [ i [ Attrs.class "fa fa-calendar" ] []
+                [ icon
                 , model.inputText ?> settings.placeholder |> text
                 ]
     in
