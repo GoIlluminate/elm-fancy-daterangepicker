@@ -6,13 +6,14 @@ import Date
         , Day(..)
         , Month(..)
         )
-import Html exposing (Html, div, h2, h4, text)
+import Html exposing (Html, div, h2, h4, text, i)
 import Html.Attributes exposing (class)
 import DateRangePicker
     exposing
         ( defaultSettings
         , getDateRange
         , setSettings
+        , setInputIcon
         )
 import DateRangePicker.Date
     exposing
@@ -52,6 +53,7 @@ init =
             dateRangePicker_
                 |> setSettings (getSettings True)
                 |> DateRangePicker.setInputId "myDateRangePicker"
+                |> setInputIcon (i [ class "fa fa-calendar" ] [])
 
         datePicker =
             datePicker_
