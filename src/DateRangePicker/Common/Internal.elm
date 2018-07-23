@@ -15,7 +15,7 @@ module DateRangePicker.Common.Internal
         , mkEnabledDateRangeFromRestrictedDateRange
         , mkClass
         , isDisabledDate
-        , getDaysOfWeek
+        , renderDaysOfWeek
         , mkClassString
         , noPresets
         )
@@ -272,8 +272,8 @@ mkEnabledDateRange start end =
 
 {-| An opaque function that gets the Days of the Week Html Msg for the calendar.
 -}
-getDaysOfWeek : List (Html msg)
-getDaysOfWeek =
+renderDaysOfWeek : List (Html msg)
+renderDaysOfWeek =
     let
         days =
             List.range 1 7
