@@ -95,6 +95,7 @@ import DateRangePicker.Common
         ( RestrictedDateRange(..)
         , DateRange
         , mkDateRange
+        , inRange
         )
 import DateRangePicker.Common.Internal
     exposing
@@ -103,7 +104,6 @@ import DateRangePicker.Common.Internal
         , EnabledDateRange
         , (?>)
         , ($!)
-        , inRange
         , prepareYear
         , padMonthLeft
         , padMonthRight

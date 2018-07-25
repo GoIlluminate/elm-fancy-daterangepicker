@@ -6,7 +6,6 @@ module DateRangePicker.Common.Internal
         , (?>)
         , ($!)
         , chunksOfLeft
-        , inRange
         , prepareQuarters
         , prepareYear
         , padMonthLeft
@@ -49,6 +48,7 @@ import DateRangePicker.Common
         ( DateRange
         , RestrictedDateRange(..)
         , mkDateRange
+        , inRange
         )
 import DateRangePicker.Date
     exposing
@@ -89,14 +89,6 @@ type alias EnabledDateRange =
     { start : Maybe Date
     , end : Maybe Date
     }
-
-
-{-| An opaque function to check if a given date is within a
-given dateRange.
--}
-inRange : Date -> DateRange -> Bool
-inRange date { start, end } =
-    start $<= date && end $>= date
 
 
 {-| An opaque function to check if the given date is a disabled date.

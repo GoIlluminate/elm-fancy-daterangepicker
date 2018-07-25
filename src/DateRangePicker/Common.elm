@@ -3,11 +3,12 @@ module DateRangePicker.Common
         ( RestrictedDateRange(..)
         , DateRange
         , mkDateRange
+        , inRange
         )
 
 {-| A common library between DatePicker and DateRangePicker
 
-@docs DateRange, mkDateRange
+@docs DateRange, mkDateRange, inRange
 
 
 # Settings
@@ -17,7 +18,14 @@ module DateRangePicker.Common
 -}
 
 import Date exposing (Date, Day(..), Month(..), day, month, year)
-import DateRangePicker.Date exposing (mkDate)
+import DateRangePicker.Date
+    exposing
+        ( mkDate
+        , ($<)
+        , ($>)
+        , ($>=)
+        , ($<=)
+        )
 
 
 {-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
@@ -61,3 +69,11 @@ mkDateRange start end =
     { start = mkDate (year start) (month start) (day start)
     , end = mkDate (year end) (month end) (day end)
     }
+
+
+{-| A function to check if a given date is within a
+given dateRange.
+-}
+inRange : Date -> DateRange -> Bool
+inRange date { start, end } =
+    start $<= date && end $>= date
