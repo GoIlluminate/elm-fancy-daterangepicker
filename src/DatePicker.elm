@@ -16,6 +16,7 @@ module DatePicker
         , init
         , update
         , isOpen
+        , getPresets
         , getDate
         , setDate
         , setSettings
@@ -43,7 +44,7 @@ module DatePicker
 
 ## Presets
 
-@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDate
+@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
 
 -}
 
@@ -89,6 +90,7 @@ import DateRangePicker.Common
     exposing
         ( RestrictedDateRange(..)
         , mkDateRange
+        , inRange
         )
 import DateRangePicker.Common.Internal
     exposing
@@ -97,7 +99,6 @@ import DateRangePicker.Common.Internal
         , EnabledDateRange
         , (?>)
         , ($!)
-        , inRange
         , prepareYear
         , padMonthLeft
         , padMonthRight
@@ -105,7 +106,7 @@ import DateRangePicker.Common.Internal
         , mkEnabledDateRangeFromRestrictedDateRange
         , mkClass
         , isDisabledDate
-        , getDaysOfWeek
+        , renderDaysOfWeek
         , mkClassString
         , noPresets
         )
@@ -257,7 +258,7 @@ type DatePicker
     = DatePicker Model
 
 
-{-| An opaque function to make presets from settings and a date
+{-| A function to make presets from settings and a date
 -}
 mkPresets : Settings -> Date -> List Preset
 mkPresets settings date =
@@ -580,11 +581,18 @@ isOpen (DatePicker model) =
     model.open
 
 
-{-| Expose the current selected daterange.
+{-| Expose the current selected date.
 -}
 getDate : DatePicker -> Maybe Date
 getDate (DatePicker model) =
     model.date
+
+
+{-| Expose the current presets.
+-}
+getPresets : DatePicker -> List Preset
+getPresets (DatePicker model) =
+    model.presets
 
 
 {-| Sets the current date for the datepicker.
@@ -770,13 +778,13 @@ datePicker model =
         content =
             case model.showPresets of
                 False ->
-                    getCalendar model
+                    renderCalendar model
 
                 True ->
-                    getPresets model
+                    renderPresets model
 
         header =
-            getHeader
+            renderHeader
     in
         div
             [ Attrs.class "elm-fancy-daterangepicker--wrapper"
@@ -790,19 +798,19 @@ datePicker model =
 
 {-| An opaque function that prints the datepicker calendar.
 -}
-getCalendar : Model -> Html Msg
-getCalendar model =
+renderCalendar : Model -> Html Msg
+renderCalendar model =
     div [ Attrs.class "elm-fancy-daterangepicker--calendar" ] <|
         List.concat
-            [ getYearHeader model
-            , getQuarters model
+            [ renderYearHeader model
+            , renderQuarters model
             ]
 
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
 -}
-getHeader : Html Msg
-getHeader =
+renderHeader : Html Msg
+renderHeader =
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
         [ div [ Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
         , div [ Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
@@ -812,19 +820,19 @@ getHeader =
 
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
 -}
-getPresets : Model -> Html Msg
-getPresets model =
+renderPresets : Model -> Html Msg
+renderPresets model =
     div [ Attrs.class "elm-fancy-daterangepicker--presets" ] <|
         if List.length model.presets > 0 then
-            List.map (getPreset model) model.presets
+            List.map (renderPreset model) model.presets
         else
             noPresets
 
 
 {-| An opaque function that gets the Html Msg for a given preset.
 -}
-getPreset : Model -> Preset -> Html Msg
-getPreset model preset =
+renderPreset : Model -> Preset -> Html Msg
+renderPreset model preset =
     let
         isDisabledPreset =
             isDisabledDate model.enabledDateRange preset.date
@@ -852,8 +860,8 @@ getPreset model preset =
 
 {-| An opaque function that gets the year header Html Msg for the calendar.
 -}
-getYearHeader : Model -> List (Html Msg)
-getYearHeader model =
+renderYearHeader : Model -> List (Html Msg)
+renderYearHeader model =
     let
         date =
             mkDate model.currentYear.year Jan 1
@@ -887,19 +895,19 @@ getYearHeader model =
 
 {-| An opaque function that gets the Html Msg for the quarters of the calendar.
 -}
-getQuarters : Model -> List (Html Msg)
-getQuarters model =
+renderQuarters : Model -> List (Html Msg)
+renderQuarters model =
     let
         quarters =
             model.currentYear.quarters
     in
-        List.map (getQuarter model) quarters
+        List.map (renderQuarter model) quarters
 
 
 {-| An opaque function that gets the Html Msg for a given Quarter.
 -}
-getQuarter : Model -> Quarter -> Html Msg
-getQuarter model qtr =
+renderQuarter : Model -> Quarter -> Html Msg
+renderQuarter model qtr =
     let
         firstMonthOfQtr =
             List.head qtr.months
@@ -947,7 +955,7 @@ getQuarter model qtr =
                                     div [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                         List.concat
                                             [ [ qtrLabel ]
-                                            , List.map (getMonth model) qtr.months
+                                            , List.map (renderMonth model) qtr.months
                                             ]
 
                             ( _, _ ) ->
@@ -961,8 +969,8 @@ getQuarter model qtr =
 
 {-| An opaque function that gets the Html Msg for a given month of the calendar.
 -}
-getMonth : Model -> List Date -> Html Msg
-getMonth model m =
+renderMonth : Model -> List Date -> Html Msg
+renderMonth model m =
     let
         h =
             List.head m
@@ -973,7 +981,7 @@ getMonth model m =
                     days =
                         List.concat
                             [ padMonthLeft a
-                            , List.map (getDay model) m
+                            , List.map (renderDay model) m
                             ]
 
                     startOfMonth_ =
@@ -1011,7 +1019,7 @@ getMonth model m =
                     div [ Attrs.class "elm-fancy-daterangepicker--month" ] <|
                         List.concat
                             [ [ monthDiv ]
-                            , getDaysOfWeek
+                            , renderDaysOfWeek
                             , days
                             , padMonthRight (42 - List.length days)
                             ]
@@ -1022,8 +1030,8 @@ getMonth model m =
 
 {-| An opaque function that gets the Html Msg for a Day.
 -}
-getDay : Model -> Date -> Html Msg
-getDay model date =
+renderDay : Model -> Date -> Html Msg
+renderDay model date =
     let
         isDisabledDate_ =
             isDisabledDate model.enabledDateRange date

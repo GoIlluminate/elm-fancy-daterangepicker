@@ -6,7 +6,6 @@ module DateRangePicker.Common.Internal
         , (?>)
         , ($!)
         , chunksOfLeft
-        , inRange
         , prepareQuarters
         , prepareYear
         , padMonthLeft
@@ -15,7 +14,7 @@ module DateRangePicker.Common.Internal
         , mkEnabledDateRangeFromRestrictedDateRange
         , mkClass
         , isDisabledDate
-        , getDaysOfWeek
+        , renderDaysOfWeek
         , mkClassString
         , noPresets
         )
@@ -49,6 +48,7 @@ import DateRangePicker.Common
         ( DateRange
         , RestrictedDateRange(..)
         , mkDateRange
+        , inRange
         )
 import DateRangePicker.Date
     exposing
@@ -89,14 +89,6 @@ type alias EnabledDateRange =
     { start : Maybe Date
     , end : Maybe Date
     }
-
-
-{-| An opaque function to check if a given date is within a
-given dateRange.
--}
-inRange : Date -> DateRange -> Bool
-inRange date { start, end } =
-    start $<= date && end $>= date
 
 
 {-| An opaque function to check if the given date is a disabled date.
@@ -272,8 +264,8 @@ mkEnabledDateRange start end =
 
 {-| An opaque function that gets the Days of the Week Html Msg for the calendar.
 -}
-getDaysOfWeek : List (Html msg)
-getDaysOfWeek =
+renderDaysOfWeek : List (Html msg)
+renderDaysOfWeek =
     let
         days =
             List.range 1 7
