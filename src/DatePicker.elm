@@ -16,6 +16,7 @@ module DatePicker
         , init
         , update
         , isOpen
+        , setOpen
         , getPresets
         , getDate
         , setDate
@@ -34,7 +35,7 @@ module DatePicker
 {-| A customizable daterangepicker component.
 
 @docs Msg, DatePicker
-@docs init, update, isOpen, view, getDate, setDate
+@docs init, update, isOpen, setOpen, view, getDate, setDate
 
 
 # Settings
@@ -579,6 +580,13 @@ update msg (DatePicker ({ settings } as model)) =
 isOpen : DatePicker -> Bool
 isOpen (DatePicker model) =
     model.open
+
+
+{-| Sets the the open state of the DatePicker
+-}
+setOpen : Bool -> DatePicker -> DatePicker
+setOpen open (DatePicker model) =
+    DatePicker { model | open = open }
 
 
 {-| Expose the current selected date.
