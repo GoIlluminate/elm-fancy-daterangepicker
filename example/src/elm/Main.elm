@@ -23,7 +23,7 @@ import DatePicker exposing (getDate)
 import DateRangePicker.Common
     exposing
         ( DateRange
-        , RestrictedDateRange(ToPresent)
+        , RestrictedDateRange(ToPresent, FromPresent)
         )
 
 
