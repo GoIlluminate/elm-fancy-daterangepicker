@@ -21,10 +21,8 @@ import Date exposing (Date, Day(..), Month(..), day, month, year)
 import DateRangePicker.Date
     exposing
         ( mkDate
-        , ($<)
-        , ($>)
-        , ($>=)
-        , ($<=)
+        , dateGreaterThanOrEqualTo
+        , dateLessThanOrEqualTo
         )
 
 
@@ -76,4 +74,4 @@ given dateRange.
 -}
 inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
-    start $<= date && end $>= date
+    dateLessThanOrEqualTo start date && dateGreaterThanOrEqualTo end date
