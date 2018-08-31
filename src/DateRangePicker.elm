@@ -561,12 +561,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                             }
 
                         newDateRange =
-                            case model.dateRange of
-                                Just a ->
-                                    Just <| getNewDateRange newModel a
-
-                                Nothing ->
-                                    Nothing
+                            Maybe.map (\x -> getNewDateRange newModel x) model.dateRange
                     in
                         { newModel | dateRange = newDateRange } ! []
 
@@ -613,24 +608,13 @@ update msg (DateRangePicker ({ settings } as model)) =
                             }
                                 ! []
 
-                        ( Just _, Nothing ) ->
+                        ( Just start, Nothing ) ->
                             let
-                                start =
-                                    model.startDate
-
-                                end =
-                                    Just date
-
                                 dateRange =
-                                    case ( start, end ) of
-                                        ( Just a, Just b ) ->
-                                            if dateLessThanOrEqualTo a b then
-                                                Just <| mkDateRange a b
-                                            else
-                                                Nothing
-
-                                        ( _, _ ) ->
-                                            Nothing
+                                    if dateLessThanOrEqualTo start date then
+                                        Just <| mkDateRange start date
+                                    else
+                                        Nothing
                             in
                                 case dateRange of
                                     Just _ ->
@@ -738,7 +722,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                 DoNothing ->
                     model ! []
     in
-        updateInputText updatedModel !> [ cmds ]
+        (DateRangePicker <| updateInputText updatedModel) ! [ cmds ]
 
 
 {-| Expose if the daterange picker is open
@@ -924,21 +908,18 @@ view (DateRangePicker ({ open, settings } as model)) =
                 |> (List.singleton >> List.filterMap identity)
 
         icon =
-            case settings.inputIcon of
-                Just icn ->
-                    icn
-
-                Nothing ->
-                    i [] []
+            Maybe.withDefault (i [] []) settings.inputIcon
 
         dateInput =
             div
-                ([ Attrs.name <| Maybe.withDefault "" settings.inputName
-                 , Events.onClick Click
-                 , Attrs.class "elm-fancy-daterangepicker--date-input"
-                 ]
-                    ++ settings.inputAttributes
-                    ++ potentialInputId
+                (List.concat
+                    [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
+                      , Events.onClick Click
+                      , Attrs.class "elm-fancy-daterangepicker--date-input"
+                      ]
+                    , settings.inputAttributes
+                    , potentialInputId
+                    ]
                 )
                 [ icon
                 , text <| Maybe.withDefault settings.placeholder model.inputText
@@ -1390,8 +1371,3 @@ formatDateRange dateRange =
         , " - "
         , formatDate dateRange.end
         ]
-
-
-(!>) : Model -> List (Cmd Msg) -> ( DateRangePicker, Cmd Msg )
-(!>) model cmds =
-    ( DateRangePicker model, Cmd.batch cmds )
