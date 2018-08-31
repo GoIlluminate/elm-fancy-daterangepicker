@@ -30,7 +30,7 @@ module DateRangePicker.Date
 {-| A custom Date Helper Library.
 
 @docs initDate, mkDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, dayFromInt, monthToInt, monthFromInt, daysInMonth, datesInRange, startOfMonth, endOfMonth, addDays, subDays, addMonths, subMonths, addYears, subYears
-@docs ($<), ($<=), ($==), ($>), ($>=)
+@docs dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
 
 -}
 
