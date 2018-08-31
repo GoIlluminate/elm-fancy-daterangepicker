@@ -773,34 +773,14 @@ getPresets (DateRangePicker model) =
 -}
 getMinDate : DateRangePicker -> Maybe Date
 getMinDate (DateRangePicker model) =
-    case model.enabledDateRange of
-        Just a ->
-            case ( a.start, a.end ) of
-                ( Just start, _ ) ->
-                    Just start
-
-                ( _, _ ) ->
-                    Nothing
-
-        Nothing ->
-            Nothing
+    Maybe.andThen .start model.enabledDateRange
 
 
 {-| Expose the max date in the enabled date range.
 -}
 getMaxDate : DateRangePicker -> Maybe Date
 getMaxDate (DateRangePicker model) =
-    case model.enabledDateRange of
-        Just a ->
-            case ( a.start, a.end ) of
-                ( _, Just end ) ->
-                    Just end
-
-                ( _, _ ) ->
-                    Nothing
-
-        Nothing ->
-            Nothing
+    Maybe.andThen .end model.enabledDateRange
 
 
 {-| Sets the current daterange for the daterangepicker.
@@ -809,12 +789,7 @@ setDateRange : Maybe DateRange -> DateRangePicker -> DateRangePicker
 setDateRange dateRange (DateRangePicker model) =
     let
         newDateRange =
-            case dateRange of
-                Just a ->
-                    Just <| getNewDateRange model a
-
-                Nothing ->
-                    Nothing
+            Maybe.map (\x -> getNewDateRange model x) dateRange
     in
         DateRangePicker ({ model | dateRange = newDateRange } |> updateInputText)
 
@@ -984,22 +959,17 @@ dateRangePicker : Model -> Html Msg
 dateRangePicker model =
     let
         content =
-            case model.showPresets of
-                False ->
-                    getCalendar model
-
-                True ->
-                    renderPresets model
-
-        header =
-            getHeader
+            if model.showPresets then
+                renderPresets model
+            else
+                getCalendar model
     in
         div
             [ Attrs.class "elm-fancy-daterangepicker--wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
-            [ header
+            [ getHeader
             , content
             ]
 
@@ -1047,13 +1017,10 @@ renderPreset model preset =
                 && isDisabledDate model.enabledDateRange preset.dateRange.end
 
         setDateRange =
-            case isDisabledPreset of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <|
-                        SetDateRange preset.dateRange
+            if isDisabledPreset then
+                Events.onClick DoNothing
+            else
+                Events.onClick <| SetDateRange preset.dateRange
 
         classString =
             mkClassString
@@ -1083,14 +1050,10 @@ renderYearHeader model =
                 && isDisabledDate model.enabledDateRange end
 
         setYearRange =
-            case isDisabledYear of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <|
-                        SetDateRange <|
-                            mkDateRange start end
+            if isDisabledYear then
+                Events.onClick DoNothing
+            else
+                Events.onClick <| SetDateRange <| mkDateRange start end
 
         yrLabelClassString =
             mkClassString
@@ -1149,14 +1112,10 @@ renderQuarter model qtr =
                                             && isDisabledDate model.enabledDateRange end
 
                                     setQtrDateRange =
-                                        case isDisabledQtr of
-                                            True ->
-                                                Events.onClick DoNothing
-
-                                            False ->
-                                                Events.onClick <|
-                                                    SetDateRange <|
-                                                        mkDateRange start end
+                                        if isDisabledQtr then
+                                            Events.onClick DoNothing
+                                        else
+                                            Events.onClick <| SetDateRange <| mkDateRange start end
 
                                     classString =
                                         mkClassString
@@ -1210,14 +1169,10 @@ renderMonth model m =
                             && isDisabledDate model.enabledDateRange endOfMonth_
 
                     setMonthDateRange =
-                        case isDisabledMonth of
-                            True ->
-                                Events.onClick DoNothing
-
-                            False ->
-                                Events.onClick <|
-                                    SetDateRange <|
-                                        mkDateRange (startOfMonth a) (endOfMonth a)
+                        if isDisabledMonth then
+                            Events.onClick DoNothing
+                        else
+                            Events.onClick <| SetDateRange <| mkDateRange (startOfMonth a) (endOfMonth a)
 
                     classString =
                         mkClassString
@@ -1273,12 +1228,10 @@ renderDay model date =
                 ]
 
         setDate =
-            case isDisabledDate_ of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <| SetDate date
+            if isDisabledDate_ then
+                Events.onClick DoNothing
+            else
+                Events.onClick <| SetDate date
 
         hoverDate =
             Events.onMouseOver <| HoverDay date

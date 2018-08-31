@@ -43,8 +43,7 @@ import Date
         )
 import DateRangePicker.Common
     exposing
-        ( DateRange
-        , RestrictedDateRange(..)
+        ( RestrictedDateRange(..)
         , mkDateRange
         , inRange
         )

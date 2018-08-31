@@ -607,12 +607,7 @@ setDate : Maybe Date -> DatePicker -> DatePicker
 setDate date (DatePicker model) =
     let
         newDate =
-            case date of
-                Just a ->
-                    Just <| getNewDate model a
-
-                Nothing ->
-                    Nothing
+            Maybe.map (\a -> getNewDate model a) date
     in
         DatePicker ({ model | date = newDate } |> updateInputText)
 
@@ -782,22 +777,17 @@ datePicker : Model -> Html Msg
 datePicker model =
     let
         content =
-            case model.showPresets of
-                False ->
-                    renderCalendar model
-
-                True ->
-                    renderPresets model
-
-        header =
-            renderHeader
+            if model.showPresets then
+                renderPresets model
+            else
+                renderCalendar model
     in
         div
             [ Attrs.class "elm-fancy-daterangepicker--wrapper"
             , onPicker "mousedown" MouseDown
             , onPicker "mouseup" MouseUp
             ]
-            [ header
+            [ renderHeader
             , content
             ]
 
@@ -844,13 +834,11 @@ renderPreset model preset =
             isDisabledDate model.enabledDateRange preset.date
 
         setDate =
-            case isDisabledPreset of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <|
-                        SetDate preset.date
+            if isDisabledPreset then
+                Events.onClick DoNothing
+            else
+                Events.onClick <|
+                    SetDate preset.date
 
         classString =
             mkClassString
@@ -876,13 +864,11 @@ renderYearHeader model =
             isDisabledDate model.enabledDateRange date
 
         setDate =
-            case isDisabledYear of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <|
-                        SetDate date
+            if isDisabledYear then
+                Events.onClick DoNothing
+            else
+                Events.onClick <|
+                    SetDate date
 
         yrLabelClassString =
             mkClassString
@@ -941,13 +927,11 @@ renderQuarter model qtr =
                                             && isDisabledDate model.enabledDateRange end
 
                                     setQtrDate =
-                                        case isDisabledQtr of
-                                            True ->
-                                                Events.onClick DoNothing
-
-                                            False ->
-                                                Events.onClick <|
-                                                    SetDate start
+                                        if isDisabledQtr then
+                                            Events.onClick DoNothing
+                                        else
+                                            Events.onClick <|
+                                                SetDate start
 
                                     classString =
                                         mkClassString
@@ -1001,13 +985,11 @@ renderMonth model m =
                             && isDisabledDate model.enabledDateRange endOfMonth_
 
                     setMonthDate =
-                        case isDisabledMonth of
-                            True ->
-                                Events.onClick DoNothing
-
-                            False ->
-                                Events.onClick <|
-                                    SetDate startOfMonth_
+                        if isDisabledMonth then
+                            Events.onClick DoNothing
+                        else
+                            Events.onClick <|
+                                SetDate startOfMonth_
 
                     classString =
                         mkClassString
@@ -1057,12 +1039,10 @@ renderDay model date =
                 ]
 
         setDate =
-            case isDisabledDate_ of
-                True ->
-                    Events.onClick DoNothing
-
-                False ->
-                    Events.onClick <| SetDate date
+            if isDisabledDate_ then
+                Events.onClick DoNothing
+            else
+                Events.onClick <| SetDate date
     in
         div [ Attrs.class classString, setDate ]
             [ text <|
