@@ -474,12 +474,7 @@ update msg (DatePicker ({ settings } as model)) =
                             }
 
                         newDate =
-                            case model.date of
-                                Just a ->
-                                    Just <| getNewDate newModel a
-
-                                Nothing ->
-                                    Nothing
+                            Maybe.map (\x -> getNewDate newModel x) model.date
                     in
                         { newModel | date = newDate } ! []
 
@@ -570,7 +565,7 @@ update msg (DatePicker ({ settings } as model)) =
                 DoNothing ->
                     model ! []
     in
-        updateInputText updatedModel !> [ cmds ]
+        (DatePicker <| updateInputText updatedModel) ! [ cmds ]
 
 
 {-| Expose if the daterange picker is open
@@ -742,21 +737,18 @@ view (DatePicker ({ open, settings } as model)) =
                 |> (List.singleton >> List.filterMap identity)
 
         icon =
-            case settings.inputIcon of
-                Just icn ->
-                    icn
-
-                Nothing ->
-                    i [] []
+            Maybe.withDefault (i [] []) settings.inputIcon
 
         dateInput =
             div
-                ([ Attrs.name <| Maybe.withDefault "" settings.inputName
-                 , Events.onClick Click
-                 , Attrs.class "elm-fancy-daterangepicker--date-input"
-                 ]
-                    ++ settings.inputAttributes
-                    ++ potentialInputId
+                (List.concat
+                    [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
+                      , Events.onClick Click
+                      , Attrs.class "elm-fancy-daterangepicker--date-input"
+                      ]
+                    , settings.inputAttributes
+                    , potentialInputId
+                    ]
                 )
                 [ icon
                 , text <| Maybe.withDefault settings.placeholder model.inputText
@@ -1126,8 +1118,3 @@ updateInputText model =
 
         Nothing ->
             { model | inputText = Nothing }
-
-
-(!>) : Model -> List (Cmd Msg) -> ( DatePicker, Cmd Msg )
-(!>) model cmds =
-    ( DatePicker model, Cmd.batch cmds )
