@@ -15,7 +15,7 @@ import Expect
         , Expectation
         )
 import Date exposing (Date, Month(..))
-import DateRangePicker.Common as Common exposing (DateRange, RestrictedDateRange(..), mkDateRange)
+import DateRangePicker.Common as Common exposing (DateRange, RestrictedDateRange(..), mkDateRange, inRange)
 import DateRangePicker.Common.Internal as CI exposing (EnabledDateRange, mkEnabledDateRangeFromRestrictedDateRange)
 import DateRangePicker.Date exposing (mkDate, subDays, addDays)
 
@@ -284,7 +284,7 @@ testInRange :
     -> Bool
     -> Expectation
 testInRange date dateRange output =
-    CI.inRange
+    inRange
         date
         dateRange
         |> equal output

@@ -20,11 +20,11 @@ module DateRangePicker.Date
         , subMonths
         , addYears
         , subYears
-        , ($==)
-        , ($<=)
-        , ($>=)
-        , ($<)
-        , ($>)
+        , dateEqualTo
+        , dateGreaterThan
+        , dateLessThan
+        , dateGreaterThanOrEqualTo
+        , dateLessThanOrEqualTo
         )
 
 {-| A custom Date Helper Library.
@@ -739,36 +739,36 @@ unsafeDate date =
             d
 
 
-{-| An opaque function that checks if date a is equal to date b
+{-| A function that checks if date a is equal to date b
 -}
-($==) : Date -> Date -> Bool
-($==) a b =
+dateEqualTo : Date -> Date -> Bool
+dateEqualTo a b =
     Date.toTime a == Date.toTime b
 
 
-{-| An opaque function that checks if date a is less than or equal to date b
+{-| A function that checks if date a is less than or equal to date b
 -}
-($<=) : Date -> Date -> Bool
-($<=) a b =
+dateLessThanOrEqualTo : Date -> Date -> Bool
+dateLessThanOrEqualTo a b =
     Date.toTime a <= Date.toTime b
 
 
-{-| An opaque function that checks if date a is greater than or equal to date b
+{-| A function that checks if date a is greater than or equal to date b
 -}
-($>=) : Date -> Date -> Bool
-($>=) a b =
+dateGreaterThanOrEqualTo : Date -> Date -> Bool
+dateGreaterThanOrEqualTo a b =
     Date.toTime a >= Date.toTime b
 
 
-{-| An opaque function that checks if date a is less than to date b
+{-| A function that checks if date a is less than to date b
 -}
-($<) : Date -> Date -> Bool
-($<) a b =
+dateLessThan : Date -> Date -> Bool
+dateLessThan a b =
     Date.toTime a < Date.toTime b
 
 
-{-| An opaque function that checks if date a is greater than to date b
+{-| A function that checks if date a is greater than to date b
 -}
-($>) : Date -> Date -> Bool
-($>) a b =
+dateGreaterThan : Date -> Date -> Bool
+dateGreaterThan a b =
     Date.toTime a > Date.toTime b

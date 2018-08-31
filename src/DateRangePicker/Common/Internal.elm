@@ -3,8 +3,6 @@ module DateRangePicker.Common.Internal
         ( FullYear
         , Quarter
         , EnabledDateRange
-        , (?>)
-        , ($!)
         , chunksOfLeft
         , prepareQuarters
         , prepareYear
@@ -59,10 +57,8 @@ import DateRangePicker.Date
         , subDays
         , formatDay
         , dayFromInt
-        , ($<)
-        , ($>)
-        , ($>=)
-        , ($<=)
+        , dateLessThan
+        , dateGreaterThan
         )
 
 
@@ -105,10 +101,10 @@ isDisabledDate enabledDateRange date =
                     not <| inRange date <| mkDateRange start end
 
                 ( Just start, Nothing ) ->
-                    date $< start
+                    dateLessThan date start
 
                 ( Nothing, Just end ) ->
-                    date $> end
+                    dateGreaterThan date end
 
                 ( Nothing, Nothing ) ->
                     False
@@ -344,13 +340,3 @@ onPicker ev =
             { preventDefault = False
             , stopPropagation = True
             }
-
-
-(?>) : Maybe a -> a -> a
-(?>) =
-    flip Maybe.withDefault
-
-
-($!) : a -> List (Cmd b) -> ( a, Cmd b )
-($!) model cmds =
-    ( model, Cmd.batch cmds )

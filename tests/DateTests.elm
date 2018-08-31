@@ -15,7 +15,23 @@ import Expect
         , Expectation
         )
 import Date exposing (Date, Month(..))
-import DateRangePicker.Date exposing (mkDate, daysInMonth, datesInRange, addDays, subDays, addMonths, subMonths, addYears, subYears, ($==), ($>=), ($<=), ($>), ($<))
+import DateRangePicker.Date
+    exposing
+        ( mkDate
+        , daysInMonth
+        , datesInRange
+        , addDays
+        , subDays
+        , addMonths
+        , subMonths
+        , addYears
+        , subYears
+        , dateEqualTo
+        , dateGreaterThanOrEqualTo
+        , dateLessThanOrEqualTo
+        , dateGreaterThan
+        , dateLessThan
+        )
 
 
 dateTestSuite : Test
@@ -203,46 +219,46 @@ dateTestSuite =
         , describe "Date Comparison Tests"
             [ test "Equal: True" <|
                 \_ ->
-                    equal True <| (mkDate 2018 Jan 1) $== (mkDate 2018 Jan 1)
+                    equal True <| dateEqualTo (mkDate 2018 Jan 1) (mkDate 2018 Jan 1)
             , test "Equal: False" <|
                 \_ ->
-                    equal False <| (mkDate 2018 Jan 2) $== (mkDate 2018 Jan 1)
+                    equal False <| dateEqualTo (mkDate 2018 Jan 2) (mkDate 2018 Jan 1)
             , test "Less than or equal to, same date: True" <|
                 \_ ->
-                    equal True <| (mkDate 2018 Jan 1) $<= (mkDate 2018 Jan 1)
+                    equal True <| dateLessThanOrEqualTo (mkDate 2018 Jan 1) (mkDate 2018 Jan 1)
             , test "Less than or equal to: True" <|
                 \_ ->
-                    equal True <| (mkDate 2017 Dec 31) $<= (mkDate 2018 Jan 1)
+                    equal True <| dateLessThanOrEqualTo (mkDate 2017 Dec 31) (mkDate 2018 Jan 1)
             , test "Less than or equal to: False" <|
                 \_ ->
-                    equal False <| (mkDate 2018 Dec 31) $<= (mkDate 2018 Jan 1)
+                    equal False <| dateLessThanOrEqualTo (mkDate 2018 Dec 31) (mkDate 2018 Jan 1)
             , test "Less than, same date: False" <|
                 \_ ->
-                    equal False <| (mkDate 2018 Jan 1) $< (mkDate 2018 Jan 1)
+                    equal False <| dateLessThan (mkDate 2018 Jan 1) (mkDate 2018 Jan 1)
             , test "Less than: True" <|
                 \_ ->
-                    equal True <| (mkDate 2017 Dec 31) $< (mkDate 2018 Jan 1)
+                    equal True <| dateLessThan (mkDate 2017 Dec 31) (mkDate 2018 Jan 1)
             , test "Less than: False" <|
                 \_ ->
-                    equal False <| (mkDate 2018 Dec 31) $< (mkDate 2018 Jan 1)
+                    equal False <| dateLessThan (mkDate 2018 Dec 31) (mkDate 2018 Jan 1)
             , test "Greater than or equal to, same date: True" <|
                 \_ ->
-                    equal True <| (mkDate 2018 Jan 1) $>= (mkDate 2018 Jan 1)
+                    equal True <| dateGreaterThanOrEqualTo (mkDate 2018 Jan 1) (mkDate 2018 Jan 1)
             , test "Greater than or equal to: True" <|
                 \_ ->
-                    equal True <| (mkDate 2019 Jan 1) $>= (mkDate 2018 Jan 1)
+                    equal True <| dateGreaterThanOrEqualTo (mkDate 2019 Jan 1) (mkDate 2018 Jan 1)
             , test "Greater than or equal: False" <|
                 \_ ->
-                    equal False <| (mkDate 2017 Jan 1) $>= (mkDate 2018 Jan 1)
+                    equal False <| dateGreaterThanOrEqualTo (mkDate 2017 Jan 1) (mkDate 2018 Jan 1)
             , test "Greater than, same date: False" <|
                 \_ ->
-                    equal False <| (mkDate 2018 Jan 1) $> (mkDate 2018 Jan 1)
+                    equal False <| dateGreaterThan (mkDate 2018 Jan 1) (mkDate 2018 Jan 1)
             , test "Greater than: True" <|
                 \_ ->
-                    equal True <| (mkDate 2019 Jan 1) $> (mkDate 2018 Jan 1)
+                    equal True <| dateGreaterThan (mkDate 2019 Jan 1) (mkDate 2018 Jan 1)
             , test "Greater than: False" <|
                 \_ ->
-                    equal False <| (mkDate 2017 Jan 1) $> (mkDate 2018 Jan 1)
+                    equal False <| dateGreaterThan (mkDate 2017 Jan 1) (mkDate 2018 Jan 1)
             ]
         ]
 

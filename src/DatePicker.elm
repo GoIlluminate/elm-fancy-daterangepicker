@@ -83,9 +83,9 @@ import DateRangePicker.Date
         , addMonths
         , subYears
         , addYears
-        , ($==)
-        , ($<=)
-        , ($>=)
+        , dateEqualTo
+        , dateGreaterThanOrEqualTo
+        , dateLessThanOrEqualTo
         )
 import DateRangePicker.Common
     exposing
@@ -98,8 +98,6 @@ import DateRangePicker.Common.Internal
         ( FullYear
         , Quarter
         , EnabledDateRange
-        , (?>)
-        , ($!)
         , prepareYear
         , padMonthLeft
         , padMonthRight
@@ -483,7 +481,7 @@ update msg (DatePicker ({ settings } as model)) =
                                 Nothing ->
                                     Nothing
                     in
-                        { newModel | date = newDate } $! []
+                        { newModel | date = newDate } ! []
 
                 PrevYear ->
                     let
@@ -491,7 +489,7 @@ update msg (DatePicker ({ settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year - 1) Jan 1
                     in
-                        { model | currentYear = prevYear } $! []
+                        { model | currentYear = prevYear } ! []
 
                 NextYear ->
                     let
@@ -499,7 +497,7 @@ update msg (DatePicker ({ settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year + 1) Jan 1
                     in
-                        { model | currentYear = nextYear } $! []
+                        { model | currentYear = nextYear } ! []
 
                 SetDate date ->
                     let
@@ -513,7 +511,7 @@ update msg (DatePicker ({ settings } as model)) =
                             , open = False
                             , forceOpen = False
                         }
-                            $! []
+                            ! []
 
                 Click ->
                     let
@@ -533,13 +531,13 @@ update msg (DatePicker ({ settings } as model)) =
                             , forceOpen = False
                             , currentYear = newYear
                         }
-                            $! []
+                            ! []
 
                 MouseDown ->
-                    { model | forceOpen = True } $! []
+                    { model | forceOpen = True } ! []
 
                 MouseUp ->
-                    { model | forceOpen = False } $! []
+                    { model | forceOpen = False } ! []
 
                 Done ->
                     let
@@ -552,10 +550,10 @@ update msg (DatePicker ({ settings } as model)) =
                     in
                         case newModel.date of
                             Just a ->
-                                { newModel | currentYear = prepareYear a } $! []
+                                { newModel | currentYear = prepareYear a } ! []
 
                             Nothing ->
-                                newModel $! []
+                                newModel ! []
 
                 Reset ->
                     { model
@@ -564,13 +562,13 @@ update msg (DatePicker ({ settings } as model)) =
                         , open = False
                         , forceOpen = False
                     }
-                        $! [ initCmd ]
+                        ! [ initCmd ]
 
                 TogglePresets ->
-                    { model | showPresets = not model.showPresets } $! []
+                    { model | showPresets = not model.showPresets } ! []
 
                 DoNothing ->
-                    model $! []
+                    model ! []
     in
         updateInputText updatedModel !> [ cmds ]
 
@@ -758,7 +756,7 @@ view (DatePicker ({ open, settings } as model)) =
 
         dateInput =
             div
-                ([ Attrs.name (settings.inputName ?> "")
+                ([ Attrs.name <| Maybe.withDefault "" settings.inputName
                  , Events.onClick Click
                  , Attrs.class "elm-fancy-daterangepicker--date-input"
                  ]
@@ -766,7 +764,7 @@ view (DatePicker ({ open, settings } as model)) =
                     ++ potentialInputId
                 )
                 [ icon
-                , model.inputText ?> settings.placeholder |> text
+                , text <| Maybe.withDefault settings.placeholder model.inputText
                 ]
     in
         div [ Attrs.class "elm-fancy-daterangepicker--container" ]
@@ -1079,7 +1077,7 @@ isSelectedDate : Model -> Date -> Bool
 isSelectedDate model date =
     case model.date of
         Just a ->
-            a $== date
+            dateEqualTo a date
 
         Nothing ->
             False
@@ -1089,7 +1087,7 @@ isSelectedDate model date =
 -}
 isToday : Model -> Date -> Bool
 isToday model date =
-    date $== model.today
+    dateEqualTo date model.today
 
 
 {-| An opaque function that gets the new date range from a selected date range
@@ -1113,7 +1111,7 @@ getNewDate model date =
                 ( Just start, Nothing ) ->
                     let
                         newDate =
-                            if date $>= start then
+                            if dateGreaterThanOrEqualTo date start then
                                 date
                             else
                                 start
@@ -1123,7 +1121,7 @@ getNewDate model date =
                 ( Nothing, Just end ) ->
                     let
                         newDate =
-                            if date $<= end then
+                            if dateLessThanOrEqualTo date end then
                                 date
                             else
                                 end

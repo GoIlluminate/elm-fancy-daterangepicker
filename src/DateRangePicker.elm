@@ -87,9 +87,9 @@ import DateRangePicker.Date
         , addMonths
         , subYears
         , addYears
-        , ($==)
-        , ($<=)
-        , ($>=)
+        , dateEqualTo
+        , dateLessThanOrEqualTo
+        , dateGreaterThanOrEqualTo
         )
 import DateRangePicker.Common
     exposing
@@ -103,8 +103,6 @@ import DateRangePicker.Common.Internal
         ( FullYear
         , Quarter
         , EnabledDateRange
-        , (?>)
-        , ($!)
         , prepareYear
         , padMonthLeft
         , padMonthRight
@@ -570,7 +568,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                 Nothing ->
                                     Nothing
                     in
-                        { newModel | dateRange = newDateRange } $! []
+                        { newModel | dateRange = newDateRange } ! []
 
                 PrevYear ->
                     let
@@ -578,7 +576,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year - 1) Jan 1
                     in
-                        { model | currentYear = prevYear } $! []
+                        { model | currentYear = prevYear } ! []
 
                 NextYear ->
                     let
@@ -586,7 +584,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                             prepareYear <|
                                 mkDate (model.currentYear.year + 1) Jan 1
                     in
-                        { model | currentYear = nextYear } $! []
+                        { model | currentYear = nextYear } ! []
 
                 SetDateRange dateRange ->
                     let
@@ -603,7 +601,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                             , forceOpen = False
                             , hoveredDate = Nothing
                         }
-                            $! []
+                            ! []
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -613,7 +611,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                 , endDate = Nothing
                                 , dateRange = Nothing
                             }
-                                $! []
+                                ! []
 
                         ( Just _, Nothing ) ->
                             let
@@ -626,7 +624,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                 dateRange =
                                     case ( start, end ) of
                                         ( Just a, Just b ) ->
-                                            if a $<= b then
+                                            if dateLessThanOrEqualTo a b then
                                                 Just <| mkDateRange a b
                                             else
                                                 Nothing
@@ -644,7 +642,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                             , forceOpen = False
                                             , hoveredDate = Nothing
                                         }
-                                            $! []
+                                            ! []
 
                                     Nothing ->
                                         { model
@@ -652,17 +650,17 @@ update msg (DateRangePicker ({ settings } as model)) =
                                             , endDate = Nothing
                                             , dateRange = Nothing
                                         }
-                                            $! []
+                                            ! []
 
                         ( Nothing, Nothing ) ->
                             { model
                                 | startDate = Just date
                                 , dateRange = Nothing
                             }
-                                $! []
+                                ! []
 
                         ( _, _ ) ->
-                            model $! []
+                            model ! []
 
                 Click ->
                     let
@@ -682,13 +680,13 @@ update msg (DateRangePicker ({ settings } as model)) =
                             , forceOpen = False
                             , currentYear = newYear
                         }
-                            $! []
+                            ! []
 
                 MouseDown ->
-                    { model | forceOpen = True } $! []
+                    { model | forceOpen = True } ! []
 
                 MouseUp ->
-                    { model | forceOpen = False } $! []
+                    { model | forceOpen = False } ! []
 
                 Done ->
                     let
@@ -697,7 +695,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                     in
                         case newModel.dateRange of
                             Just _ ->
-                                newModel $! []
+                                newModel ! []
 
                             Nothing ->
                                 case newModel.startDate of
@@ -714,10 +712,10 @@ update msg (DateRangePicker ({ settings } as model)) =
                                                 , currentYear = prepareYear newDateRange.end
                                                 , showPresets = False
                                             }
-                                                $! []
+                                                ! []
 
                                     Nothing ->
-                                        newModel $! []
+                                        newModel ! []
 
                 Reset ->
                     { model
@@ -729,16 +727,16 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , open = False
                         , forceOpen = False
                     }
-                        $! [ initCmd ]
+                        ! [ initCmd ]
 
                 TogglePresets ->
-                    { model | showPresets = not model.showPresets } $! []
+                    { model | showPresets = not model.showPresets } ! []
 
                 HoverDay date ->
                     { model | hoveredDate = Just date } ! []
 
                 DoNothing ->
-                    model $! []
+                    model ! []
     in
         updateInputText updatedModel !> [ cmds ]
 
@@ -960,7 +958,7 @@ view (DateRangePicker ({ open, settings } as model)) =
 
         dateInput =
             div
-                ([ Attrs.name (settings.inputName ?> "")
+                ([ Attrs.name <| Maybe.withDefault "" settings.inputName
                  , Events.onClick Click
                  , Attrs.class "elm-fancy-daterangepicker--date-input"
                  ]
@@ -968,7 +966,7 @@ view (DateRangePicker ({ open, settings } as model)) =
                     ++ potentialInputId
                 )
                 [ icon
-                , model.inputText ?> settings.placeholder |> text
+                , text <| Maybe.withDefault settings.placeholder model.inputText
                 ]
     in
         div [ Attrs.class "elm-fancy-daterangepicker--container" ]
@@ -1312,7 +1310,7 @@ isHoveredDateRange model date =
         hoveredDateRange =
             case ( model.startDate, model.hoveredDate ) of
                 ( Just startDate, Just hoveredDate ) ->
-                    if hoveredDate $>= startDate then
+                    if dateGreaterThanOrEqualTo hoveredDate startDate then
                         Just <| mkDateRange startDate hoveredDate
                     else
                         Nothing
@@ -1335,13 +1333,13 @@ isStartOrEnd : Model -> Date -> Bool
 isStartOrEnd model date =
     case ( model.startDate, model.endDate ) of
         ( Just a, Just b ) ->
-            a $== date || b $== date
+            dateEqualTo a date || dateEqualTo b date
 
         ( Just a, _ ) ->
-            a $== date
+            dateEqualTo a date
 
         ( _, Just b ) ->
-            b $== date
+            dateEqualTo b date
 
         ( _, _ ) ->
             False
@@ -1351,7 +1349,7 @@ isStartOrEnd model date =
 -}
 isToday : Model -> Date -> Bool
 isToday model date =
-    date $== model.today
+    dateEqualTo date model.today
 
 
 {-| An opaque function that gets the new date range from a selected date range
@@ -1381,13 +1379,13 @@ getNewDateRange model dateRange =
                 ( Just start, Nothing ) ->
                     let
                         newStart =
-                            if dateRange.start $>= start then
+                            if dateGreaterThanOrEqualTo dateRange.start start then
                                 dateRange.start
                             else
                                 start
 
                         newEnd =
-                            if dateRange.end $>= start then
+                            if dateGreaterThanOrEqualTo dateRange.end start then
                                 dateRange.end
                             else
                                 start
@@ -1397,13 +1395,13 @@ getNewDateRange model dateRange =
                 ( Nothing, Just end ) ->
                     let
                         newStart =
-                            if dateRange.start $<= end then
+                            if dateLessThanOrEqualTo dateRange.start end then
                                 dateRange.start
                             else
                                 end
 
                         newEnd =
-                            if dateRange.end $<= end then
+                            if dateLessThanOrEqualTo dateRange.end end then
                                 dateRange.end
                             else
                                 end
