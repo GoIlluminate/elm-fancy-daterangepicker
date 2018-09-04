@@ -1,10 +1,7 @@
-module DateRangePicker.Common
-    exposing
-        ( RestrictedDateRange(..)
-        , DateRange
-        , mkDateRange
-        , inRange
-        )
+module DateRangePicker.Common exposing
+    ( DateRange, mkDateRange, inRange
+    , RestrictedDateRange(..)
+    )
 
 {-| A common library between DatePicker and DateRangePicker
 
@@ -17,25 +14,25 @@ module DateRangePicker.Common
 
 -}
 
-import Date exposing (Date, Day(..), Month(..), day, month, year)
+import Date exposing (Date, day, month, year, fromCalendarDate)
 import DateRangePicker.Date
     exposing
-        ( mkDate
-        , dateGreaterThanOrEqualTo
+        ( dateGreaterThanOrEqualTo
         , dateLessThanOrEqualTo
         )
+import Time exposing (Month(..), Weekday(..))
 
 
 {-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
 
-  - *Off* = no restrictions, any date to any date can be chosen.
-  - *ToPresent* = from any date in the past up to today (including today)
-  - *FromPresent* = from today to any date in the future
-  - *Past* = from any date in the past up to yesterday (excluding today)
-  - *Future* = from tomorrow up to any date in the future
-  - *Between* date date = only between the two given dates [start - end] (inclusive)
-  - *To* date = from any date in the past up to the given date (inclusive)
-  - *From* date = from the given date up to any date in the future (inclusive)
+  - _Off_ = no restrictions, any date to any date can be chosen.
+  - _ToPresent_ = from any date in the past up to today (including today)
+  - _FromPresent_ = from today to any date in the future
+  - _Past_ = from any date in the past up to yesterday (excluding today)
+  - _Future_ = from tomorrow up to any date in the future
+  - _Between_ date date = only between the two given dates [start - end] (inclusive)
+  - _To_ date = from any date in the past up to the given date (inclusive)
+  - _From_ date = from the given date up to any date in the future (inclusive)
 
 -}
 type RestrictedDateRange
@@ -64,8 +61,8 @@ This function assumes that start <= end
 -}
 mkDateRange : Date -> Date -> DateRange
 mkDateRange start end =
-    { start = mkDate (year start) (month start) (day start)
-    , end = mkDate (year end) (month end) (day end)
+    { start = fromCalendarDate (year start) (month start) (day start)
+    , end = fromCalendarDate (year end) (month end) (day end)
     }
 
 

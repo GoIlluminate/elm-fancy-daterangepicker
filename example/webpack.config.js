@@ -74,8 +74,8 @@ if (isDev === true) {
                     loader: 'elm-webpack-loader',
                     options: {
                         verbose: true,
-                        warn: true,
-                        debug: true
+                        debug: true,
+                        pathToElm: 'node_modules/.bin/elm'
                     }
                 }]
             },{

@@ -103,8 +103,8 @@ somePresetSettings =
 
 somePresets : List DateRangePicker.Preset
 somePresets =
-    [ mkPresetFromDates "January 1, 2018 to February 1, 2018" (mkDate 2018 Jan 1) (mkDate 2018 Feb 1)
-    , mkPresetFromDates "March 1, 2018 to April 1, 2018" (mkDate 2018 Mar 1) (mkDate 2018 Apr 1)
+    [ mkPresetFromDates "January 1, 2018 to February 1, 2018" (fromCalendarDate 2018 Jan 1) (fromCalendarDate 2018 Feb 1)
+    , mkPresetFromDates "March 1, 2018 to April 1, 2018" (fromCalendarDate 2018 Mar 1) (fromCalendarDate 2018 Apr 1)
     ]
 
 somePresetOptions : DateRangePicker.PresetOptions
@@ -257,8 +257,8 @@ somePresetSettings =
 
 somePresets : List DatePicker.Preset
 somePresets =
-    [ mkPresetFromDate "January 1, 2018" (mkDate 2018 Jan 1)
-    , mkPresetFromDate "March 1, 2018" (mkDate 2018 Mar 1)
+    [ mkPresetFromDate "January 1, 2018" (fromCalendarDate 2018 Jan 1)
+    , mkPresetFromDate "March 1, 2018" (fromCalendarDate 2018 Mar 1)
     ]
 
 somePresetOptions : DatePicker.PresetOptions
@@ -306,7 +306,7 @@ init : (Model, Cmd Msg)
                 |> setInputId "myDatePicker"
                 |> setPresetOptions somePresetOptions
                 |> setPlaceholder "No date selected"
-                |> setDate (Just (mkDate someDate) )
+                |> setDate (Just (fromCalendarDate someDate) )
     in
         { model
             | datePicker = datePicker

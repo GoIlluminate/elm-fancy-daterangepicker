@@ -1,29 +1,45 @@
-module DateRangePicker.Common.Internal
-    exposing
-        ( FullYear
-        , Quarter
-        , EnabledDateRange
-        , chunksOfLeft
-        , prepareQuarters
-        , prepareYear
-        , padMonthLeft
-        , padMonthRight
-        , onPicker
-        , mkEnabledDateRangeFromRestrictedDateRange
-        , mkClass
-        , isDisabledDate
-        , renderDaysOfWeek
-        , mkClassString
-        , noPresets
-        )
+module DateRangePicker.Common.Internal exposing
+    ( EnabledDateRange
+    , FullYear
+    , Quarter
+    , chunksOfLeft
+    , isDisabledDate
+    , mkClass
+    , mkClassString
+    , mkEnabledDateRangeFromRestrictedDateRange
+    , noPresets
+    , padMonthLeft
+    , padMonthRight
+    , prepareQuarters
+    , prepareYear
+    , renderDaysOfWeek
+    )
 
 {-| A common internal library between DatePicker and DateRangePicker
 -}
 
-import List.Extra as LE
-import Html.Attributes as Attrs
-import Html.Events as Events
-import Json.Decode as Json
+import Date
+    exposing
+        ( Date
+        , day
+        , fromCalendarDate
+        , month
+        , numberToWeekday
+        , year
+        )
+import DateRangePicker.Common
+    exposing
+        ( RestrictedDateRange(..)
+        , inRange
+        , mkDateRange
+        )
+import DateRangePicker.Date
+    exposing
+        ( dateGreaterThan
+        , dateLessThan
+        , dayToInt
+        , formatDay
+        )
 import Html
     exposing
         ( Html
@@ -31,34 +47,11 @@ import Html
         , span
         , text
         )
-import Date
-    exposing
-        ( Date
-        , Day(..)
-        , Month(..)
-        , day
-        , dayOfWeek
-        , month
-        , year
-        )
-import DateRangePicker.Common
-    exposing
-        ( RestrictedDateRange(..)
-        , mkDateRange
-        , inRange
-        )
-import DateRangePicker.Date
-    exposing
-        ( datesInRange
-        , mkDate
-        , dayToInt
-        , addDays
-        , subDays
-        , formatDay
-        , dayFromInt
-        , dateLessThan
-        , dateGreaterThan
-        )
+import Html.Attributes as Attrs
+import Html.Events as Events
+import Json.Decode as Json
+import List.Extra as LE
+import Time exposing (Month(..), Weekday(..))
 
 
 {-| An opaque type to represent the full year that the daterangepicker is using.
@@ -118,20 +111,21 @@ prepareYear date =
             year date
 
         start =
-            mkDate yr Jan 1
+            fromCalendarDate yr Jan 1
 
         end =
-            mkDate yr Dec 31
+            fromCalendarDate yr Dec 31
 
         dates =
-            datesInRange start end
+            Date.range Date.Day 1 start end
     in
-        { name = toString yr
-        , year = yr
-        , quarters =
-            prepareQuarters <|
+    { name = String.fromInt yr
+    , year = yr
+    , quarters =
+        prepareQuarters <|
+            List.map Tuple.second <|
                 LE.groupWhile (\x y -> month x == month y) dates
-        }
+    }
 
 
 {-| An opaque function that prepares the quarters of the full year
@@ -143,17 +137,17 @@ prepareQuarters lst =
         qs =
             chunksOfLeft 3 lst
     in
-        List.indexedMap
-            (\idx q ->
-                { name =
-                    String.concat
-                        [ "Q"
-                        , toString <| idx + 1
-                        ]
-                , months = q
-                }
-            )
-            qs
+    List.indexedMap
+        (\idx q ->
+            { name =
+                String.concat
+                    [ "Q"
+                    , String.fromInt <| idx + 1
+                    ]
+            , months = q
+            }
+        )
+        qs
 
 
 {-| An opaque function taht pads the month from the left with filler days
@@ -164,7 +158,7 @@ padMonthLeft : Date -> List (Html msg)
 padMonthLeft d =
     let
         dd =
-            dayToInt <| dayOfWeek d
+            dayToInt <| Date.weekday d
 
         n =
             dd - 1
@@ -172,7 +166,7 @@ padMonthLeft d =
         go =
             div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
-        List.repeat n go
+    List.repeat n go
 
 
 {-| An opaque function that pads the end of the month with filler days in order to fill
@@ -185,7 +179,7 @@ padMonthRight n =
         go =
             div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
-        List.repeat n go
+    List.repeat n go
 
 
 {-| An opaque function that makes the EnabledDateRange from settings.
@@ -209,16 +203,16 @@ mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today =
         Past ->
             let
                 yesterday =
-                    subDays 1 today
+                    Date.add Date.Days -1 today
             in
-                mkEnabledDateRange Nothing (Just yesterday)
+            mkEnabledDateRange Nothing (Just yesterday)
 
         Future ->
             let
                 tomorrow =
-                    addDays 1 today
+                    Date.add Date.Days 1 today
             in
-                mkEnabledDateRange (Just tomorrow) Nothing
+            mkEnabledDateRange (Just tomorrow) Nothing
 
         Between start end ->
             mkEnabledDateRange (Just start) (Just end)
@@ -237,20 +231,20 @@ mkEnabledDateRange start end =
     case ( start, end ) of
         ( Just a, Just b ) ->
             Just <|
-                { start = Just <| mkDate (year a) (month a) (day a)
-                , end = Just <| mkDate (year b) (month b) (day b)
+                { start = Just <| fromCalendarDate (year a) (month a) (day a)
+                , end = Just <| fromCalendarDate (year b) (month b) (day b)
                 }
 
         ( Just a, Nothing ) ->
             Just <|
-                { start = Just <| mkDate (year a) (month a) (day a)
+                { start = Just <| fromCalendarDate (year a) (month a) (day a)
                 , end = Nothing
                 }
 
         ( Nothing, Just b ) ->
             Just <|
                 { start = Nothing
-                , end = Just <| mkDate (year b) (month b) (day b)
+                , end = Just <| fromCalendarDate (year b) (month b) (day b)
                 }
 
         ( Nothing, Nothing ) ->
@@ -269,10 +263,10 @@ renderDaysOfWeek =
             div [ Attrs.class "elm-fancy-daterangepicker--dow" ]
                 [ text <|
                     formatDay <|
-                        dayFromInt n
+                        numberToWeekday n
                 ]
     in
-        List.map go days
+    List.map go days
 
 
 {-| An opaque recursive function that chunks a list of a into a
@@ -295,10 +289,11 @@ chunksOfLeft k xs =
         len =
             List.length xs
     in
-        if len > k then
-            List.take k xs :: chunksOfLeft k (List.drop k xs)
-        else
-            [ xs ]
+    if len > k then
+        List.take k xs :: chunksOfLeft k (List.drop k xs)
+
+    else
+        [ xs ]
 
 
 {-| An opaque function that returns a class name or an empty string
@@ -308,6 +303,7 @@ mkClass : String -> Bool -> String
 mkClass cls bool =
     if bool then
         cls
+
     else
         ""
 
@@ -330,12 +326,3 @@ noPresets =
         , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] []
         ]
     ]
-
-
-onPicker : String -> msg -> Html.Attribute msg
-onPicker ev =
-    Json.succeed
-        >> Events.onWithOptions ev
-            { preventDefault = False
-            , stopPropagation = True
-            }

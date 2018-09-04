@@ -1,30 +1,30 @@
-module Main exposing (..)
+module Main exposing (Model, Msg(..), getSettings, init, main, printDate, printDateRange, update, view)
 
+import Browser
 import Date
     exposing
         ( Date
-        , Day(..)
-        , Month(..)
         )
-import Html exposing (Html, div, h2, h4, text, i)
-import Html.Attributes exposing (class)
+import DatePicker exposing (getDate)
 import DateRangePicker
     exposing
         ( defaultSettings
         , getDateRange
-        , setSettings
         , setInputIcon
+        , setSettings
+        )
+import DateRangePicker.Common
+    exposing
+        ( DateRange
+        , RestrictedDateRange(..)
         )
 import DateRangePicker.Date
     exposing
         ( formatDate
         )
-import DatePicker exposing (getDate)
-import DateRangePicker.Common
-    exposing
-        ( DateRange
-        , RestrictedDateRange(ToPresent, FromPresent)
-        )
+import Html exposing (Html, div, h2, h4, i, text)
+import Html.Attributes exposing (class)
+import Time exposing (Month(..), Weekday(..))
 
 
 type Msg
@@ -58,18 +58,20 @@ init =
         datePicker =
             datePicker_
     in
-        { dateRange = Nothing
-        , dateRangePicker = dateRangePicker
-        , datePicker = datePicker
-        , date = Nothing
-        }
-            ! [ Cmd.map SetDateRangePicker dateRangePickerCmd, Cmd.map SetDatePicker datePickerCmd ]
+    ( { dateRange = Nothing
+      , dateRangePicker = dateRangePicker
+      , datePicker = datePicker
+      , date = Nothing
+      }
+    , Cmd.batch [ Cmd.map SetDateRangePicker dateRangePickerCmd, Cmd.map SetDatePicker datePickerCmd ]
+    )
 
 
 getSettings : Bool -> DateRangePicker.Settings
 getSettings useDefault =
     if useDefault then
         DateRangePicker.defaultSettings
+
     else
         { defaultSettings
             | formatDateRange = DateRangePicker.formatDateRange
@@ -85,22 +87,24 @@ update msg ({ dateRangePicker, datePicker } as model) =
                 ( newDateRangePicker, dateRangePickerCmd ) =
                     DateRangePicker.update msg_ dateRangePicker
             in
-                { model
-                    | dateRangePicker = newDateRangePicker
-                    , dateRange = getDateRange newDateRangePicker
-                }
-                    ! [ Cmd.map SetDateRangePicker dateRangePickerCmd ]
+            ( { model
+                | dateRangePicker = newDateRangePicker
+                , dateRange = getDateRange newDateRangePicker
+              }
+            , Cmd.map SetDateRangePicker dateRangePickerCmd
+            )
 
         SetDatePicker msg_ ->
             let
                 ( newDatePicker, datePickerCmd ) =
                     DatePicker.update msg_ datePicker
             in
-                { model
-                    | datePicker = newDatePicker
-                    , date = getDate newDatePicker
-                }
-                    ! [ Cmd.map SetDatePicker datePickerCmd ]
+            ( { model
+                | datePicker = newDatePicker
+                , date = getDate newDatePicker
+              }
+            , Cmd.map SetDatePicker datePickerCmd
+            )
 
 
 view : Model -> Html Msg
@@ -139,11 +143,11 @@ printDate date =
             ""
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
-        { init = init
-        , update = update
+    Browser.element
+        { init = \_ -> init
         , view = view
-        , subscriptions = always Sub.none
+        , update = update
+        , subscriptions = \_ -> Sub.none
         }
