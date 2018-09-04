@@ -1,40 +1,17 @@
-module DateRangePicker.Date
-    exposing
-        ( initDate
-        , mkDate
-        , dateTuple
-        , formatDate
-        , formatDay
-        , formatMonth
-        , dayToInt
-        , dayFromInt
-        , monthToInt
-        , monthFromInt
-        , daysInMonth
-        , datesInRange
-        , startOfMonth
-        , endOfMonth
-        , addDays
-        , subDays
-        , addMonths
-        , subMonths
-        , addYears
-        , subYears
-        , dateEqualTo
-        , dateGreaterThan
-        , dateLessThan
-        , dateGreaterThanOrEqualTo
-        , dateLessThanOrEqualTo
-        )
+module DateRangePicker.Date exposing
+    ( initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth
+    , dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
+    )
 
 {-| A custom Date Helper Library.
 
-@docs initDate, mkDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, dayFromInt, monthToInt, monthFromInt, daysInMonth, datesInRange, startOfMonth, endOfMonth, addDays, subDays, addMonths, subMonths, addYears, subYears
+@docs initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth
 @docs dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
 
 -}
 
-import Date exposing (Date, Day(..), Month(..))
+import Date exposing (Date, format, fromCalendarDate, numberToMonth)
+import Time exposing (Month(..), Weekday(..))
 
 
 {-| An opaque type to represent year as an Int.
@@ -53,7 +30,7 @@ type alias Day =
 -}
 initDate : Date
 initDate =
-    mkDate 1994 Dec 6
+    fromCalendarDate 1994 Dec 6
 
 
 {-| A function to format a Date into a string.
@@ -63,21 +40,15 @@ initDate =
 -}
 formatDate : Date -> String
 formatDate date =
-    String.concat
-        [ toString (Date.month date)
-        , " "
-        , dayToString (Date.day date)
-        , ", "
-        , toString (Date.year date)
-        ]
+    format "MMMM ddd, y" date
 
 
-{-| A function that takes a Date.Day and formats it into the abbreviated string.
+{-| A function that takes a Weekday and formats it into the abbreviated string.
 
   - Ex. Mon -> "Mo"
 
 -}
-formatDay : Date.Day -> String
+formatDay : Weekday -> String
 formatDay day =
     case day of
         Mon ->
@@ -147,24 +118,6 @@ formatMonth month =
             "December"
 
 
-{-| A function that gets all the dates between two dates (inclusive).
--}
-datesInRange : Date -> Date -> List Date
-datesInRange min max =
-    let
-        go x acc =
-            let
-                y =
-                    subDay x
-            in
-                if dateTuple y == dateTuple min then
-                    y :: acc
-                else
-                    go y (y :: acc)
-    in
-        go (addDay max) []
-
-
 {-| A function that converts a Date into a tuple. (year, month, day)
 -}
 dateTuple : Date -> ( Int, Int, Int )
@@ -180,17 +133,18 @@ repeat f =
         go n x =
             if n == 0 then
                 x
+
             else
                 go (n - 1) (f x)
     in
-        go
+    go
 
 
 {-| A function that takes a Date and returns the date representing the first of that month.
 -}
 startOfMonth : Date -> Date
 startOfMonth date =
-    mkDate (Date.year date) (Date.month date) 1
+    fromCalendarDate (Date.year date) (Date.month date) 1
 
 
 {-| A function that takes a Date and returns the date representing the end of that month.
@@ -204,250 +158,7 @@ endOfMonth date =
         m =
             Date.month date
     in
-        mkDate y m (daysInMonth y m)
-
-
-{-| A function that returns a date given a starting date and the number of days to subtract from that starting date.
-
-  - Ex. subDays 7 Date
-
--}
-subDays : Int -> Date -> Date
-subDays =
-    repeat subDay
-
-
-{-| A function that subtracts 1 day from the given date and returns it.
--}
-subDay : Date -> Date
-subDay date =
-    let
-        month =
-            Date.month date
-
-        year =
-            Date.year date
-
-        day =
-            Date.day date - 1
-
-        pred =
-            predMonth month
-
-        predYear =
-            if pred == Dec then
-                year - 1
-            else
-                year
-    in
-        if day < 1 then
-            mkDate predYear pred (daysInMonth predYear pred)
-        else
-            mkDate year month day
-
-
-{-| A function that returns a date given a starting date and the number of days to add to that starting date.
-
-  - Ex. addDays 7 Date
-
--}
-addDays : Int -> Date -> Date
-addDays =
-    repeat addDay
-
-
-{-| A function that adds 1 day to the given date and returns it.
--}
-addDay : Date -> Date
-addDay date =
-    let
-        month =
-            Date.month date
-
-        year =
-            Date.year date
-
-        dim =
-            daysInMonth year month
-
-        day =
-            Date.day date + 1
-
-        succ =
-            succMonth month
-
-        succYear =
-            if succ == Jan then
-                year + 1
-            else
-                year
-    in
-        if day > dim then
-            mkDate succYear succ 1
-        else
-            mkDate year month day
-
-
-{-| A function that returns a date given a starting date and the number of months to add to that starting date.
-
-  - Ex. addMonths 2 Date
-
--}
-addMonths : Int -> Date -> Date
-addMonths =
-    repeat addMonth
-
-
-{-| A function that adds 1 month from the given date and returns it.
--}
-addMonth : Date -> Date
-addMonth date =
-    let
-        month =
-            Date.month date
-
-        newMonth =
-            succMonth month
-
-        year =
-            Date.year date
-
-        newYear =
-            if newMonth == Jan then
-                year + 1
-            else
-                year
-
-        day =
-            Date.day date
-
-        dim =
-            daysInMonth newYear newMonth
-
-        newDay =
-            if day > dim then
-                dim
-            else
-                day
-    in
-        mkDate newYear newMonth newDay
-
-
-{-| A function that returns a date given a starting date and the number of months to subtract from that starting date.
-
-  - Ex. subMonths 2 Date
-
--}
-subMonths : Int -> Date -> Date
-subMonths =
-    repeat subMonth
-
-
-{-| A function that subtracts 1 month from the given date and returns it.
--}
-subMonth : Date -> Date
-subMonth date =
-    let
-        month =
-            Date.month date
-
-        newMonth =
-            predMonth month
-
-        year =
-            Date.year date
-
-        newYear =
-            if newMonth == Dec then
-                year - 1
-            else
-                year
-
-        day =
-            Date.day date
-
-        dim =
-            daysInMonth newYear newMonth
-
-        newDay =
-            if day > dim then
-                dim
-            else
-                day
-    in
-        mkDate newYear newMonth newDay
-
-
-{-| A function that returns a date given a starting date and the number of years to subtract from that starting date.
-
-  - Ex. subYears 2 Date
-
--}
-subYears : Int -> Date -> Date
-subYears =
-    repeat subYear
-
-
-{-| A function that subtracts 1 year from the given date and returns it.
--}
-subYear : Date -> Date
-subYear date =
-    let
-        month =
-            Date.month date
-
-        year =
-            Date.year date - 1
-
-        day =
-            Date.day date
-
-        dim =
-            daysInMonth year month
-
-        newDay =
-            if day > dim then
-                dim
-            else
-                day
-    in
-        mkDate year month newDay
-
-
-{-| A function that returns a date given a starting date and the number of years to add to that starting date.
-
-  - Ex. addYears 2 Date
-
--}
-addYears : Int -> Date -> Date
-addYears =
-    repeat addYear
-
-
-{-| A function that adds 1 year to the given date and returns it.
--}
-addYear : Date -> Date
-addYear date =
-    let
-        month =
-            Date.month date
-
-        year =
-            Date.year date + 1
-
-        day =
-            Date.day date
-
-        dim =
-            daysInMonth year month
-
-        newDay =
-            if day > dim then
-                dim
-            else
-                day
-    in
-        mkDate year month newDay
+    fromCalendarDate y m (daysInMonth y m)
 
 
 {-| A function that takes an Int for the day and returns a string, padding single digit days.
@@ -459,18 +170,19 @@ addYear date =
 dayToString : Int -> String
 dayToString day =
     if day < 10 then
-        "0" ++ toString day
+        "0" ++ String.fromInt day
+
     else
-        toString day
+        String.fromInt day
 
 
-{-| A function that takes a Day and returns it as an integer.
+{-| A function that takes a Weekday and returns it as an integer.
 
   - Sun - Sat
   - 1 - 7
 
 -}
-dayToInt : Date.Day -> Int
+dayToInt : Weekday -> Int
 dayToInt day =
     case day of
         Sun ->
@@ -495,36 +207,6 @@ dayToInt day =
             7
 
 
-{-| A function that gets the day represented as an int and returns the day of the week.
--}
-dayFromInt : Int -> Date.Day
-dayFromInt day =
-    case day of
-        1 ->
-            Sun
-
-        2 ->
-            Mon
-
-        3 ->
-            Tue
-
-        4 ->
-            Wed
-
-        5 ->
-            Thu
-
-        6 ->
-            Fri
-
-        7 ->
-            Sat
-
-        _ ->
-            Debug.crash ("dayFromInt: invalid day: " ++ toString day)
-
-
 {-| A function that takes a Month and returns a string represented as a number, padding single digit months.
 
   - Ex. monthToString Jan -> "01"
@@ -537,35 +219,11 @@ monthToString month =
         int =
             monthToInt month
     in
-        if int < 10 then
-            "0" ++ toString int
-        else
-            toString int
+    if int < 10 then
+        "0" ++ String.fromInt int
 
-
-{-| An opaque function returning the previous month.
--}
-predMonth : Month -> Month
-predMonth month =
-    let
-        prev =
-            (monthToInt month - 1)
-                |> flip rem 12
-    in
-        if prev == 0 then
-            Dec
-        else
-            monthFromInt prev
-
-
-{-| An opaque function returning the next month.
--}
-succMonth : Month -> Month
-succMonth month =
-    monthToInt month
-        |> flip rem 12
-        |> (+) 1
-        |> monthFromInt
+    else
+        String.fromInt int
 
 
 {-| A function that takes a Month and returns it as an Int.
@@ -614,55 +272,6 @@ monthToInt month =
             12
 
 
-{-| A function that takes an Int and returns the corresponding month.
-
-  - Ex. 1 -> Jan
-  - Ex. 12 -> Dec
-
--}
-monthFromInt : Int -> Month
-monthFromInt month =
-    case month of
-        1 ->
-            Jan
-
-        2 ->
-            Feb
-
-        3 ->
-            Mar
-
-        4 ->
-            Apr
-
-        5 ->
-            May
-
-        6 ->
-            Jun
-
-        7 ->
-            Jul
-
-        8 ->
-            Aug
-
-        9 ->
-            Sep
-
-        10 ->
-            Oct
-
-        11 ->
-            Nov
-
-        12 ->
-            Dec
-
-        x ->
-            Debug.crash ("monthFromInt: invalid month: " ++ toString x)
-
-
 {-| A function that returns the number of days in the given month for the given year.
 -}
 daysInMonth : Year -> Month -> Int
@@ -674,6 +283,7 @@ daysInMonth year month =
         Feb ->
             if isLeapYear year then
                 29
+
             else
                 28
 
@@ -712,63 +322,39 @@ daysInMonth year month =
 -}
 isLeapYear : Year -> Bool
 isLeapYear year =
-    year % 400 == 0 || year % 100 /= 0 && year % 4 == 0
-
-
-{-| A function that takes a Year, Month, Day and returns a Date.
--}
-mkDate : Year -> Month -> Day -> Date
-mkDate year month day =
-    toString year
-        ++ "/"
-        ++ monthToString month
-        ++ "/"
-        ++ dayToString day
-        |> unsafeDate
-
-
-{-| An opaque function that tries to parse a String into a Date.
--}
-unsafeDate : String -> Date
-unsafeDate date =
-    case Date.fromString date of
-        Err e ->
-            Debug.crash ("unsafeDate: failed to parse date:" ++ e)
-
-        Ok d ->
-            d
+    modBy year 400 == 0 || modBy year 100 /= 0 && modBy year 4 == 0
 
 
 {-| A function that checks if date a is equal to date b
 -}
 dateEqualTo : Date -> Date -> Bool
 dateEqualTo a b =
-    Date.toTime a == Date.toTime b
+    Date.toRataDie a == Date.toRataDie b
 
 
 {-| A function that checks if date a is less than or equal to date b
 -}
 dateLessThanOrEqualTo : Date -> Date -> Bool
 dateLessThanOrEqualTo a b =
-    Date.toTime a <= Date.toTime b
+    Date.toRataDie a <= Date.toRataDie b
 
 
 {-| A function that checks if date a is greater than or equal to date b
 -}
 dateGreaterThanOrEqualTo : Date -> Date -> Bool
 dateGreaterThanOrEqualTo a b =
-    Date.toTime a >= Date.toTime b
+    Date.toRataDie a >= Date.toRataDie b
 
 
 {-| A function that checks if date a is less than to date b
 -}
 dateLessThan : Date -> Date -> Bool
 dateLessThan a b =
-    Date.toTime a < Date.toTime b
+    Date.toRataDie a < Date.toRataDie b
 
 
 {-| A function that checks if date a is greater than to date b
 -}
 dateGreaterThan : Date -> Date -> Bool
 dateGreaterThan a b =
-    Date.toTime a > Date.toTime b
+    Date.toRataDie a > Date.toRataDie b
