@@ -94,36 +94,18 @@ if (isProd === true) {
             rules: [{
                 test: /\.elm$/,
                 exclude: [/elm-stuff/, /node_modules/],
-                use: 'elm-webpack-loader'
-            }, {
+                use: [{
+                    loader: 'elm-webpack-loader',
+                    options: {
+                        verbose: true,
+                        debug: true,
+                        pathToElm: 'node_modules/.bin/elm'
+                    }
+                }]
+            },{
                 test: /\.sc?ss$/,
-                use: ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    use: ['css-loader', 'postcss-loader', 'sass-loader']
-                })
+                use: ['style-loader', 'css-loader', 'postcss-loader', 'sass-loader']
             }]
-        },
-        plugins: [
-            new ExtractTextPlugin({
-                filename: 'static/css/[name]-[hash].css',
-                allChunks: true,
-            }),
-            new CopyWebpackPlugin([{
-                from: 'src/static/img/',
-                to: 'static/img/'
-            }, {
-                from: 'src/favicon.ico'
-            }]),
-
-            // extract CSS into a separate file
-            // minify & mangle JS/CSS
-            new webpack.optimize.UglifyJsPlugin({
-                minimize: true,
-                compressor: {
-                    warnings: false
-                }
-                // mangle:  true
-            })
-        ]
+        }
     });
 }
