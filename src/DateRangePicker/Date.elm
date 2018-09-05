@@ -322,7 +322,7 @@ daysInMonth year month =
 -}
 isLeapYear : Year -> Bool
 isLeapYear year =
-    modBy year 400 == 0 || modBy year 100 /= 0 && modBy year 4 == 0
+    modBy 400 year == 0 || modBy 100 year /= 0 && modBy 4 year == 0
 
 
 {-| A function that checks if date a is equal to date b

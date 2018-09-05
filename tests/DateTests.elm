@@ -90,8 +90,3 @@ today =
 testDaysInMonth : Int -> Month -> Int -> Expectation
 testDaysInMonth year month output =
     daysInMonth year month |> equal output
-
-
-testDatesInRange : Date -> Date -> List Date -> Expectation
-testDatesInRange min max output =
-    datesInRange min max |> equal output
