@@ -3,6 +3,7 @@ task :default => [:npm, :test, :watch]
 task :jenkins => [:npm, :test, :build]
 
 task :npm do
+    sh("npm install")
     sh("cd example && npm install")
 end
 
@@ -15,5 +16,5 @@ task :build do
 end
 
 task :test do
-    sh("./example/node_modules/.bin/elm-test")
+    sh("./node_modules/.bin/elm-test")
 end
