@@ -1,0 +1,27 @@
+{
+  "name": "elm-fancy-daterangepicker",
+  "version": "1.0.0",
+  "description": "```shell\r elm package install goilluminate/elm-fancy-daterangepicker\r ```",
+  "main": "index.js",
+  "directories": {
+    "example": "example",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GoIlluminate/elm-fancy-daterangepicker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GoIlluminate/elm-fancy-daterangepicker/issues"
+  },
+  "homepage": "https://github.com/GoIlluminate/elm-fancy-daterangepicker#readme",
+  "devDependencies": {
+    "elm-test": "^0.19.0-beta6",
+    "elm": "^0.19.0"
+  }
+}
