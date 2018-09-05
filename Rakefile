@@ -16,5 +16,5 @@ task :build do
 end
 
 task :test do
-    sh("./node_modules/.bin/elm-test")
+    sh("./node_modules/.bin/elm-test --compiler=./node_modules/.bin/elm")
 end

@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/GoIlluminate/elm-fancy-daterangepicker#readme",
   "devDependencies": {
-    "elm-test": "^0.19.0-beta6"
+    "elm-test": "^0.19.0-beta6",
+    "elm": "^0.19.0"
   }
 }
