@@ -15,5 +15,5 @@ task :build do
 end
 
 task :test do
-    sh("elm-test")
+    sh("./example/node_modules/.bin/elm-test")
 end
