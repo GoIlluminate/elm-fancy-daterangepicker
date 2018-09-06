@@ -7,7 +7,7 @@ elm install goilluminate/elm-fancy-daterangepicker
 A reusable daterange picker component in Elm.
 
 ## Example
-[https://ellie-app.com/3gh3VrfrjbJa1](Ellie App Example)
+[Ellie App Example](https://ellie-app.com/3gh3VrfrjbJa1)
 
 ## DateRangePicker
 
