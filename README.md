@@ -1,10 +1,13 @@
 # elm-fancy-daterangepicker
 
 ```shell
-elm package install goilluminate/elm-fancy-daterangepicker
+elm install goilluminate/elm-fancy-daterangepicker
 ```
 
 A reusable daterange picker component in Elm.
+
+## Example
+[https://ellie-app.com/3gh3VrfrjbJa1](Ellie App Example)
 
 ## DateRangePicker
 
