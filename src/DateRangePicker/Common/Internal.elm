@@ -123,7 +123,7 @@ prepareYear date =
     , year = yr
     , quarters =
         prepareQuarters <|
-            List.map Tuple.second <|
+            List.map (\x -> Tuple.first x :: Tuple.second x) <|
                 LE.groupWhile (\x y -> month x == month y) dates
     }
 
