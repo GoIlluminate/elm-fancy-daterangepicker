@@ -257,7 +257,7 @@ renderDaysOfWeek : List (Html msg)
 renderDaysOfWeek =
     let
         days =
-            List.range 1 7
+            7 :: List.range 1 6
 
         go n =
             div [ Attrs.class "elm-fancy-daterangepicker--dow" ]
