@@ -1,0 +1,51 @@
+@import "variables";
+
+$themes: (
+  light: (
+    color-header-text: $illum-color-gray,
+    color-primary: $illum-color-blue,
+    color-dark-onhover: $illum-color-dark-blue,
+    color-secondary: $illum-color-white,
+    color-white: $illum-color-white,
+    color-header-bg: $illum-color-header-bg-white,
+    color-border: $illum-color-border-light-gray,
+    color-text: $illum-color-dark-gray,
+    color-round-btn-border: rgb(236,236,236),
+    color-input-label: rgb(0,0,0)
+  ),
+  dark: (
+    color-header-text: $illum-color-gray,
+    color-primary: $illum-color-blue,
+    color-dark-onhover: $illum-color-dark-blue,
+    color-secondary: rgb(33,33,33),
+    color-white: $illum-color-white,
+    color-header-bg: rgb(66,66,66),
+    color-border: rgb(129, 129, 129),
+    color-text: rgb(129, 129, 129),
+    color-round-btn-border: rgb(129, 129, 129),
+    color-input-label: rgb(129, 129, 129)
+  )
+);
+
+
+@mixin themify($themes: $themes) {
+    @each $theme, $map in $themes {
+  
+      &.theme-#{$theme},
+      .theme-#{$theme} & {
+        $theme-map: () !global;
+        @each $key, $submap in $map {
+          $value: map-get(map-get($themes, $theme), '#{$key}');
+          $theme-map: map-merge($theme-map, ($key: $value)) !global;
+        }
+  
+        @content;
+        $theme-map: null !global;
+      }
+  
+    }
+  }
+
+@function themed($key) {
+    @return map-get($theme-map, $key);
+}

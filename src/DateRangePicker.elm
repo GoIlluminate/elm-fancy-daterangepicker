@@ -85,6 +85,7 @@ type Msg
     | PrevYear
     | NextYear
     | SetDateRange DateRange
+    | Save Date
     | SetDate Date
     | DoNothing
     | Click
@@ -92,7 +93,7 @@ type Msg
     | MouseUp
     | Done
     | Reset
-    | TogglePresets
+    | TogglePresets Tab
     | HoverDay Date
 
 
@@ -112,6 +113,7 @@ type alias Model =
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
+    , selectedTab : Tab
     }
 
 
@@ -155,6 +157,13 @@ type PresetOption
     | CustomOnly
     | AllPresets
     | NoPresets
+
+
+{-| A type representing what tab is selected.
+-}
+type Tab
+    = Calendar
+    | Presets
 
 
 {-| A type representing what the value in PresetSettings is measured in.
@@ -439,7 +448,7 @@ presetLastMonth today =
 -}
 defaultSettings : Settings
 defaultSettings =
-    { placeholder = "Select a date range..."
+    { placeholder = "Select a date range"
     , inputName = Nothing
     , inputId = Nothing
     , inputIcon = Nothing
@@ -488,6 +497,7 @@ initModel =
     , presets = []
     , enabledDateRange = Nothing
     , settings = defaultSettings
+    , selectedTab = Calendar
     }
 
 
@@ -560,6 +570,59 @@ update msg (DateRangePicker ({ settings } as model)) =
                       }
                     , Cmd.none
                     )
+
+                Save date ->
+                    case ( model.startDate, model.endDate ) of
+                        ( Just _, Just _ ) ->
+                            ( { model
+                                | startDate = Just date
+                                , endDate = Nothing
+                                , dateRange = Nothing
+                              }
+                            , Cmd.none
+                            )
+
+                        ( Just start, Nothing ) ->
+                            let
+                                dateRange =
+                                    if dateLessThanOrEqualTo start date then
+                                        Just <| mkDateRange start date
+
+                                    else
+                                        Nothing
+                            in
+                            case dateRange of
+                                Just _ ->
+                                    ( { model
+                                        | endDate = Nothing
+                                        , startDate = Nothing
+                                        , dateRange = dateRange
+                                        , open = False
+                                        , forceOpen = False
+                                        , hoveredDate = Nothing
+                                      }
+                                    , Cmd.none
+                                    )
+
+                                Nothing ->
+                                    ( { model
+                                        | startDate = Just date
+                                        , endDate = Nothing
+                                        , dateRange = Nothing
+                                      }
+                                    , Cmd.none
+                                    )
+
+                        ( Nothing, Nothing ) ->
+                            ( { model
+                                | startDate = Just date
+                                , dateRange = Nothing
+                              }
+                            , Cmd.none
+                            )
+
+                        ( _, _ ) ->
+                            ( model, Cmd.none )
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -678,14 +741,18 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , endDate = Nothing
                         , hoveredDate = Nothing
                         , showPresets = False
-                        , open = False
                         , forceOpen = False
                       }
                     , initCmd
                     )
 
-                TogglePresets ->
-                    ( { model | showPresets = not model.showPresets }, Cmd.none )
+                TogglePresets tab ->
+                    ( { model
+                        | showPresets = not model.showPresets
+                        , selectedTab = tab
+                      }
+                    , Cmd.none
+                    )
 
                 HoverDay date ->
                     ( { model | hoveredDate = Just date }, Cmd.none )
@@ -912,19 +979,20 @@ dateRangePicker : Model -> Html Msg
 dateRangePicker model =
     let
         content =
-            if model.showPresets then
+            if model.selectedTab == Presets then
                 renderPresets model
 
             else
                 getCalendar model
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--wrapper"
+        [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
         ]
-        [ getHeader
+        [ getHeader model
         , content
+        , getFooter model
         ]
 
 
@@ -941,13 +1009,72 @@ getCalendar model =
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
 -}
-getHeader : Html Msg
-getHeader =
+getHeader : Model -> Html Msg
+getHeader model =
+    let
+        getSelectedClass b =
+            if b then
+                "selected"
+
+            else
+                ""
+    in
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
-        [ div [ Html.Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
-        , div [ Html.Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
-        , div [ Html.Events.onClick Reset, Attrs.class "elm-fancy-daterangepicker--reset-btn" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
+        [ div
+            [ Html.Events.onClick (TogglePresets Calendar)
+            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+            , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
+            ]
+            [ text "Calendar" ]
+        , div
+            [ Html.Events.onClick (TogglePresets Presets)
+            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+            , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
+            ]
+            [ text "Presets" ]
         ]
+
+
+{-| An opaque function gets the Html Msg for the footer of the daterange picker.
+-}
+getFooter : Model -> Html Msg
+getFooter model =
+    case model.selectedTab of
+        Calendar ->
+            div [ Attrs.class "elm-fancy-daterangepicker--footer" ]
+                [ div [ Attrs.class "round-btns", Html.Events.onClick Reset ] [ text "Reset" ]
+                , div [ Attrs.class "round-btns", Html.Events.onClick Save ] [ text "Save" ]
+                ]
+
+        _ ->
+            span [] []
+
+
+mkCsBtns : String -> List ( Html msg, Bool ) -> Html msg
+mkCsBtns cls btns =
+    let
+        renderRoundBtn : ( Html msg, Bool ) -> Html msg
+        renderRoundBtn ( msg, isActive ) =
+            div [ Attrs.class "round-btn--container" ]
+                [ div [ Attrs.class "round-btn--wrapper" ]
+                    [ div
+                        [ Attrs.class
+                            ("round-btn "
+                                ++ (if isActive then
+                                        " round-btn--active" ++ cls
+
+                                    else
+                                        cls
+                                   )
+                            )
+                        ]
+                        [ msg
+                        ]
+                    ]
+                ]
+    in
+    div [ Attrs.class ("round-btns--container " ++ cls) ] <|
+        List.map renderRoundBtn btns
 
 
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
@@ -1020,9 +1147,11 @@ renderYearHeader model =
                 ]
     in
     [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Html.Events.onClick PrevYear ] []
+        [ div [] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Html.Events.onClick PrevYear ] []
         , div [ Attrs.class yrLabelClassString, setYearRange ] [ text model.currentYear.name ]
         , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", Html.Events.onClick NextYear ] []
+        , div [] []
         ]
     ]
 
@@ -1197,7 +1326,8 @@ renderDay model date =
             Html.Events.onMouseOver <| HoverDay date
     in
     div [ Attrs.class classString, setDate_, hoverDate ]
-        [ text <|
+        [ div [ Attrs.class "test" ] []
+        , text <|
             String.fromInt <|
                 day date
         ]
