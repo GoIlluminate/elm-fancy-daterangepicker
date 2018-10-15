@@ -53,7 +53,7 @@ init =
             dateRangePicker_
                 |> setSettings (getSettings True)
                 |> DateRangePicker.setInputId "myDateRangePicker"
-                |> setInputIcon (i [ class "fa fa-calendar" ] [])
+                |> setInputIcon (i [] [ text "📆" ])
 
         datePicker =
             datePicker_
@@ -109,7 +109,7 @@ update msg ({ dateRangePicker, datePicker } as model) =
 
 view : Model -> Html Msg
 view { dateRange, dateRangePicker, datePicker, date } =
-    div [ class "main" ]
+    div [ class "main theme-light" ]
         [ div [ class "date-range-picker-wrapper" ]
             [ h2 [] [ text "Date Range Picker" ]
             , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]

@@ -1,13 +1,9 @@
-$dp-ns: elm-fancy-daterangepicker-- !default;
-$dp-bg-clr-hover: #ccc;
 $dp-clr-disabled: grey;
-$dp-clr-main: darkblue;
+$dp-clr-main: rgb(67,130,255);
+$dp-blue: rgb(67,130,255);
 $dp-clr-secondary: white;
-$dp-bg-clr-selected: grey;
-$dp-arrow-left: '◄';
-$dp-arrow-right: '►';
-
-
+$dp-bg-clr-hover: rgba($dp-clr-secondary, 0.8);
+$dp-bg-clr-selected: rgb(67,130,255);
 
 .#{$dp-ns}hover-date {
     cursor: pointer;
@@ -23,13 +19,15 @@ $dp-arrow-right: '►';
 }
 
 .#{dp-ns}btn {
-    -webkit-appearance: button;
-    -moz-appearance: button;
-    appearance: button;
-    background: $dp-clr-main;
-    color: $dp-clr-secondary;
+    background: whitesmoke;
+    color: grey;
+    border-bottom: 1px solid $dp-blue;
     padding:3px 8px 3px 8px;
+    left: 134px;
     cursor: pointer;
+    .fa-calendar {
+        color: $dp-blue;
+    }
 }
 
 .#{$dp-ns}today {
@@ -37,16 +35,26 @@ $dp-arrow-right: '►';
     color: $dp-clr-secondary !important;
 }
 
+.google-box-shadow {
+    -moz-box-shadow:    0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
+    -webkit-box-shadow: 0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
+    box-shadow:         0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
+}
+
 .#{$dp-ns}container {
     i.fa {
-        margin-right: 5px;
+        margin-left: 5px;
+        margin-top: 1px;
+        float: right;
     }
     .#{$dp-ns}date-input {
         @extend .#{dp-ns}btn;
-        width: 175px;
+        width: 350px;
         display:inline-block;
         font-size:13px;
         position:relative;
+        margin-bottom: 10px;
+        border-bottom: 1px solid black;
     }
     .#{$dp-ns}wrapper {
         padding: 0px;
@@ -55,7 +63,6 @@ $dp-arrow-right: '►';
         display: grid;
         width: 500px;
         background: $dp-clr-main;
-        padding: 5px;
         .#{$dp-ns}calendar {
             -webkit-touch-callout: none; /* iOS Safari */
             -webkit-user-select: none; /* Safari */
@@ -68,23 +75,28 @@ $dp-arrow-right: '►';
             display: grid;
             grid-template-columns: 1fr;
             grid-auto-flow: dense;
-            grid-gap: 5px;
+            grid-gap: 1px;
             .#{$dp-ns}yr-label-wrapper {
                 display: grid;
-                grid-template-columns: 25px auto 25px;
+                grid-template-columns: auto 25px min-content 25px auto;
                 text-align: center;
-                background: $dp-clr-secondary;
-                color: $dp-clr-main;
+                background: whitesmoke;
+                color: black;
+                padding: 5px;
                 .#{$dp-ns}yr-btn {
                     @extend .#{$dp-ns}hover-date;
-                    font-weight: bold;
                 }
                 .#{$dp-ns}yr-prev:before {
                     content: $dp-arrow-left;
+                    color: $dp-blue;
                 }
                 
                 .#{$dp-ns}yr-next:before {
                     content: $dp-arrow-right;
+                    color: $dp-blue;
+                }
+                .#{$dp-ns}yr-label {
+                    line-height: 1.5;
                 }
             }
             .#{$dp-ns}qtr-row {
@@ -92,14 +104,15 @@ $dp-arrow-right: '►';
                 width: 100%;
                 display: grid;
                 grid-auto-flow: dense;
-                grid-gap: 5px;
+                grid-gap: 1px;
                 grid-template-columns: 20px 1fr 1fr 1fr;
                 .#{$dp-ns}qtr-label {
                     display: grid;
-                    align-items: center;
-                    background: $dp-clr-secondary;
+                    background: whitesmoke;
                     text-align: center;
-                    color: $dp-clr-main;
+                    color: black;
+                    padding: 2px;
+                    margin-right: -1px;
                     &:not(.#{$dp-ns}disabled) {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -120,20 +133,17 @@ $dp-arrow-right: '►';
                     }
                     .#{$dp-ns}month-label {
                         background: $dp-clr-secondary;
-                        border-bottom: solid 1px $dp-clr-main;
-                        color: $dp-clr-main;
+                        color: black;
                         &:not(.#{$dp-ns}disabled) {
                             @extend .#{$dp-ns}hover-date;
                         }
                     }
                     .#{$dp-ns}dow {
                         background: $dp-clr-secondary;
-                        border-bottom: solid 1px $dp-clr-main;
-                        color: $dp-clr-main;
+                        color: black;
                     }
                     .#{$dp-ns}day-filler {
                         background: $dp-clr-secondary;
-                        opacity: 0.5;
                     }
                     .#{$dp-ns}day {
                         color: $dp-clr-main;
@@ -143,25 +153,100 @@ $dp-arrow-right: '►';
                         }
                         &.#{$dp-ns}hovered-range {
                             background: $dp-bg-clr-hover;
+                            font-weight: bold;
                         }
                     }
                     .#{$dp-ns}selected-range {
                         background: $dp-bg-clr-selected;
                         color: $dp-clr-secondary;
+                        .#{$dp-ns}start-range {
+                            position: absolute;
+                            width: 15px;
+                            height: 15px;
+                            background: red;
+                        }
+                        .#{$dp-ns}end-range {
+                            position: absolute;
+                            width: 15px;
+                            height: 15px;
+                            background: red;
+                        }
                     }
                 }
             }
         }
         .#{$dp-ns}header {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             color: $dp-clr-main;
-            padding-bottom: 5px;
             >div {
                 @extend .#{dp-ns}btn;
                 background: $dp-clr-secondary;
                 color: $dp-clr-main;
                 text-align: center;
+            }
+            .#{$dp-ns}presets-btn {
+                padding: 5px;
+                &:hover {
+                    cursor: pointer;
+                    @include themify($themes) {
+                        background: themed('color-primary');
+                        color: themed('color-secondary');
+                    }
+                }
+                &.selected {
+                    @include themify($themes) {
+                        background: themed('color-primary');
+                        color: themed('color-secondary');
+                    }
+                }
+            }
+        }
+        .#{$dp-ns}footer {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            height: 30px;
+            border-top: 1px solid $dp-blue;
+            background: $dp-clr-secondary;
+            padding: 5px;
+            align-items: center;
+            .round-btns {
+                border-radius: 15px;
+                width: fit-content;
+                height: fit-content;
+                padding: 5px;
+                width: 60px;
+                text-align: center;
+            }
+            .round-btns:first-child { 
+                color: $dp-blue;
+                @include themify($themes) {
+                    border: 1px solid themed('color-primary');
+                    color: themed('color-primary');
+                }
+                &:hover {
+                    cursor: pointer;
+                    @include themify($themes) {
+                        background: themed('color-primary');
+                        color: themed('color-secondary');
+                    }
+                }
+            }
+            .round-btns:last-child {
+                color: white;
+                background-color: $dp-blue;
+                justify-self: right;
+                @include themify($themes) {
+                    border: 1px solid themed('color-primary');
+                    color: themed('color-secondary');
+                }
+                &:hover {
+                    cursor: pointer;
+                    @include themify($themes) {
+                        background: themed('color-secondary');
+                        color: themed('color-primary');
+                    }
+                }
             }
         }
         .#{$dp-ns}presets {
@@ -176,21 +261,16 @@ $dp-arrow-right: '►';
             display: grid;
             grid-template-columns: 1fr;
             grid-auto-flow: dense;
-            grid-gap: 5px;
+            grid-gap: 1px;
             .#{$dp-ns}preset {
                 &:not(.#{$dp-ns}no-presets) {
                     @extend .#{$dp-ns}hover-date;
-                    color: $dp-clr-main;
-                }
-                &.#{$dp-ns}no-presets {
-                    color: $dp-clr-disabled;
                 }
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
                 background: $dp-clr-secondary;
                 grid-gap: 5px;
                 padding: 5px;
-                font-weight: bold;
                 .#{$dp-ns}preset-name {
                     font-size: 14px;
                 }
