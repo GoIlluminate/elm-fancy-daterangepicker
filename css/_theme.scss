@@ -11,7 +11,16 @@ $themes: (
     color-border: $illum-color-border-light-gray,
     color-text: $illum-color-dark-gray,
     color-round-btn-border: rgb(236,236,236),
-    color-input-label: rgb(0,0,0)
+    color-input-label: rgb(0,0,0),
+    color-box-shadow: rgb(0,0,0),
+    color-bg-light-gray: $illum-color-bg-light-gray,
+    color-text-primary: $illum-color-blue, 
+    color-dp-hover: rgba($illum-color-white, 0.8),
+    color-bg-primary: $illum-color-blue,
+    color-text-primary-selected: $illum-color-white,
+    color-border-primary: $illum-color-blue,
+    color-text-primary-white: $illum-color-blue,
+    color-text-black-white: rgb(98,98,98)
   ),
   dark: (
     color-header-text: $illum-color-gray,
@@ -23,7 +32,16 @@ $themes: (
     color-border: rgb(129, 129, 129),
     color-text: rgb(129, 129, 129),
     color-round-btn-border: rgb(129, 129, 129),
-    color-input-label: rgb(129, 129, 129)
+    color-input-label: rgb(129, 129, 129),
+    color-box-shadow: $illum-color-white,
+    color-bg-light-gray: rgb(66,66,66),
+    color-text-primary: rgb(200,209,225),
+    color-dp-hover: rgb(50,81,144),
+    color-bg-primary: rgb(0,0,0),
+    color-text-primary-selected: rgb(84,84,84),
+    color-border-primary: rgb(142,142,142),
+    color-text-primary-white: rgb(223,223,223),
+    color-text-black-white: $illum-color-white,
   )
 );
 

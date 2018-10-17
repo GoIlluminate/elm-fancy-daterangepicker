@@ -90,7 +90,8 @@ type Msg
     | MouseUp
     | Done
     | Reset
-    | TogglePresets
+    | Save
+    | TogglePresets Tab
 
 
 {-| The opaque model to be used within the DatePicker.
@@ -106,6 +107,7 @@ type alias Model =
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
+    , selectedTab : Tab
     }
 
 
@@ -149,6 +151,13 @@ type PresetOption
     | CustomOnly
     | AllPresets
     | NoPresets
+
+
+{-| A type representing what tab is selected.
+-}
+type Tab
+    = Calendar
+    | Presets
 
 
 {-| A type representing what the value in PresetSettings is measured in.
@@ -405,6 +414,7 @@ initModel =
     , presets = []
     , enabledDateRange = Nothing
     , settings = defaultSettings
+    , selectedTab = Calendar
     }
 
 
@@ -491,6 +501,7 @@ update msg (DatePicker ({ settings } as model)) =
                     ( { model
                         | open = newOpen
                         , forceOpen = False
+                        , selectedTab = Calendar
                         , currentYear = newYear
                       }
                     , Cmd.none
@@ -528,8 +539,20 @@ update msg (DatePicker ({ settings } as model)) =
                     , initCmd
                     )
 
-                TogglePresets ->
-                    ( { model | showPresets = not model.showPresets }, Cmd.none )
+                TogglePresets tab ->
+                    ( { model
+                        | showPresets = not model.showPresets
+                        , selectedTab = tab
+                      }
+                    , Cmd.none
+                    )
+
+                Save ->
+                    ( { model
+                        | open = False
+                      }
+                    , initCmd
+                    )
 
                 DoNothing ->
                     ( model, Cmd.none )
@@ -706,7 +729,7 @@ view (DatePicker ({ open, settings } as model)) =
                 |> (List.singleton >> List.filterMap identity)
 
         icon =
-            Maybe.withDefault (i [] []) settings.inputIcon
+            Maybe.withDefault (i [] [ text "📆" ]) settings.inputIcon
 
         dateInput =
             div
@@ -719,8 +742,8 @@ view (DatePicker ({ open, settings } as model)) =
                     , potentialInputId
                     ]
                 )
-                [ icon
-                , text <| Maybe.withDefault settings.placeholder model.inputText
+                [ text <| Maybe.withDefault settings.placeholder model.inputText
+                , icon
                 ]
     in
     div [ Attrs.class "elm-fancy-daterangepicker--container" ]
@@ -746,12 +769,13 @@ datePicker model =
                 renderCalendar model
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--wrapper"
+        [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mouseup" <| Json.succeed ( MouseUp, True )
         ]
-        [ renderHeader
+        [ renderHeader model
         , content
+        , renderFooter model
         ]
 
 
@@ -768,13 +792,46 @@ renderCalendar model =
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
 -}
-renderHeader : Html Msg
-renderHeader =
+renderHeader : Model -> Html Msg
+renderHeader model =
+    let
+        getSelectedClass b =
+            if b then
+                "selected"
+
+            else
+                ""
+    in
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
-        [ div [ Html.Events.onClick Done, Attrs.class "elm-fancy-daterangepicker--done-btn" ] [ i [ Attrs.class "fa fa-check" ] [], text "Done" ]
-        , div [ Html.Events.onClick TogglePresets, Attrs.class "elm-fancy-daterangepicker--presets-btn" ] [ i [ Attrs.class "fa fa-cog" ] [], text "Presets" ]
-        , div [ Html.Events.onClick Reset, Attrs.class "elm-fancy-daterangepicker--reset-btn" ] [ i [ Attrs.class "fa fa-ban" ] [], text "Reset" ]
+        [ div
+            [ Html.Events.onClick (TogglePresets Calendar)
+            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+            , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
+            ]
+            [ text "Calendar" ]
+        , div
+            [ Html.Events.onClick (TogglePresets Presets)
+            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+            , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
+            ]
+            [ text "Presets" ]
         ]
+
+
+{-| An opaque function gets the Html Msg for the footer of the daterange picker.
+-}
+renderFooter : Model -> Html Msg
+renderFooter model =
+    case model.selectedTab of
+        Calendar ->
+            div [ Attrs.class "elm-fancy-daterangepicker--footer" ]
+                [ -- div [ Attrs.class "round-btns", Html.Events.onClick Cancel ] [ text "Cancel" ]
+                  div [ Attrs.class "round-btns", Html.Events.onClick Reset ] [ text "Reset" ]
+                , div [ Attrs.class "round-btns", Html.Events.onClick Save ] [ text "Save" ]
+                ]
+
+        _ ->
+            span [] []
 
 
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
@@ -844,9 +901,11 @@ renderYearHeader model =
                 ]
     in
     [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Html.Events.onClick PrevYear ] []
+        [ div [] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Html.Events.onClick PrevYear ] []
         , div [ Attrs.class yrLabelClassString, setDate_ ] [ text model.currentYear.name ]
         , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", Html.Events.onClick NextYear ] []
+        , div [] []
         ]
     ]
 
@@ -1014,9 +1073,11 @@ renderDay model date =
                 Html.Events.onClick <| SetDate date
     in
     div [ Attrs.class classString, setDate_ ]
-        [ text <|
-            String.fromInt <|
-                day date
+        [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
+            [ text <|
+                String.fromInt <|
+                    day date
+            ]
         ]
 
 

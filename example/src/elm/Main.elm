@@ -109,16 +109,30 @@ update msg ({ dateRangePicker, datePicker } as model) =
 
 view : Model -> Html Msg
 view { dateRange, dateRangePicker, datePicker, date } =
-    div [ class "main theme-light" ]
-        [ div [ class "date-range-picker-wrapper" ]
-            [ h2 [] [ text "Date Range Picker" ]
-            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
-            , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
+    div [ class "main" ]
+        [ div [ class "date-range-picker-wrapper date-picker--wrapper" ]
+            [ div [ class "theme--wrapper theme-light" ]
+                [ h2 [] [ text "Date Range Picker" ]
+                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
+                , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
+                ]
+            , div [ class "theme--wrapper theme-dark" ]
+                [ h2 [] [ text "Date Range Picker" ]
+                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
+                , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
+                ]
             ]
-        , div [ class "single-date-picker-wrapper" ]
-            [ h2 [] [ text "Single Date Picker" ]
-            , h4 [] [ text <| "Selected Date: " ++ printDate date ]
-            , DatePicker.view datePicker |> Html.map SetDatePicker
+        , div [ class "single-date-picker-wrapper date-picker--wrapper" ]
+            [ div [ class "theme--wrapper theme-light" ]
+                [ h2 [] [ text "Single Date Picker" ]
+                , h4 [] [ text <| "Selected Date: " ++ printDate date ]
+                , DatePicker.view datePicker |> Html.map SetDatePicker
+                ]
+            , div [ class "theme--wrapper theme-dark" ]
+                [ h2 [] [ text "Single Date Picker" ]
+                , h4 [] [ text <| "Selected Date: " ++ printDate date ]
+                , DatePicker.view datePicker |> Html.map SetDatePicker
+                ]
             ]
         ]
 
