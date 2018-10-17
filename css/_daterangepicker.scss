@@ -6,21 +6,34 @@
             float: right;
         }
         .#{$dp-ns}date-input {
-            @extend .#{dp-ns}btn;
+            background: themed('color-bg-light-gray');
+            color: themed('color-text');
+            padding:5px;
+            left: 241px;
+            cursor: pointer;
             width: 350px;
-            display:inline-block;
             font-size:13px;
             position:relative;
             margin-bottom: 10px;
-            border-bottom: 1px solid themed('color-border');
+            line-height: 1.5;
+            border-bottom: 1px solid themed('color-box-shadow');
+            align-self: center;
+            display: grid;
+            grid-template-columns: 1fr 25px;
         }
         .#{$dp-ns}wrapper {
             padding: 0px;
             margin: 0px;
-            font-size: 12px;
+            font-size: 14px;
             display: grid;
-            width: 500px;
-            background: themed('color-primary');
+            .footer{
+                grid-template-rows: 30px 1fr 50px;
+            }
+            &:not(.footer) {
+                grid-template-rows: 30px 1fr;
+            }
+            width: 600px;
+            background: themed('color-border-primary');
             .#{$dp-ns}calendar {
                 -webkit-touch-callout: none; /* iOS Safari */
                 -webkit-user-select: none; /* Safari */
@@ -38,10 +51,10 @@
                     display: grid;
                     grid-template-columns: auto 25px min-content 25px auto;
                     text-align: center;
-                    background: whitesmoke;
-                    color: themed('color-text');
+                    background: themed('color-bg-light-gray');
+                    color: themed('color-text-black-white');
                     padding: 5px;
-                    border-top: 1px solid themed('color-primary');
+                    border-top: 1px solid themed('color-border-primary');
                     .#{$dp-ns}yr-btn {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -67,7 +80,7 @@
                     grid-template-columns: 20px 1fr 1fr 1fr;
                     .#{$dp-ns}qtr-label {
                         display: grid;
-                        background: whitesmoke;
+                        background: themed('color-bg-light-gray');
                         text-align: center;
                         color: themed('color-text');
                         padding: 2px;
@@ -111,25 +124,41 @@
                                 @extend .#{$dp-ns}hover-date;
                             }
                             &.#{$dp-ns}hovered-range {
-                                background: rgba(themed('color-white'), 0.8);
+                                background: themed('color-dp-hover');
                                 font-weight: bold;
                             }
                         }
                         .#{$dp-ns}selected-range {
-                            color: themed('color-primary');
-                            background: rgba(themed('color-secondary'), 0.8);
+                            color: themed('color-text-primary');
+                            background: themed('color-dp-hover');
+                            .#{$dp-ns}bubble {
+                                font-weight: bold;
+                            }
                         }
-                        .#{$dp-ns}start-end {
-                            // background: themed('color-secondary') !important;
-                            background: linear-gradient(to left, rgba(themed('color-secondary'), 0.8) 50%, themed('color-secondary') 50%) !important;
-                            .test {
+                        .#{$dp-ns}start {
+                            &.#{$dp-ns}end {
+                                background: themed('color-secondary') !important;
+                            }
+                            &:not(.#{$dp-ns}end) {
+                                background: linear-gradient(to left, themed('color-dp-hover') 50%, themed('color-secondary') 50%) !important;
+                            }
+                        }
+                        .#{$dp-ns}end {
+                            background: linear-gradient(to right, themed('color-dp-hover') 50%, themed('color-secondary') 50%) !important;
+                        }
+                        .#{$dp-ns}start, .#{$dp-ns}end {
+                            .#{$dp-ns}bubble {
                                 background: themed('color-primary');
-                                color: themed('color-secondary');
+                                color: themed('color-white');
                                 width: 75%;
                                 height: 100%;
                                 border-radius: 75%;
                                 margin: auto;
+                                font-weight: bold;
                             }
+                        }
+                        .#{$dp-ns}bubble {
+                            padding: 1px;
                         }
                     }
                 }
@@ -137,33 +166,35 @@
             .#{$dp-ns}header {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
+                align-content: center;
                 color: themed('color-primary');
+                font-weight: bold;
                 >div {
                     background: themed('color-secondary');
-                    color: themed('color-primary');
+                    color: themed('color-text-primary-white');
                     text-align: center;
                 }
                 .#{$dp-ns}presets-btn {
-                    padding: 5px;
+                    padding: 7px;
                     &:hover {
                         cursor: pointer;
-                        background: themed('color-primary');
-                        color: themed('color-secondary');
+                        background: themed('color-bg-primary');
+                        color: themed('color-text-primary-selected');
                     }
                     &.selected {
-                        background: themed('color-primary');
-                        color: themed('color-secondary');
+                        background: themed('color-bg-primary');
+                        color: themed('color-text-primary-selected');
                     }
                 }
             }
             .#{$dp-ns}footer {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                height: 30px;
                 border-top: themed('color-primary');
                 background: themed('color-secondary');
                 padding: 5px;
                 align-items: center;
+                margin-top: 1px;
                 .round-btns {
                     border-radius: 15px;
                     width: fit-content;
@@ -173,20 +204,19 @@
                     text-align: center;
                 }
                 .round-btns:first-child { 
-                    border: 1px solid themed('color-primary');
-                    color: themed('color-primary');
+                    border: 1px solid themed('color-border-primary');
+                    color: themed('color-border-primary');
                     &:hover {
                         cursor: pointer;
                         background: themed('color-primary');
-                        color: themed('color-secondary');
+                        color: themed('color-white');
                     }
                 }
                 .round-btns:last-child {
-                    color: white;
                     background-color: themed('color-primary');
                     justify-self: right;
                     border: 1px solid themed('color-primary');
-                    color: themed('color-secondary');
+                    color: themed('color-white');
                     &:hover {
                         cursor: pointer;
                         background: themed('color-secondary');
@@ -226,7 +256,7 @@
         .#{$dp-ns}hover-date {
             cursor: pointer;
             &:hover {
-                background: rgba(themed('color-white'), 0.8);
+                background: rgba(themed('color-dp-hover'), 0.8);
             }
         }
         
@@ -237,7 +267,7 @@
         }
         
         .#{dp-ns}btn {
-            background: whitesmoke;
+            background: themed('color-bg-light-gray');
             color: grey;
             border-bottom: themed('color-primary');
             padding:3px 8px 3px 8px;
@@ -254,9 +284,9 @@
         }
 
         .google-box-shadow {
-            -moz-box-shadow:    0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
-            -webkit-box-shadow: 0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
-            box-shadow:         0 3px 8px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.08);
+            -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
+            -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
+            box-shadow:         0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
         }
     }
 }

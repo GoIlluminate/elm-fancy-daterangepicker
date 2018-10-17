@@ -86,7 +86,7 @@ type Msg
     | NextYear
     | SetDateRange DateRange
     | Cancel Date
-    | Save Date
+    | Save
     | SetDate Date
     | DoNothing
     | Click
@@ -165,6 +165,13 @@ type PresetOption
 type Tab
     = Calendar
     | Presets
+
+
+{-| A type representing the type of datepicker.
+-}
+type DatePickerType
+    = Single
+    | Range
 
 
 {-| A type representing what the value in PresetSettings is measured in.
@@ -625,58 +632,12 @@ update msg (DateRangePicker ({ settings } as model)) =
                         ( _, _ ) ->
                             ( model, Cmd.none )
 
-                Save date ->
-                    case ( model.startDate, model.endDate ) of
-                        ( Just _, Just _ ) ->
-                            ( { model
-                                | startDate = Just date
-                                , endDate = Nothing
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( Just start, Nothing ) ->
-                            let
-                                dateRange =
-                                    if dateLessThanOrEqualTo start date then
-                                        Just <| mkDateRange start date
-
-                                    else
-                                        Nothing
-                            in
-                            case dateRange of
-                                Just _ ->
-                                    ( { model
-                                        | endDate = Nothing
-                                        , startDate = Nothing
-                                        , dateRange = dateRange
-                                        , open = False
-                                        , forceOpen = False
-                                        , hoveredDate = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                                Nothing ->
-                                    ( { model
-                                        | startDate = Just date
-                                        , endDate = Nothing
-                                        , dateRange = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                        ( Nothing, Nothing ) ->
-                            ( { model
-                                | startDate = Just date
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( _, _ ) ->
-                            ( model, Cmd.none )
+                Save ->
+                    ( { model
+                        | open = False
+                      }
+                    , initCmd
+                    )
 
                 SetDate date ->
                     case ( model.startDate, model.endDate ) of
@@ -704,7 +665,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                         | endDate = Nothing
                                         , startDate = Nothing
                                         , dateRange = dateRange
-                                        , open = False
+                                        , open = True
                                         , forceOpen = False
                                         , hoveredDate = Nothing
                                       }
@@ -721,6 +682,10 @@ update msg (DateRangePicker ({ settings } as model)) =
                                     )
 
                         ( Nothing, Nothing ) ->
+                            -- let
+                            --     dateRange =
+                            --             Just <| mkDateRange date Nothing
+                            -- in
                             ( { model
                                 | startDate = Just date
                                 , dateRange = Nothing
@@ -1014,8 +979,8 @@ view (DateRangePicker ({ open, settings } as model)) =
                     , potentialInputId
                     ]
                 )
-                [ icon
-                , text <| Maybe.withDefault settings.placeholder model.inputText
+                [ text <| Maybe.withDefault settings.placeholder model.inputText
+                , icon
                 ]
     in
     div [ Attrs.class "elm-fancy-daterangepicker--container" ]
@@ -1039,9 +1004,18 @@ dateRangePicker model =
 
             else
                 getCalendar model
+
+        footer =
+            case model.selectedTab of
+                Calendar ->
+                    "footer"
+
+                _ ->
+                    ""
     in
     div
         [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
+        , Attrs.class footer
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
         ]
@@ -1097,9 +1071,9 @@ getFooter model =
     case model.selectedTab of
         Calendar ->
             div [ Attrs.class "elm-fancy-daterangepicker--footer" ]
-                [-- div [ Attrs.class "round-btns", Html.Events.onClick Cancel ] [ text "Cancel" ]
-                 -- , div [ Attrs.class "round-btns", Html.Events.onClick Reset ] [ text "Reset" ]
-                 -- , div [ Attrs.class "round-btns", Html.Events.onClick Save ] [ text "Save" ]
+                [ -- div [ Attrs.class "round-btns", Html.Events.onClick Cancel ] [ text "Cancel" ]
+                  div [ Attrs.class "round-btns", Html.Events.onClick Reset ] [ text "Reset" ]
+                , div [ Attrs.class "round-btns", Html.Events.onClick Save ] [ text "Save" ]
                 ]
 
         _ ->
@@ -1363,10 +1337,10 @@ renderDay model date =
             isToday model date
 
         isStart_ =
-            isStartOrEnd model date
-        
+            isStart model date
+
         isEnd_ =
-            isStartOrEnd model date
+            isEnd model date
 
         classString =
             mkClassString
@@ -1390,7 +1364,7 @@ renderDay model date =
             Html.Events.onMouseOver <| HoverDay date
     in
     div [ Attrs.class classString, setDate_, hoverDate ]
-        [ div [ Attrs.class "test" ]
+        [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
             [ text <|
                 String.fromInt <|
                     day date
@@ -1458,6 +1432,7 @@ isStartOrEnd model date =
         Just { start, end } ->
             dateEqualTo start date || dateEqualTo end date
 
+
 {-| An opaque function that checks if the passed in date is equal
 to the model's startDate
 -}
@@ -1465,22 +1440,43 @@ isStart : Model -> Date -> Bool
 isStart model date =
     case model.dateRange of
         Nothing ->
-            case ( model.startDate, model.endDate ) of
-                ( Just a, Just b ) ->
-                    dateEqualTo a date || dateEqualTo b date
-
-                ( Just a, _ ) ->
+            case model.startDate of
+                Just a ->
                     dateEqualTo a date
 
-                ( _, Just b ) ->
-                    dateEqualTo b date
-
-                ( _, _ ) ->
+                Nothing ->
                     False
 
-        Just { start, end } ->
-            dateEqualTo start date || dateEqualTo end date
+        Just { start } ->
+            dateEqualTo start date
 
+
+{-| An opaque function that checks if the passed in date is equal
+to the model's endDate
+-}
+isEnd : Model -> Date -> Bool
+isEnd model date =
+    case model.dateRange of
+        Nothing ->
+            case model.endDate of
+                Just a ->
+                    dateEqualTo a date
+
+                Nothing ->
+                    case model.hoveredDate of
+                        Just a ->
+                            case model.startDate of
+                                Just sd ->
+                                    dateEqualTo a date && dateGreaterThanOrEqualTo a sd
+
+                                _ ->
+                                    False
+
+                        Nothing ->
+                            False
+
+        Just { end } ->
+            dateEqualTo end date
 
 
 {-| An opaque function that checks if the passed in date is today.
