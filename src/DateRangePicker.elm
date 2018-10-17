@@ -1,7 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
-    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+    , Settings, defaultSettings, setSettings, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
     )
 
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+@docs Settings, defaultSettings, setSettings, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
 
 
 ## Presets
@@ -168,13 +168,6 @@ type PresetOption
 type Tab
     = Calendar
     | Presets
-
-
-{-| A type representing the type of datepicker.
--}
-type DatePickerType
-    = Single
-    | Range
 
 
 {-| A type representing what the value in PresetSettings is measured in.
@@ -685,10 +678,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                                     )
 
                         ( Nothing, Nothing ) ->
-                            -- let
-                            --     dateRange =
-                            --             Just <| mkDateRange date Nothing
-                            -- in
                             ( { model
                                 | startDate = Just date
                                 , dateRange = Nothing
@@ -840,20 +829,6 @@ setDateRange dateRange (DateRangePicker model) =
             Maybe.map (\x -> getNewDateRange model x) dateRange
     in
     DateRangePicker ({ model | dateRange = newDateRange } |> updateInputText)
-
-
-{-| Sets the date range formatter for the daterangepicker.
--}
-setDateRangeFormat : (DateRange -> String) -> DateRangePicker -> DateRangePicker
-setDateRangeFormat dateRangeFormat (DateRangePicker model) =
-    let
-        settings =
-            model.settings
-
-        newSettings =
-            { settings | formatDateRange = dateRangeFormat }
-    in
-    DateRangePicker { model | settings = newSettings }
 
 
 {-| Sets the placeholder for the daterangepicker.
@@ -1068,13 +1043,13 @@ getHeader model =
     in
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
         [ div
-            [ onClickNoDefault (TogglePresets Calendar)
+            [ onClickNoDefault <| TogglePresets Calendar
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
             ]
             [ text "Calendar" ]
         , div
-            [ onClickNoDefault (TogglePresets Presets)
+            [ onClickNoDefault <| TogglePresets Presets
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
             ]
@@ -1095,33 +1070,6 @@ getFooter model =
 
         _ ->
             span [] []
-
-
-mkCsBtns : String -> List ( Html msg, Bool ) -> Html msg
-mkCsBtns cls btns =
-    let
-        renderRoundBtn : ( Html msg, Bool ) -> Html msg
-        renderRoundBtn ( msg, isActive ) =
-            div [ Attrs.class "round-btn--container" ]
-                [ div [ Attrs.class "round-btn--wrapper" ]
-                    [ div
-                        [ Attrs.class
-                            ("round-btn "
-                                ++ (if isActive then
-                                        " round-btn--active" ++ cls
-
-                                    else
-                                        cls
-                                   )
-                            )
-                        ]
-                        [ msg
-                        ]
-                    ]
-                ]
-    in
-    div [ Attrs.class ("round-btns--container " ++ cls) ] <|
-        List.map renderRoundBtn btns
 
 
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
@@ -1458,7 +1406,7 @@ isStart model date =
     case model.dateRange of
         Just { start } ->
             dateEqualTo start date
-            
+
         Nothing ->
             case model.startDate of
                 Just a ->
@@ -1468,7 +1416,6 @@ isStart model date =
                     False
 
 
-
 {-| An opaque function that checks if the passed in date is equal
 to the model's endDate
 -}
@@ -1476,14 +1423,14 @@ isEnd : Model -> Date -> Bool
 isEnd model date =
     let
         fun =
-            Maybe.andThen 
-                (\a -> 
-                    Maybe.map 
-                        (\sd -> 
+            Maybe.andThen
+                (\a ->
+                    Maybe.map
+                        (\sd ->
                             dateEqualTo a date && dateGreaterThanOrEqualTo a sd
-                        ) 
-                        model.startDate 
-                ) 
+                        )
+                        model.startDate
+                )
                 model.hoveredDate
     in
     case model.dateRange of
@@ -1497,7 +1444,6 @@ isEnd model date =
 
                 Nothing ->
                     Maybe.withDefault False fun
-
 
 
 {-| An opaque function that checks if the passed in date is today.
