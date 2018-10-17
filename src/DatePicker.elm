@@ -3,6 +3,7 @@ module DatePicker exposing
     , init, update, isOpen, setOpen, view, getDate, setDate
     , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
+    , subscriptions
     )
 
 {-| A customizable daterangepicker component.
@@ -50,6 +51,7 @@ import DateRangePicker.Common.Internal
         , padMonthRight
         , prepareYear
         , renderDaysOfWeek
+        , onClickNoDefault
         )
 import DateRangePicker.Date
     exposing
@@ -75,7 +77,7 @@ import Html.Events
 import Json.Decode as Json
 import Task
 import Time exposing (Month(..), Weekday(..))
-
+import Browser.Events
 
 {-| A type representing messages that are passed within the DatePicker.
 -}
@@ -92,7 +94,7 @@ type Msg
     | Reset
     | Save
     | TogglePresets Tab
-
+    | CancelClick
 
 {-| The opaque model to be used within the DatePicker.
 -}
@@ -554,6 +556,9 @@ update msg (DatePicker ({ settings } as model)) =
                     , initCmd
                     )
 
+                CancelClick ->
+                    ( { model | open = False }, Cmd.none )
+
                 DoNothing ->
                     ( model, Cmd.none )
     in
@@ -718,6 +723,17 @@ setRestrictedDateRange restrictedDateRange (DatePicker model) =
     DatePicker { model | settings = newSettings }
 
 
+{-| Subscribes to a mouse click
+-}
+subscriptions : DatePicker -> Sub Msg
+subscriptions (DatePicker model) =
+    if model.open then
+        Browser.Events.onClick (Json.succeed CancelClick)
+
+    else
+        Sub.none
+
+
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
 -}
 view : DatePicker -> Html Msg
@@ -735,7 +751,7 @@ view (DatePicker ({ open, settings } as model)) =
             div
                 (List.concat
                     [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
-                      , Html.Events.onClick Click
+                      , onClickNoDefault Click
                       , Attrs.class "elm-fancy-daterangepicker--date-input"
                       ]
                     , settings.inputAttributes
@@ -772,6 +788,7 @@ datePicker model =
         [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mouseup" <| Json.succeed ( MouseUp, True )
+        , onClickNoDefault DoNothing
         ]
         [ renderHeader model
         , content
@@ -804,13 +821,13 @@ renderHeader model =
     in
     div [ Attrs.class "elm-fancy-daterangepicker--header" ]
         [ div
-            [ Html.Events.onClick (TogglePresets Calendar)
+            [ onClickNoDefault (TogglePresets Calendar)
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
             ]
             [ text "Calendar" ]
         , div
-            [ Html.Events.onClick (TogglePresets Presets)
+            [ onClickNoDefault (TogglePresets Presets)
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
             ]
@@ -825,9 +842,8 @@ renderFooter model =
     case model.selectedTab of
         Calendar ->
             div [ Attrs.class "elm-fancy-daterangepicker--footer" ]
-                [ -- div [ Attrs.class "round-btns", Html.Events.onClick Cancel ] [ text "Cancel" ]
-                  div [ Attrs.class "round-btns", Html.Events.onClick Reset ] [ text "Reset" ]
-                , div [ Attrs.class "round-btns", Html.Events.onClick Save ] [ text "Save" ]
+                [ div [ Attrs.class "round-btns", onClickNoDefault Reset ] [ text "Reset" ]
+                , div [ Attrs.class "round-btns", onClickNoDefault Save ] [ text "Save" ]
                 ]
 
         _ ->
@@ -856,10 +872,10 @@ renderPreset model preset =
 
         setDate_ =
             if isDisabledPreset then
-                Html.Events.onClick DoNothing
+                onClickNoDefault DoNothing
 
             else
-                Html.Events.onClick <|
+                onClickNoDefault <|
                     SetDate preset.date
 
         classString =
@@ -887,10 +903,10 @@ renderYearHeader model =
 
         setDate_ =
             if isDisabledYear then
-                Html.Events.onClick DoNothing
+                onClickNoDefault DoNothing
 
             else
-                Html.Events.onClick <|
+                onClickNoDefault <|
                     SetDate date
 
         yrLabelClassString =
@@ -902,9 +918,9 @@ renderYearHeader model =
     in
     [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
         [ div [] []
-        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", Html.Events.onClick PrevYear ] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", onClickNoDefault PrevYear ] []
         , div [ Attrs.class yrLabelClassString, setDate_ ] [ text model.currentYear.name ]
-        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", Html.Events.onClick NextYear ] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", onClickNoDefault NextYear ] []
         , div [] []
         ]
     ]
@@ -953,10 +969,10 @@ renderQuarter model qtr =
 
                                 setQtrDate =
                                     if isDisabledQtr then
-                                        Html.Events.onClick DoNothing
+                                        onClickNoDefault DoNothing
 
                                     else
-                                        Html.Events.onClick <|
+                                        onClickNoDefault <|
                                             SetDate start
 
                                 classString =
@@ -1012,10 +1028,10 @@ renderMonth model m =
 
                 setMonthDate =
                     if isDisabledMonth then
-                        Html.Events.onClick DoNothing
+                        onClickNoDefault DoNothing
 
                     else
-                        Html.Events.onClick <|
+                        onClickNoDefault <|
                             SetDate startOfMonth_
 
                 classString =
@@ -1067,10 +1083,10 @@ renderDay model date =
 
         setDate_ =
             if isDisabledDate_ then
-                Html.Events.onClick DoNothing
+                onClickNoDefault DoNothing
 
             else
-                Html.Events.onClick <| SetDate date
+                onClickNoDefault <| SetDate date
     in
     div [ Attrs.class classString, setDate_ ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]

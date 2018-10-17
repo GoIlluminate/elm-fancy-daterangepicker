@@ -8,6 +8,7 @@ module DateRangePicker.Common.Internal exposing
     , mkClassString
     , mkEnabledDateRangeFromRestrictedDateRange
     , noPresets
+    , onClickNoDefault
     , padMonthLeft
     , padMonthRight
     , prepareQuarters
@@ -315,6 +316,18 @@ mkClassString lst =
     String.join " " <|
         List.filter (\x -> x /= "")
             lst
+
+
+{-| An opaque function that stop propagation of click event.
+-}
+onClickNoDefault : msg -> Html.Attribute msg
+onClickNoDefault message =
+    Events.custom "click" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = True
+            }
 
 
 {-| An opaque function that returns a no presets available Html msg
