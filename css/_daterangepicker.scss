@@ -283,7 +283,7 @@
             text-decoration: underline;
         }
 
-        .google-box-shadow {
+        .#{$dp-ns}box-shadow {
             -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
             -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
             box-shadow:         0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
