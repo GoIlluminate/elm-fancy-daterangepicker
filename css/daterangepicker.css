@@ -58,10 +58,10 @@
       border-top: 1px solid #4382ff; }
       .elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-prev:before, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-prev:before {
         color: #4382ff;
-        content: "Γ¥«"; }
+        content: "❮"; }
       .elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-next:before, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-next:before {
         color: #4382ff;
-        content: "Γ¥»"; }
+        content: "❯"; }
       .elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-label, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-label {
         line-height: 1.5; }
     .elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--qtr-row, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--qtr-row {
@@ -285,10 +285,10 @@
       border-top: 1px solid #8e8e8e; }
       .elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-prev:before, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-prev:before {
         color: #4382ff;
-        content: "Γ¥«"; }
+        content: "❮"; }
       .elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-next:before, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-next:before {
         color: #4382ff;
-        content: "Γ¥»"; }
+        content: "❯"; }
       .elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-label, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--yr-label-wrapper .elm-fancy-daterangepicker--yr-label {
         line-height: 1.5; }
     .elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--qtr-row, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--wrapper .elm-fancy-daterangepicker--calendar .elm-fancy-daterangepicker--qtr-row {
