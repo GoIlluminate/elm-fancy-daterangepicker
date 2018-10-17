@@ -1,9 +1,8 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
-    , init, update, isOpen, setOpen, view, getDateRange, setDateRange
+    , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
-    , subscriptions
     )
 
 {-| A customizable daterangepicker component.
@@ -968,6 +967,7 @@ subscriptions : DateRangePicker -> Sub Msg
 subscriptions (DateRangePicker model) =
     if model.open then
         Browser.Events.onClick (Json.succeed CancelClick)
+
     else
         Sub.none
 
@@ -1004,6 +1004,7 @@ view (DateRangePicker ({ open, settings } as model)) =
         [ dateInput
         , if open then
             dateRangePicker model
+
           else
             text ""
         ]
@@ -1034,7 +1035,7 @@ dateRangePicker model =
         , Attrs.class footer
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
-        , onClickNoDefault DoNothing 
+        , onClickNoDefault DoNothing
         ]
         [ getHeader model
         , content
