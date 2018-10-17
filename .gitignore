@@ -6,3 +6,4 @@ elm-stuff
 .coverage
 node_modules
 *-lock.json
+.sass-cache
