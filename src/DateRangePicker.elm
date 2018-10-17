@@ -1456,6 +1456,9 @@ to the model's startDate
 isStart : Model -> Date -> Bool
 isStart model date =
     case model.dateRange of
+        Just { start } ->
+            dateEqualTo start date
+            
         Nothing ->
             case model.startDate of
                 Just a ->
@@ -1464,8 +1467,6 @@ isStart model date =
                 Nothing ->
                     False
 
-        Just { start } ->
-            dateEqualTo start date
 
 
 {-| An opaque function that checks if the passed in date is equal
@@ -1473,27 +1474,30 @@ to the model's endDate
 -}
 isEnd : Model -> Date -> Bool
 isEnd model date =
+    let
+        fun =
+            Maybe.andThen 
+                (\a -> 
+                    Maybe.map 
+                        (\sd -> 
+                            dateEqualTo a date && dateGreaterThanOrEqualTo a sd
+                        ) 
+                        model.startDate 
+                ) 
+                model.hoveredDate
+    in
     case model.dateRange of
+        Just { end } ->
+            dateEqualTo end date
+
         Nothing ->
             case model.endDate of
                 Just a ->
                     dateEqualTo a date
 
                 Nothing ->
-                    case model.hoveredDate of
-                        Just a ->
-                            case model.startDate of
-                                Just sd ->
-                                    dateEqualTo a date && dateGreaterThanOrEqualTo a sd
+                    Maybe.withDefault False fun
 
-                                _ ->
-                                    False
-
-                        Nothing ->
-                            False
-
-        Just { end } ->
-            dateEqualTo end date
 
 
 {-| An opaque function that checks if the passed in date is today.
