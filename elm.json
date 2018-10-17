@@ -3,7 +3,7 @@
     "name": "goilluminate/elm-fancy-daterangepicker",
     "summary": "A fancy daterangepicker in elm.",
     "license": "BSD-3-Clause",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "exposed-modules": [
         "DateRangePicker",
         "DatePicker",
@@ -21,7 +21,7 @@
         "elm/url": "1.0.0 <= v < 2.0.0",
         "elm/virtual-dom": "1.0.0 <= v < 2.0.0",
         "elm-community/list-extra": "8.0.0 <= v < 9.0.0",
-        "justinmimbs/date": "2.0.1 <= v < 3.0.0"
+        "justinmimbs/date": "3.0.0 <= v < 4.0.0"
     },
     "test-dependencies": {
         "elm-explorations/test": "1.1.0 <= v < 2.0.0"
