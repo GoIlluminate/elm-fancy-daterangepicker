@@ -9,7 +9,7 @@ module DatePicker exposing
 {-| A customizable daterangepicker component.
 
 @docs Msg, DatePicker
-@docs init, update, isOpen, setOpen, view, getDate, setDate
+@docs init, update, subscriptions, isOpen, setOpen, view, getDate, setDate
 
 
 # Settings
