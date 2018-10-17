@@ -222,7 +222,7 @@
 .elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--today, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--today {
   font-weight: bold;
   text-decoration: underline; }
-.elm-fancy-daterangepicker--container.theme-light .google-box-shadow, .theme-light .elm-fancy-daterangepicker--container .google-box-shadow {
+.elm-fancy-daterangepicker--container.theme-light .elm-fancy-daterangepicker--box-shadow, .theme-light .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--box-shadow {
   -moz-box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.08);
   -webkit-box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.08);
   box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.08); }
@@ -449,7 +449,7 @@
 .elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--today, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--today {
   font-weight: bold;
   text-decoration: underline; }
-.elm-fancy-daterangepicker--container.theme-dark .google-box-shadow, .theme-dark .elm-fancy-daterangepicker--container .google-box-shadow {
+.elm-fancy-daterangepicker--container.theme-dark .elm-fancy-daterangepicker--box-shadow, .theme-dark .elm-fancy-daterangepicker--container .elm-fancy-daterangepicker--box-shadow {
   -moz-box-shadow: 0 3px 8px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
   -webkit-box-shadow: 0 3px 8px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
   box-shadow: 0 3px 8px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08); }

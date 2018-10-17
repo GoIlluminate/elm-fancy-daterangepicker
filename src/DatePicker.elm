@@ -785,7 +785,7 @@ datePicker model =
                 renderCalendar model
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
+        [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mouseup" <| Json.succeed ( MouseUp, True )
         , onClickNoDefault DoNothing

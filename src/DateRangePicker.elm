@@ -1031,7 +1031,7 @@ dateRangePicker model =
                     ""
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--wrapper google-box-shadow"
+        [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
         , Attrs.class footer
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
@@ -1458,7 +1458,7 @@ isStart model date =
     case model.dateRange of
         Just { start } ->
             dateEqualTo start date
-            
+
         Nothing ->
             case model.startDate of
                 Just a ->
