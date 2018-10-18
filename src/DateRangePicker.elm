@@ -661,7 +661,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                         | endDate = Nothing
                                         , startDate = Nothing
                                         , dateRange = dateRange
-                                        , open = True
+                                        , open = False
                                         , forceOpen = False
                                         , hoveredDate = Nothing
                                       }

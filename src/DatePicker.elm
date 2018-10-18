@@ -535,7 +535,6 @@ update msg (DatePicker ({ settings } as model)) =
                     ( { model
                         | date = Nothing
                         , showPresets = False
-                        , open = False
                         , forceOpen = False
                       }
                     , initCmd
