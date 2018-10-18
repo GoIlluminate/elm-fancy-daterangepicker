@@ -1,7 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
-    , Settings, defaultSettings, setSettings, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
     )
 
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
 
 
 ## Presets
@@ -829,6 +829,20 @@ setDateRange dateRange (DateRangePicker model) =
             Maybe.map (\x -> getNewDateRange model x) dateRange
     in
     DateRangePicker ({ model | dateRange = newDateRange } |> updateInputText)
+
+
+{-| Sets the date range formatter for the daterangepicker.
+-}
+setDateRangeFormat : (DateRange -> String) -> DateRangePicker -> DateRangePicker
+setDateRangeFormat dateRangeFormat (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | formatDateRange = dateRangeFormat }
+    in
+    DateRangePicker { model | settings = newSettings }
 
 
 {-| Sets the placeholder for the daterangepicker.
