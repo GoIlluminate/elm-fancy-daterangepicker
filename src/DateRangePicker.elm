@@ -1,7 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
-    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
     )
 
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay
 
 
 ## Presets
@@ -33,16 +33,20 @@ import Date
         )
 import DateRangePicker.Common
     exposing
-        ( DateRange
+        ( CalendarDisplay(..)
+        , DateRange
         , RestrictedDateRange(..)
+        , calendarDisplayToStr
         , inRange
         , mkDateRange
         )
 import DateRangePicker.Common.Internal
     exposing
-        ( EnabledDateRange
+        ( CalendarRange
+        , EnabledDateRange
         , FullYear
-        , Quarter
+        , Months
+        , chunksOfLeft
         , isDisabledDate
         , mkClass
         , mkClassString
@@ -51,6 +55,7 @@ import DateRangePicker.Common.Internal
         , onClickNoDefault
         , padMonthLeft
         , padMonthRight
+        , prepareCalendarRange
         , prepareYear
         , renderDaysOfWeek
         )
@@ -84,8 +89,8 @@ import Time exposing (Month(..), Weekday(..))
 -}
 type Msg
     = InitCurrentDate Date
-    | PrevYear
-    | NextYear
+    | PrevCalendarRange
+    | NextCalendarRange
     | SetDateRange DateRange
     | Cancel Date
     | Save
@@ -118,6 +123,7 @@ type alias Model =
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
     , selectedTab : Tab
+    , calendarRange : CalendarRange
     }
 
 
@@ -132,6 +138,7 @@ type alias Settings =
     , presetOptions : PresetOptions
     , restrictedDateRange : RestrictedDateRange
     , formatDateRange : DateRange -> String
+    , calendarDisplay : CalendarDisplay
     }
 
 
@@ -460,6 +467,7 @@ defaultSettings =
     , presetOptions = defaultPresetOptions
     , restrictedDateRange = Off
     , formatDateRange = formatDateRange
+    , calendarDisplay = FullCalendar
     }
 
 
@@ -502,6 +510,7 @@ initModel =
     , enabledDateRange = Nothing
     , settings = defaultSettings
     , selectedTab = Calendar
+    , calendarRange = prepareCalendarRange FullCalendar initDate
     }
 
 
@@ -534,6 +543,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                 , currentYear = prepareYear date
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
+                                , calendarRange = prepareCalendarRange settings.calendarDisplay date
                             }
 
                         newDateRange =
@@ -541,21 +551,43 @@ update msg (DateRangePicker ({ settings } as model)) =
                     in
                     ( { newModel | dateRange = newDateRange }, Cmd.none )
 
-                PrevYear ->
+                PrevCalendarRange ->
                     let
-                        prevYear =
-                            prepareYear <|
-                                fromCalendarDate (model.currentYear.year - 1) Jan 1
-                    in
-                    ( { model | currentYear = prevYear }, Cmd.none )
+                        prevCalendarRange =
+                            prepareCalendarRange model.settings.calendarDisplay <|
+                                case model.settings.calendarDisplay of
+                                    FullCalendar ->
+                                        Date.add Date.Years -1 model.calendarRange.start
 
-                NextYear ->
-                    let
-                        nextYear =
-                            prepareYear <|
-                                fromCalendarDate (model.currentYear.year + 1) Jan 1
+                                    ThreeMonths ->
+                                        Date.add Date.Months -3 model.calendarRange.start
+
+                                    TwoMonths ->
+                                        Date.add Date.Months -2 model.calendarRange.start
+
+                                    OneMonth ->
+                                        Date.add Date.Months -1 model.calendarRange.start
                     in
-                    ( { model | currentYear = nextYear }, Cmd.none )
+                    ( { model | calendarRange = prevCalendarRange }, Cmd.none )
+
+                NextCalendarRange ->
+                    let
+                        nextCalendarRange =
+                            prepareCalendarRange model.settings.calendarDisplay <|
+                                case model.settings.calendarDisplay of
+                                    FullCalendar ->
+                                        Date.add Date.Years 1 model.calendarRange.start
+
+                                    ThreeMonths ->
+                                        Date.add Date.Months 3 model.calendarRange.start
+
+                                    TwoMonths ->
+                                        Date.add Date.Months 2 model.calendarRange.start
+
+                                    OneMonth ->
+                                        Date.add Date.Months 1 model.calendarRange.start
+                    in
+                    ( { model | calendarRange = nextCalendarRange }, Cmd.none )
 
                 SetDateRange dateRange ->
                     let
@@ -690,13 +722,13 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                 Click ->
                     let
-                        newYear =
+                        newCalendarRange =
                             case model.dateRange of
                                 Just a ->
-                                    prepareYear a.end
+                                    prepareCalendarRange model.settings.calendarDisplay a.start
 
                                 Nothing ->
-                                    model.currentYear
+                                    model.calendarRange
 
                         newOpen =
                             not model.open
@@ -705,7 +737,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                         | open = newOpen
                         , forceOpen = False
                         , selectedTab = Calendar
-                        , currentYear = newYear
+                        , calendarRange = newCalendarRange
                       }
                     , Cmd.none
                     )
@@ -943,6 +975,20 @@ setRestrictedDateRange restrictedDateRange (DateRangePicker model) =
     DateRangePicker { model | settings = newSettings }
 
 
+{-| Sets the CalendarDisplay for the daterangepicker
+-}
+setCalendarDisplay : CalendarDisplay -> DateRangePicker -> DateRangePicker
+setCalendarDisplay calendarDisplay (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | calendarDisplay = calendarDisplay }
+    in
+    DateRangePicker { model | settings = newSettings }
+
+
 {-| Sets the settings for the daterange picker
 -}
 setSettings : Settings -> DateRangePicker -> DateRangePicker
@@ -1011,17 +1057,21 @@ dateRangePicker model =
             else
                 getCalendar model
 
-        footer =
+        tabClass =
             case model.selectedTab of
                 Calendar ->
-                    "footer"
+                    "elm-fancy-daterangepicker--calendar-tab"
 
                 _ ->
-                    ""
+                    "elm-fancy-daterangepicker--presets-tab"
+
+        calendarDisplayClass =
+            "elm-fancy-daterangepicker--" ++ calendarDisplayToStr model.settings.calendarDisplay
     in
     div
         [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
-        , Attrs.class footer
+        , Attrs.class tabClass
+        , Attrs.class calendarDisplayClass
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
         , onClickNoDefault DoNothing
@@ -1036,10 +1086,32 @@ dateRangePicker model =
 -}
 getCalendar : Model -> Html Msg
 getCalendar model =
-    div [ Attrs.class "elm-fancy-daterangepicker--calendar" ] <|
+    let
+        calendarDisplayClass =
+            "elm-fancy-daterangepicker--" ++ calendarDisplayToStr model.settings.calendarDisplay
+
+        body =
+            case model.settings.calendarDisplay of
+                FullCalendar ->
+                    renderFullCalendarBody model
+
+                ThreeMonths ->
+                    renderThreeMonthsBody model
+
+                TwoMonths ->
+                    renderTwoMonthsBody model
+
+                OneMonth ->
+                    renderOneMonthBody model
+    in
+    div
+        [ Attrs.class "elm-fancy-daterangepicker--calendar"
+        , Attrs.class calendarDisplayClass
+        ]
+    <|
         List.concat
-            [ renderYearHeader model
-            , renderQuarters model
+            [ renderDateRangePickerHeader model
+            , body
             ]
 
 
@@ -1128,65 +1200,85 @@ renderPreset model preset =
 
 {-| An opaque function that gets the year header Html Msg for the calendar.
 -}
-renderYearHeader : Model -> List (Html Msg)
-renderYearHeader model =
+renderDateRangePickerHeader : Model -> List (Html Msg)
+renderDateRangePickerHeader model =
     let
-        start =
-            fromCalendarDate model.currentYear.year Jan 1
+        ( start, end ) =
+            ( model.calendarRange.start, model.calendarRange.end )
 
-        end =
-            fromCalendarDate model.currentYear.year Dec 31
-
-        isDisabledYear =
+        isDisabledDateRange =
             isDisabledDate model.enabledDateRange start
                 && isDisabledDate model.enabledDateRange end
 
-        setYearRange =
-            if isDisabledYear then
+        setRange =
+            if isDisabledDateRange then
                 onClickNoDefault DoNothing
 
             else
                 onClickNoDefault <| SetDateRange <| mkDateRange start end
 
-        yrLabelClassString =
+        rangeLabelClassString =
             mkClassString
-                [ "elm-fancy-daterangepicker--yr-btn"
-                , "elm-fancy-daterangepicker--yr-label"
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledYear
+                [ "elm-fancy-daterangepicker--range-btn"
+                , "elm-fancy-daterangepicker--range-label"
+                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDateRange
                 ]
     in
     [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [] []
-        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", onClickNoDefault PrevYear ] []
-        , div [ Attrs.class yrLabelClassString, setYearRange ] [ text model.currentYear.name ]
-        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", onClickNoDefault NextYear ] []
-        , div [] []
+        [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] []
+        , div [ Attrs.class rangeLabelClassString, setRange ] [ text model.calendarRange.name ]
+        , div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-next", onClickNoDefault NextCalendarRange ] []
         ]
     ]
 
 
-{-| An opaque function that gets the Html Msg for the quarters of the calendar.
+{-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for FullCalendarYear
 -}
-renderQuarters : Model -> List (Html Msg)
-renderQuarters model =
+renderFullCalendarBody : Model -> List (Html Msg)
+renderFullCalendarBody model =
     let
         quarters =
-            model.currentYear.quarters
+            chunksOfLeft 3 model.calendarRange.months
     in
     List.map (renderQuarter model) quarters
 
 
+{-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for ThreeMonths
+-}
+renderThreeMonthsBody : Model -> List (Html Msg)
+renderThreeMonthsBody model =
+    [ renderQuarter model model.calendarRange.months ]
+
+
+{-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for TwoMonths
+-}
+renderTwoMonthsBody : Model -> List (Html Msg)
+renderTwoMonthsBody model =
+    [ div [ Attrs.class "elm-fancy-daterangepicker--months-row" ] <|
+        List.map (renderMonth model) model.calendarRange.months
+    ]
+
+
+{-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for OneMonth
+-}
+renderOneMonthBody : Model -> List (Html Msg)
+renderOneMonthBody model =
+    [ div [ Attrs.class "elm-fancy-daterangepicker--months-row" ] <|
+        List.map (renderMonth model) model.calendarRange.months
+    ]
+
+
 {-| An opaque function that gets the Html Msg for a given Quarter.
 -}
-renderQuarter : Model -> Quarter -> Html Msg
-renderQuarter model qtr =
+renderQuarter : Model -> Months -> Html Msg
+renderQuarter model months =
     let
         firstMonthOfQtr =
-            List.head qtr.months
+            List.head months
 
         lastMonthOfQtr =
             List.head <|
-                List.reverse qtr.months
+                List.reverse months
     in
     case ( firstMonthOfQtr, lastMonthOfQtr ) of
         ( Just firstMonth, Just lastMonth ) ->
@@ -1220,12 +1312,12 @@ renderQuarter model qtr =
                                         ]
 
                                 qtrLabel =
-                                    div [ Attrs.class classString, setQtrDateRange ] [ text qtr.name ]
+                                    div [ Attrs.class classString, setQtrDateRange ] [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
                             in
                             div [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                 List.concat
                                     [ [ qtrLabel ]
-                                    , List.map (renderMonth model) qtr.months
+                                    , List.map (renderMonth model) months
                                     ]
 
                         ( _, _ ) ->

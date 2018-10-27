@@ -1,6 +1,6 @@
 module DateRangePicker.Common exposing
     ( DateRange, mkDateRange, inRange
-    , RestrictedDateRange(..)
+    , CalendarDisplay(..), RestrictedDateRange(..), calendarDisplayToStr
     )
 
 {-| A common library between DatePicker and DateRangePicker
@@ -10,11 +10,11 @@ module DateRangePicker.Common exposing
 
 # Settings
 
-@docs RestrictedDateRange
+@docs CalendarDisplay, RestrictedDateRange, calendarDisplayToStr
 
 -}
 
-import Date exposing (Date, day, month, year, fromCalendarDate)
+import Date exposing (Date, day, fromCalendarDate, month, year)
 import DateRangePicker.Date
     exposing
         ( dateGreaterThanOrEqualTo
@@ -72,3 +72,36 @@ given dateRange.
 inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
     dateLessThanOrEqualTo start date && dateGreaterThanOrEqualTo end date
+
+
+{-| A type representing how the calendar will be displayed
+
+  - _FullCalendar_ = the datepicker displays all 12 months when open
+  - _ThreeMonths_ = the datepicker displays 3 months at a time
+  - _TwoMonths_ = the datepicker displays 2 months at a time
+  - _OneMonth_ = the datepicker displays 1 month at a time
+
+-}
+type CalendarDisplay
+    = FullCalendar
+    | ThreeMonths
+    | TwoMonths
+    | OneMonth
+
+
+{-| A function that gets the class string for the CalendarDisplay
+-}
+calendarDisplayToStr : CalendarDisplay -> String
+calendarDisplayToStr calendarDisplay =
+    case calendarDisplay of
+        FullCalendar ->
+            "full-calendar"
+
+        ThreeMonths ->
+            "three-months"
+
+        TwoMonths ->
+            "two-months"
+
+        OneMonth ->
+            "one-month"

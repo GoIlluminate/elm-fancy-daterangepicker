@@ -10,12 +10,14 @@ import DateRangePicker
     exposing
         ( defaultSettings
         , getDateRange
+        , setCalendarDisplay
         , setInputIcon
         , setSettings
         )
 import DateRangePicker.Common
     exposing
-        ( DateRange
+        ( CalendarDisplay(..)
+        , DateRange
         , RestrictedDateRange(..)
         )
 import DateRangePicker.Date
@@ -54,6 +56,7 @@ init =
                 |> setSettings (getSettings True)
                 |> DateRangePicker.setInputId "myDateRangePicker"
                 |> setInputIcon (i [] [ text "📆" ])
+                |> setCalendarDisplay ThreeMonths
 
         datePicker =
             datePicker_
