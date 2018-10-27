@@ -1,9 +1,8 @@
 module DatePicker exposing
     ( Msg, DatePicker
-    , init, update, isOpen, setOpen, view, getDate, setDate
+    , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate
     , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
-    , subscriptions
     )
 
 {-| A customizable daterangepicker component.
@@ -23,6 +22,7 @@ module DatePicker exposing
 
 -}
 
+import Browser.Events
 import Date
     exposing
         ( Date
@@ -47,11 +47,11 @@ import DateRangePicker.Common.Internal
         , mkClassString
         , mkEnabledDateRangeFromRestrictedDateRange
         , noPresets
+        , onClickNoDefault
         , padMonthLeft
         , padMonthRight
         , prepareYear
         , renderDaysOfWeek
-        , onClickNoDefault
         )
 import DateRangePicker.Date
     exposing
@@ -77,7 +77,7 @@ import Html.Events
 import Json.Decode as Json
 import Task
 import Time exposing (Month(..), Weekday(..))
-import Browser.Events
+
 
 {-| A type representing messages that are passed within the DatePicker.
 -}
@@ -95,6 +95,7 @@ type Msg
     | Save
     | TogglePresets Tab
     | CancelClick
+
 
 {-| The opaque model to be used within the DatePicker.
 -}
@@ -801,8 +802,8 @@ renderCalendar : Model -> Html Msg
 renderCalendar model =
     div [ Attrs.class "elm-fancy-daterangepicker--calendar" ] <|
         List.concat
-            [ renderYearHeader model
-            , renderQuarters model
+            [ renderFullCalendarHeader model
+            , renderFullCalendarBody model
             ]
 
 
@@ -891,8 +892,8 @@ renderPreset model preset =
 
 {-| An opaque function that gets the year header Html Msg for the calendar.
 -}
-renderYearHeader : Model -> List (Html Msg)
-renderYearHeader model =
+renderFullCalendarHeader : Model -> List (Html Msg)
+renderFullCalendarHeader model =
     let
         date =
             fromCalendarDate model.currentYear.year Jan 1
@@ -927,8 +928,8 @@ renderYearHeader model =
 
 {-| An opaque function that gets the Html Msg for the quarters of the calendar.
 -}
-renderQuarters : Model -> List (Html Msg)
-renderQuarters model =
+renderFullCalendarBody : Model -> List (Html Msg)
+renderFullCalendarBody model =
     let
         quarters =
             model.currentYear.quarters

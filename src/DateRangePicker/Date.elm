@@ -1,16 +1,17 @@
 module DateRangePicker.Date exposing
-    ( initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth
+    ( initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, monthAbbr
     , dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
     )
 
 {-| A custom Date Helper Library.
 
-@docs initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth
+@docs initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, monthAbbr
 @docs dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
 
 -}
 
 import Date exposing (Date, format, fromCalendarDate, numberToMonth)
+import Set
 import Time exposing (Month(..), Weekday(..))
 
 
@@ -24,6 +25,12 @@ type alias Year =
 -}
 type alias Day =
     Int
+
+
+{-| An opaque type to represent quarter as a triple of Months.
+-}
+type alias Quarter =
+    ( Month, Month, Month )
 
 
 {-| A function that initializes a date.
@@ -118,6 +125,51 @@ formatMonth month =
             "December"
 
 
+{-| A function that formats a Month into the abbreviated string.
+
+  - Ex. Jan -> "Jan"
+
+-}
+monthAbbr : Month -> String
+monthAbbr month =
+    case month of
+        Jan ->
+            "Jan"
+
+        Feb ->
+            "Feb"
+
+        Mar ->
+            "Mar"
+
+        Apr ->
+            "Apr"
+
+        May ->
+            "May"
+
+        Jun ->
+            "Jun"
+
+        Jul ->
+            "Jul"
+
+        Aug ->
+            "Aug"
+
+        Sep ->
+            "Sep"
+
+        Oct ->
+            "Oct"
+
+        Nov ->
+            "Nov"
+
+        Dec ->
+            "Dec"
+
+
 {-| A function that converts a Date into a tuple. (year, month, day)
 -}
 dateTuple : Date -> ( Int, Int, Int )
@@ -159,6 +211,31 @@ endOfMonth date =
             Date.month date
     in
     fromCalendarDate y m (daysInMonth y m)
+
+
+{-| A function that takes a Date and returns the date representing the first date of the quarter that the passed in date belongs to.
+-}
+startOfQuarter : Date -> Date
+startOfQuarter date =
+    let
+        ( month1, month2, month3 ) =
+            getQuarter date
+    in
+    fromCalendarDate (Date.year date) month1 1
+
+
+{-| A function that takes a Date and returns the date representing the last date of the quarter that the passed in date belongs to.
+-}
+endOfQuarter : Date -> Date
+endOfQuarter date =
+    let
+        year =
+            Date.year date
+
+        ( month1, month2, month3 ) =
+            getQuarter date
+    in
+    fromCalendarDate year month3 (daysInMonth year month3)
 
 
 {-| A function that takes an Int for the day and returns a string, padding single digit days.
@@ -358,3 +435,61 @@ dateLessThan a b =
 dateGreaterThan : Date -> Date -> Bool
 dateGreaterThan a b =
     Date.toRataDie a > Date.toRataDie b
+
+
+{-| A function that takes a date and returns the quarter that it belongs to.
+-}
+getQuarter : Date -> Quarter
+getQuarter date =
+    let
+        q1 =
+            ( Jan, Feb, Mar )
+
+        q2 =
+            ( Apr, May, Jun )
+
+        q3 =
+            ( Jul, Aug, Sep )
+
+        q4 =
+            ( Oct, Nov, Dec )
+
+        month =
+            Date.month date
+    in
+    case month of
+        Jan ->
+            q1
+
+        Feb ->
+            q1
+
+        Mar ->
+            q1
+
+        Apr ->
+            q2
+
+        May ->
+            q2
+
+        Jun ->
+            q2
+
+        Jul ->
+            q3
+
+        Aug ->
+            q3
+
+        Sep ->
+            q3
+
+        Oct ->
+            q4
+
+        Nov ->
+            q4
+
+        Dec ->
+            q4

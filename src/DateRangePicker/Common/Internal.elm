@@ -1,6 +1,8 @@
 module DateRangePicker.Common.Internal exposing
-    ( EnabledDateRange
+    ( CalendarRange
+    , EnabledDateRange
     , FullYear
+    , Months
     , Quarter
     , chunksOfLeft
     , isDisabledDate
@@ -11,6 +13,7 @@ module DateRangePicker.Common.Internal exposing
     , onClickNoDefault
     , padMonthLeft
     , padMonthRight
+    , prepareCalendarRange
     , prepareQuarters
     , prepareYear
     , renderDaysOfWeek
@@ -30,7 +33,8 @@ import Date
         )
 import DateRangePicker.Common
     exposing
-        ( RestrictedDateRange(..)
+        ( CalendarDisplay(..)
+        , RestrictedDateRange(..)
         , inRange
         , mkDateRange
         )
@@ -39,7 +43,13 @@ import DateRangePicker.Date
         ( dateGreaterThan
         , dateLessThan
         , dayToInt
+        , endOfMonth
+        , endOfQuarter
         , formatDay
+        , formatMonth
+        , monthAbbr
+        , startOfMonth
+        , startOfQuarter
         )
 import Html
     exposing
@@ -53,6 +63,22 @@ import Html.Events as Events
 import Json.Decode as Json
 import List.Extra as LE
 import Time exposing (Month(..), Weekday(..))
+
+
+{-| An opaque type to represent the displayed calendar range that the daterange picker is using.
+-}
+type alias CalendarRange =
+    { name : String
+    , start : Date
+    , end : Date
+    , months : Months
+    }
+
+
+{-| An opaque type to represent a list of a list of dates (months).
+-}
+type alias Months =
+    List (List Date)
 
 
 {-| An opaque type to represent the full year that the daterangepicker is using.
@@ -101,6 +127,60 @@ isDisabledDate enabledDateRange date =
 
                 ( Nothing, Nothing ) ->
                     False
+
+
+{-| An opaque function that prepares the full year based on the given date.
+-}
+prepareCalendarRange : CalendarDisplay -> Date -> CalendarRange
+prepareCalendarRange calendarDisplay date =
+    let
+        yr =
+            year date
+
+        ( start, end ) =
+            case calendarDisplay of
+                FullCalendar ->
+                    ( fromCalendarDate yr Jan 1
+                    , fromCalendarDate yr Dec 31
+                    )
+
+                ThreeMonths ->
+                    ( startOfQuarter date, endOfQuarter date )
+
+                TwoMonths ->
+                    ( startOfMonth date, endOfMonth <| Date.add Date.Months 1 date )
+
+                OneMonth ->
+                    ( startOfMonth date, endOfMonth date )
+
+        dates =
+            Date.range Date.Day 1 start (Date.add Date.Days 1 end)
+
+        name =
+            case calendarDisplay of
+                FullCalendar ->
+                    String.fromInt yr
+
+                ThreeMonths ->
+                    String.join " - "
+                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
+                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
+                        ]
+
+                TwoMonths ->
+                    String.join " - "
+                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
+                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
+                        ]
+
+                OneMonth ->
+                    String.join " " [ formatMonth <| Date.month start, String.fromInt yr ]
+
+        months =
+            List.map (\x -> Tuple.first x :: Tuple.second x) <|
+                LE.groupWhile (\x y -> month x == month y) dates
+    in
+    CalendarRange name start end months
 
 
 {-| An opaque function that prepares the full year based on the given date.
