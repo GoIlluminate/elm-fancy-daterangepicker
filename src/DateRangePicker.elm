@@ -113,7 +113,6 @@ type alias Model =
     , inputText : Maybe String
     , open : Bool
     , forceOpen : Bool
-    , currentYear : FullYear
     , dateRange : Maybe DateRange
     , startDate : Maybe Date
     , endDate : Maybe Date
@@ -500,7 +499,6 @@ initModel =
     , inputText = Nothing
     , open = False
     , forceOpen = False
-    , currentYear = prepareYear initDate
     , dateRange = Nothing
     , startDate = Nothing
     , endDate = Nothing
@@ -540,7 +538,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                         newModel =
                             { model
                                 | today = fromCalendarDate (year date) (month date) (day date)
-                                , currentYear = prepareYear date
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
                                 , calendarRange = prepareCalendarRange settings.calendarDisplay date
@@ -599,7 +596,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , startDate = Nothing
                         , endDate = Nothing
                         , showPresets = False
-                        , currentYear = prepareYear newDateRange.end
+                        , calendarRange = prepareCalendarRange model.settings.calendarDisplay newDateRange.start
                         , open = False
                         , forceOpen = False
                         , hoveredDate = Nothing
@@ -769,7 +766,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                         , startDate = Nothing
                                         , endDate = Nothing
                                         , hoveredDate = Nothing
-                                        , currentYear = prepareYear newDateRange.end
+                                        , calendarRange = prepareCalendarRange model.settings.calendarDisplay newDateRange.start
                                         , showPresets = False
                                       }
                                     , Cmd.none
@@ -1055,7 +1052,7 @@ dateRangePicker model =
                 renderPresets model
 
             else
-                getCalendar model
+                renderCalendar model
 
         tabClass =
             case model.selectedTab of
@@ -1076,16 +1073,16 @@ dateRangePicker model =
         , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
         , onClickNoDefault DoNothing
         ]
-        [ getHeader model
+        [ renderHeader model
         , content
-        , getFooter model
+        , renderFooter model
         ]
 
 
 {-| An opaque function that prints the daterangepicker calendar.
 -}
-getCalendar : Model -> Html Msg
-getCalendar model =
+renderCalendar : Model -> Html Msg
+renderCalendar model =
     let
         calendarDisplayClass =
             "elm-fancy-daterangepicker--" ++ calendarDisplayToStr model.settings.calendarDisplay
@@ -1117,8 +1114,8 @@ getCalendar model =
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
 -}
-getHeader : Model -> Html Msg
-getHeader model =
+renderHeader : Model -> Html Msg
+renderHeader model =
     let
         getSelectedClass b =
             if b then
@@ -1145,8 +1142,8 @@ getHeader model =
 
 {-| An opaque function gets the Html Msg for the footer of the daterange picker.
 -}
-getFooter : Model -> Html Msg
-getFooter model =
+renderFooter : Model -> Html Msg
+renderFooter model =
     case model.selectedTab of
         Calendar ->
             div [ Attrs.class "elm-fancy-daterangepicker--footer" ]

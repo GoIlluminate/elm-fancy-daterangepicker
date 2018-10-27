@@ -60,6 +60,8 @@ init =
 
         datePicker =
             datePicker_
+                |> DatePicker.setSettings DatePicker.defaultSettings
+                |> DatePicker.setCalendarDisplay ThreeMonths
     in
     ( { dateRange = Nothing
       , dateRangePicker = dateRangePicker
