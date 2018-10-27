@@ -772,7 +772,7 @@ setCalendarDisplay calendarDisplay (DatePicker model) =
                     Just d ->
                         d
     in
-    DatePicker { model | settings = newSettings }
+    DatePicker { model | settings = newSettings, calendarRange = newCalendarRange }
 
 
 {-| Subscribes to a mouse click
