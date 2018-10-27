@@ -115,7 +115,7 @@ prepareYear date =
             fromCalendarDate yr Jan 1
 
         end =
-            fromCalendarDate yr Dec 31
+            fromCalendarDate (yr + 1) Jan 1
 
         dates =
             Date.range Date.Day 1 start end
