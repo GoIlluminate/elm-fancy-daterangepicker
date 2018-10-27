@@ -35,7 +35,7 @@ import DateRangePicker.Common
     exposing
         ( CalendarDisplay(..)
         , RestrictedDateRange(..)
-        , calendarDisplayToStr
+        , calendarDisplayToClassStr
         , inRange
         , mkDateRange
         )
@@ -762,6 +762,15 @@ setCalendarDisplay calendarDisplay (DatePicker model) =
 
         newSettings =
             { settings | calendarDisplay = calendarDisplay }
+
+        newCalendarRange =
+            prepareCalendarRange calendarDisplay <|
+                case model.date of
+                    Nothing ->
+                        model.today
+
+                    Just d ->
+                        d
     in
     DatePicker { model | settings = newSettings }
 
@@ -836,7 +845,7 @@ datePicker model =
                     "elm-fancy-daterangepicker--presets-tab"
 
         calendarDisplayClass =
-            "elm-fancy-daterangepicker--" ++ calendarDisplayToStr model.settings.calendarDisplay
+            "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
     in
     div
         [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
@@ -858,7 +867,7 @@ renderCalendar : Model -> Html Msg
 renderCalendar model =
     let
         calendarDisplayClass =
-            "elm-fancy-daterangepicker--" ++ calendarDisplayToStr model.settings.calendarDisplay
+            "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
 
         body =
             case model.settings.calendarDisplay of

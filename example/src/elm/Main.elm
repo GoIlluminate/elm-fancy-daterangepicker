@@ -19,19 +19,22 @@ import DateRangePicker.Common
         ( CalendarDisplay(..)
         , DateRange
         , RestrictedDateRange(..)
+        , calendarDisplayToDisplayStr
         )
 import DateRangePicker.Date
     exposing
         ( formatDate
         )
-import Html exposing (Html, div, h2, h4, i, text)
+import Html exposing (Html, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
+import Html.Events
 import Time exposing (Month(..), Weekday(..))
 
 
 type Msg
     = SetDateRangePicker DateRangePicker.Msg
     | SetDatePicker DatePicker.Msg
+    | ChangeCalendarDisplay CalendarDisplay
 
 
 type alias Model =
@@ -39,12 +42,16 @@ type alias Model =
     , dateRangePicker : DateRangePicker.DateRangePicker
     , datePicker : DatePicker.DatePicker
     , date : Maybe Date
+    , calendarDisplay : CalendarDisplay
     }
 
 
 init : ( Model, Cmd Msg )
 init =
     let
+        calendarDisplay =
+            FullCalendar
+
         ( dateRangePicker_, dateRangePickerCmd ) =
             DateRangePicker.init
 
@@ -56,17 +63,18 @@ init =
                 |> setSettings (getSettings True)
                 |> DateRangePicker.setInputId "myDateRangePicker"
                 |> setInputIcon (i [] [ text "📆" ])
-                |> setCalendarDisplay ThreeMonths
+                |> setCalendarDisplay calendarDisplay
 
         datePicker =
             datePicker_
                 |> DatePicker.setSettings DatePicker.defaultSettings
-                |> DatePicker.setCalendarDisplay ThreeMonths
+                |> DatePicker.setCalendarDisplay calendarDisplay
     in
     ( { dateRange = Nothing
       , dateRangePicker = dateRangePicker
       , datePicker = datePicker
       , date = Nothing
+      , calendarDisplay = calendarDisplay
       }
     , Cmd.batch [ Cmd.map SetDateRangePicker dateRangePickerCmd, Cmd.map SetDatePicker datePickerCmd ]
     )
@@ -111,33 +119,91 @@ update msg ({ dateRangePicker, datePicker } as model) =
             , Cmd.map SetDatePicker datePickerCmd
             )
 
+        ChangeCalendarDisplay calendarDisplay ->
+            let
+                newDateRangePicker =
+                    DateRangePicker.setCalendarDisplay calendarDisplay dateRangePicker
+
+                newDatePicker =
+                    DatePicker.setCalendarDisplay calendarDisplay datePicker
+            in
+            ( { model
+                | dateRangePicker = newDateRangePicker
+                , datePicker = newDatePicker
+                , calendarDisplay = calendarDisplay
+              }
+            , Cmd.none
+            )
+
 
 view : Model -> Html Msg
-view { dateRange, dateRangePicker, datePicker, date } =
+view model =
     div [ class "main" ]
-        [ div [ class "date-range-picker-wrapper date-picker--wrapper" ]
-            [ div [ class "theme--wrapper theme-light" ]
-                [ h2 [] [ text "Date Range Picker" ]
-                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
-                , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
-                ]
-            , div [ class "theme--wrapper theme-dark" ]
-                [ h2 [] [ text "Date Range Picker" ]
-                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange dateRange ]
-                , DateRangePicker.view dateRangePicker |> Html.map SetDateRangePicker
-                ]
+        [ calendarDisplayOptions model
+        , dateRangePickers model
+        , datePickers model
+        ]
+
+
+calendarDisplayOptions : Model -> Html Msg
+calendarDisplayOptions model =
+    let
+        options =
+            [ FullCalendar
+            , ThreeMonths
+            , TwoMonths
+            , OneMonth
             ]
-        , div [ class "single-date-picker-wrapper date-picker--wrapper" ]
-            [ div [ class "theme--wrapper theme-light" ]
-                [ h2 [] [ text "Single Date Picker" ]
-                , h4 [] [ text <| "Selected Date: " ++ printDate date ]
-                , DatePicker.view datePicker |> Html.map SetDatePicker
+
+        selectedClass calendarDisplay =
+            if calendarDisplay == model.calendarDisplay then
+                "selected"
+
+            else
+                ""
+
+        go calendarDisplay =
+            div
+                [ class "calendar-display-option"
+                , class <| selectedClass calendarDisplay
+                , Html.Events.onClick <| ChangeCalendarDisplay calendarDisplay
                 ]
-            , div [ class "theme--wrapper theme-dark" ]
-                [ h2 [] [ text "Single Date Picker" ]
-                , h4 [] [ text <| "Selected Date: " ++ printDate date ]
-                , DatePicker.view datePicker |> Html.map SetDatePicker
+                [ span [] [ text <| calendarDisplayToDisplayStr calendarDisplay ]
                 ]
+    in
+    div [ class "calendar-display-options--container" ]
+        [ div [ class "calendar-display-options--wrapper" ] <| List.map go options
+        ]
+
+
+dateRangePickers : Model -> Html Msg
+dateRangePickers model =
+    div [ class "date-range-picker-wrapper date-picker--wrapper" ]
+        [ div [ class "theme--wrapper theme-light" ]
+            [ h2 [] [ text "Date Range Picker" ]
+            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
+            , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
+            ]
+        , div [ class "theme--wrapper theme-dark" ]
+            [ h2 [] [ text "Date Range Picker" ]
+            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
+            , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
+            ]
+        ]
+
+
+datePickers : Model -> Html Msg
+datePickers model =
+    div [ class "single-date-picker-wrapper date-picker--wrapper" ]
+        [ div [ class "theme--wrapper theme-light" ]
+            [ h2 [] [ text "Single Date Picker" ]
+            , h4 [] [ text <| "Selected Date: " ++ printDate model.date ]
+            , DatePicker.view model.datePicker |> Html.map SetDatePicker
+            ]
+        , div [ class "theme--wrapper theme-dark" ]
+            [ h2 [] [ text "Single Date Picker" ]
+            , h4 [] [ text <| "Selected Date: " ++ printDate model.date ]
+            , DatePicker.view model.datePicker |> Html.map SetDatePicker
             ]
         ]
 
