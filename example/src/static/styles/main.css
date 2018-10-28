@@ -1,0 +1,63 @@
+body, html {
+  margin: 0;
+  padding: 0;
+}
+
+.main {
+  height: 100vh;
+  width: 100vw;
+  display: grid;
+  grid-template-rows: 75px 1fr 1fr;
+  grid-template-columns: 1fr;
+}
+.main .calendar-display-options--container {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: repeat(4, min-content);
+  grid-gap: 10px;
+  margin: auto;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option {
+  align-self: center;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option span {
+  height: 100%;
+  width: 100%;
+  border-radius: 15px;
+  padding: 5px;
+  border: solid 1px #4382ff;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option span:hover {
+  cursor: pointer;
+  color: pink;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option.selected span {
+  background: #4382ff;
+  color: white;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option:not(.selected) span {
+  color: #4382ff;
+  background: white;
+}
+.main .calendar-display-options--container .calendar-display-options--wrapper > div.calendar-display-option span:hover {
+  background: #004adc;
+  color: white;
+}
+.main > .date-picker--wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+.main > .date-picker--wrapper .theme--wrapper {
+  padding: 20px;
+}
+.main > .date-picker--wrapper .theme-dark {
+  background: black;
+  color: white;
+}
+
+/*# sourceMappingURL=main.css.map */
