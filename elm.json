@@ -3,7 +3,7 @@
     "name": "goilluminate/elm-fancy-daterangepicker",
     "summary": "A fancy daterangepicker in elm.",
     "license": "BSD-3-Clause",
-    "version": "3.1.0",
+    "version": "3.1.1",
     "exposed-modules": [
         "DateRangePicker",
         "DatePicker",
