@@ -43,6 +43,10 @@ type alias Model =
     , datePicker : DatePicker.DatePicker
     , date : Maybe Date
     , calendarDisplay : CalendarDisplay
+    , yearsInRange : Maybe Int
+    , monthsInRange : Maybe Int
+    , weeksInRange : Maybe Int
+    , daysInRange : Maybe Int
     }
 
 
@@ -75,6 +79,10 @@ init =
       , datePicker = datePicker
       , date = Nothing
       , calendarDisplay = calendarDisplay
+      , yearsInRange = Nothing
+      , monthsInRange = Nothing
+      , weeksInRange = Nothing
+      , daysInRange = Nothing
       }
     , Cmd.batch [ Cmd.map SetDateRangePicker dateRangePickerCmd, Cmd.map SetDatePicker datePickerCmd ]
     )
@@ -99,11 +107,32 @@ update msg ({ dateRangePicker, datePicker } as model) =
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
                     DateRangePicker.update msg_ dateRangePicker
+                
+                newDateRange =
+                    getDateRange newDateRangePicker
+                
+                updatedModel =
+                    case newDateRange of
+                        Nothing ->
+                            { model
+                                | dateRangePicker = newDateRangePicker
+                                , dateRange = newDateRange
+                                , yearsInRange = Nothing
+                                , monthsInRange = Nothing
+                                , weeksInRange = Nothing
+                                , daysInRange = Nothing
+                            }
+                        Just dr ->
+                            { model
+                                | dateRangePicker = newDateRangePicker
+                                , dateRange = newDateRange
+                                , yearsInRange = Just <| DateRangePicker.Common.yearsInRange dr
+                                , monthsInRange = Just <| DateRangePicker.Common.monthsInRange dr
+                                , weeksInRange = Just <| DateRangePicker.Common.weeksInRange dr
+                                , daysInRange = Just <| DateRangePicker.Common.daysInRange dr
+                            }
             in
-            ( { model
-                | dateRangePicker = newDateRangePicker
-                , dateRange = getDateRange newDateRangePicker
-              }
+            ( updatedModel
             , Cmd.map SetDateRangePicker dateRangePickerCmd
             )
 
@@ -178,33 +207,48 @@ calendarDisplayOptions model =
 
 dateRangePickers : Model -> Html Msg
 dateRangePickers model =
+    let
+        numInRangeView str maybeN =
+            case maybeN of
+                Nothing -> text ""
+                Just n -> div [] [ text <| str ++ " " ++ String.fromInt n ]
+
+        drpView theme =
+            div [ class "theme--wrapper" 
+                , class theme
+                ]
+                [ h2 [] [ text "Date Range Picker" ]
+                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
+                , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
+                , div [ class "in-range--container" ]
+                    [ numInRangeView "Years in DateRange:" model.yearsInRange
+                    , numInRangeView "Months in DateRange:" model.monthsInRange
+                    , numInRangeView "Weeks in DateRange:" model.weeksInRange
+                    , numInRangeView "Days in DateRange:" model.daysInRange
+                    ]
+                ]
+    in
     div [ class "date-range-picker-wrapper date-picker--wrapper" ]
-        [ div [ class "theme--wrapper theme-light" ]
-            [ h2 [] [ text "Date Range Picker" ]
-            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
-            , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
-            ]
-        , div [ class "theme--wrapper theme-dark" ]
-            [ h2 [] [ text "Date Range Picker" ]
-            , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
-            , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
-            ]
+        [ drpView "theme-light"
+        , drpView "theme-dark"
         ]
 
 
 datePickers : Model -> Html Msg
 datePickers model =
+    let
+        dpView theme =
+            div [ class "theme--wrapper"
+                , class theme
+                ]
+                [ h2 [] [ text "Single Date Picker" ]
+                , h4 [] [ text <| "Selected Date: " ++ printDate model.date ]
+                , DatePicker.view model.datePicker |> Html.map SetDatePicker
+                ]
+    in
     div [ class "single-date-picker-wrapper date-picker--wrapper" ]
-        [ div [ class "theme--wrapper theme-light" ]
-            [ h2 [] [ text "Single Date Picker" ]
-            , h4 [] [ text <| "Selected Date: " ++ printDate model.date ]
-            , DatePicker.view model.datePicker |> Html.map SetDatePicker
-            ]
-        , div [ class "theme--wrapper theme-dark" ]
-            [ h2 [] [ text "Single Date Picker" ]
-            , h4 [] [ text <| "Selected Date: " ++ printDate model.date ]
-            , DatePicker.view model.datePicker |> Html.map SetDatePicker
-            ]
+        [ dpView "theme-light"
+        , dpView "theme-dark"
         ]
 
 
