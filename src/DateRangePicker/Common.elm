@@ -1,12 +1,13 @@
 module DateRangePicker.Common exposing
     ( DateRange, mkDateRange, inRange
     , CalendarDisplay(..), RestrictedDateRange(..), calendarDisplayToClassStr, calendarDisplayToDisplayStr
+    , yearsInRange, monthsInRange, weeksInRange, daysInRange
     )
 
 {-| A common library between DatePicker and DateRangePicker
 
 @docs DateRange, mkDateRange, inRange
-
+@docs yearsInRange, monthsInRange, weeksInRange, daysInRange
 
 # Settings
 
@@ -14,7 +15,7 @@ module DateRangePicker.Common exposing
 
 -}
 
-import Date exposing (Date, day, fromCalendarDate, month, year)
+import Date exposing (Date, day, fromCalendarDate, month, year, diff, Unit(..))
 import DateRangePicker.Date
     exposing
         ( dateGreaterThanOrEqualTo
@@ -123,3 +124,23 @@ calendarDisplayToDisplayStr calendarDisplay =
 
         OneMonth ->
             "OneMonth"
+
+{-| A function that returns the number of years as a whole number in the daterange
+-}
+yearsInRange : DateRange -> Int
+yearsInRange dateRange = diff Years dateRange.start dateRange.end
+
+{-| A function that returns the number of months as a whole number in the daterange
+-}
+monthsInRange : DateRange -> Int
+monthsInRange dateRange = diff Months dateRange.start dateRange.end
+
+{-| A function that returns the number of weeks as a whole number in the daterange
+-}
+weeksInRange : DateRange -> Int
+weeksInRange dateRange = diff Weeks dateRange.start dateRange.end
+
+{-| A function that returns the number of days as a whole number in the daterange
+-}
+daysInRange : DateRange -> Int
+daysInRange dateRange = diff Days dateRange.start dateRange.end
