@@ -43,7 +43,6 @@ import DateRangePicker.Common.Internal
     exposing
         ( CalendarRange
         , EnabledDateRange
-        , FullYear
         , Months
         , chunksOfLeft
         , isDisabledDate
@@ -55,7 +54,6 @@ import DateRangePicker.Common.Internal
         , padMonthLeft
         , padMonthRight
         , prepareCalendarRange
-        , prepareYear
         , renderDaysOfWeek
         )
 import DateRangePicker.Date
@@ -95,7 +93,6 @@ type Msg
     | Click
     | MouseDown
     | MouseUp
-    | Done
     | Reset
     | Save
     | TogglePresets Tab
@@ -544,22 +541,6 @@ update msg (DatePicker ({ settings } as model)) =
 
                 MouseUp ->
                     ( { model | forceOpen = False }, Cmd.none )
-
-                Done ->
-                    let
-                        newModel =
-                            { model
-                                | open = False
-                                , forceOpen = False
-                                , showPresets = False
-                            }
-                    in
-                    case newModel.date of
-                        Just a ->
-                            ( { newModel | calendarRange = prepareCalendarRange model.settings.calendarDisplay a }, Cmd.none )
-
-                        Nothing ->
-                            ( newModel, Cmd.none )
 
                 Reset ->
                     ( { model
