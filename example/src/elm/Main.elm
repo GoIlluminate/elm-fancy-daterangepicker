@@ -107,10 +107,10 @@ update msg ({ dateRangePicker, datePicker } as model) =
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
                     DateRangePicker.update msg_ dateRangePicker
-                
+
                 newDateRange =
                     getDateRange newDateRangePicker
-                
+
                 updatedModel =
                     case newDateRange of
                         Nothing ->
@@ -122,6 +122,7 @@ update msg ({ dateRangePicker, datePicker } as model) =
                                 , weeksInRange = Nothing
                                 , daysInRange = Nothing
                             }
+
                         Just dr ->
                             { model
                                 | dateRangePicker = newDateRangePicker
@@ -210,11 +211,15 @@ dateRangePickers model =
     let
         numInRangeView str maybeN =
             case maybeN of
-                Nothing -> text ""
-                Just n -> div [] [ text <| str ++ " " ++ String.fromInt n ]
+                Nothing ->
+                    text ""
+
+                Just n ->
+                    div [] [ text <| str ++ " " ++ String.fromInt n ]
 
         drpView theme =
-            div [ class "theme--wrapper" 
+            div
+                [ class "theme--wrapper"
                 , class theme
                 ]
                 [ h2 [] [ text "Date Range Picker" ]
@@ -238,7 +243,8 @@ datePickers : Model -> Html Msg
 datePickers model =
     let
         dpView theme =
-            div [ class "theme--wrapper"
+            div
+                [ class "theme--wrapper"
                 , class theme
                 ]
                 [ h2 [] [ text "Single Date Picker" ]

@@ -1,7 +1,7 @@
 module DateRangePicker.Common exposing
     ( DateRange, mkDateRange, inRange
-    , CalendarDisplay(..), RestrictedDateRange(..), calendarDisplayToClassStr, calendarDisplayToDisplayStr
     , yearsInRange, monthsInRange, weeksInRange, daysInRange
+    , CalendarDisplay(..), RestrictedDateRange(..), calendarDisplayToClassStr, calendarDisplayToDisplayStr
     )
 
 {-| A common library between DatePicker and DateRangePicker
@@ -9,13 +9,14 @@ module DateRangePicker.Common exposing
 @docs DateRange, mkDateRange, inRange
 @docs yearsInRange, monthsInRange, weeksInRange, daysInRange
 
+
 # Settings
 
 @docs CalendarDisplay, RestrictedDateRange, calendarDisplayToClassStr, calendarDisplayToDisplayStr
 
 -}
 
-import Date exposing (Date, day, fromCalendarDate, month, year, diff, Unit(..))
+import Date exposing (Date, Unit(..), day, diff, fromCalendarDate, month, year)
 import DateRangePicker.Date
     exposing
         ( dateGreaterThanOrEqualTo
@@ -125,22 +126,30 @@ calendarDisplayToDisplayStr calendarDisplay =
         OneMonth ->
             "OneMonth"
 
+
 {-| A function that returns the number of years as a whole number in the daterange
 -}
 yearsInRange : DateRange -> Int
-yearsInRange dateRange = diff Years dateRange.start dateRange.end
+yearsInRange dateRange =
+    diff Years dateRange.start dateRange.end
+
 
 {-| A function that returns the number of months as a whole number in the daterange
 -}
 monthsInRange : DateRange -> Int
-monthsInRange dateRange = diff Months dateRange.start dateRange.end
+monthsInRange dateRange =
+    diff Months dateRange.start dateRange.end
+
 
 {-| A function that returns the number of weeks as a whole number in the daterange
 -}
 weeksInRange : DateRange -> Int
-weeksInRange dateRange = diff Weeks dateRange.start dateRange.end
+weeksInRange dateRange =
+    diff Weeks dateRange.start dateRange.end
+
 
 {-| A function that returns the number of days as a whole number in the daterange
 -}
 daysInRange : DateRange -> Int
-daysInRange dateRange = diff Days dateRange.start dateRange.end
+daysInRange dateRange =
+    diff Days dateRange.start dateRange.end
