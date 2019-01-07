@@ -1017,28 +1017,27 @@ renderCalendar model =
             "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
 
         body =
-            case model.settings.calendarDisplay of
-                FullCalendar ->
-                    renderFullCalendarBody model
+            div [ Attrs.class "elm-fancy-daterangepicker--body--container" ] <|
+                case model.settings.calendarDisplay of
+                    FullCalendar ->
+                        renderFullCalendarBody model
 
-                ThreeMonths ->
-                    renderThreeMonthsBody model
+                    ThreeMonths ->
+                        renderThreeMonthsBody model
 
-                TwoMonths ->
-                    renderTwoMonthsBody model
+                    TwoMonths ->
+                        renderTwoMonthsBody model
 
-                OneMonth ->
-                    renderOneMonthBody model
+                    OneMonth ->
+                        renderOneMonthBody model
     in
     div
         [ Attrs.class "elm-fancy-daterangepicker--calendar"
         , Attrs.class calendarDisplayClass
         ]
-    <|
-        List.concat
-            [ renderDateRangePickerHeader model
-            , body
-            ]
+        [ renderDateRangePickerHeader model
+        , body
+        ]
 
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
@@ -1126,7 +1125,7 @@ renderPreset model preset =
 
 {-| An opaque function that gets the year header Html Msg for the calendar.
 -}
-renderDateRangePickerHeader : Model -> List (Html Msg)
+renderDateRangePickerHeader : Model -> Html Msg
 renderDateRangePickerHeader model =
     let
         ( start, end ) =
@@ -1150,12 +1149,11 @@ renderDateRangePickerHeader model =
                 , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDateRange
                 ]
     in
-    [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] []
+    div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
+        [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
         , div [ Attrs.class rangeLabelClassString, setRange ] [ text model.calendarRange.name ]
-        , div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-next", onClickNoDefault NextCalendarRange ] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-next", onClickNoDefault NextCalendarRange ] [ text "❯" ]
         ]
-    ]
 
 
 {-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for FullCalendarYear

@@ -858,28 +858,27 @@ renderCalendar model =
             "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
 
         body =
-            case model.settings.calendarDisplay of
-                FullCalendar ->
-                    renderFullCalendarBody model
+            div [ Attrs.class "elm-fancy-daterangepicker--body--container" ] <|
+                case model.settings.calendarDisplay of
+                    FullCalendar ->
+                        renderFullCalendarBody model
 
-                ThreeMonths ->
-                    renderThreeMonthsBody model
+                    ThreeMonths ->
+                        renderThreeMonthsBody model
 
-                TwoMonths ->
-                    renderTwoMonthsBody model
+                    TwoMonths ->
+                        renderTwoMonthsBody model
 
-                OneMonth ->
-                    renderOneMonthBody model
+                    OneMonth ->
+                        renderOneMonthBody model
     in
     div
         [ Attrs.class "elm-fancy-daterangepicker--calendar"
         , Attrs.class calendarDisplayClass
         ]
-    <|
-        List.concat
-            [ renderDatePickerHeader model
-            , body
-            ]
+        [ renderDatePickerHeader model
+        , body
+        ]
 
 
 {-| An opaque function gets the Html Msg for the header of the daterange picker.
@@ -967,7 +966,7 @@ renderPreset model preset =
 
 {-| An opaque function that gets the year header Html Msg for the calendar.
 -}
-renderDatePickerHeader : Model -> List (Html Msg)
+renderDatePickerHeader : Model -> Html Msg
 renderDatePickerHeader model =
     let
         ( start, end ) =
@@ -984,12 +983,11 @@ renderDatePickerHeader model =
                 , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDateRange
                 ]
     in
-    [ div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", onClickNoDefault PrevCalendarRange ] []
+    div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
+        [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
         , div [ Attrs.class rangeLabelClassString ] [ text model.calendarRange.name ]
-        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", onClickNoDefault NextCalendarRange ] []
+        , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", onClickNoDefault NextCalendarRange ] [ text "❯" ]
         ]
-    ]
 
 
 {-| An opaque function that gets the Html Msg for the quarters of the calendar.
