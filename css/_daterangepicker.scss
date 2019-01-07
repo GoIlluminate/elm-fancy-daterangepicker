@@ -66,15 +66,12 @@
                     .#{$dp-ns}yr-btn, .#{$dp-ns}range-btn {
                         @extend .#{$dp-ns}hover-date;
                     }
-                    .#{$dp-ns}yr-prev:before, .#{$dp-ns}range-prev:before {
+                    .#{$dp-ns}yr-prev, .#{$dp-ns}range-prev {
                         color: themed('color-primary');
-                        content: $dp-arrow-left;
                     }
-                    .#{$dp-ns}yr-next:before, .#{$dp-ns}range-next:before {
+                    .#{$dp-ns}yr-next, .#{$dp-ns}range-next {
                         color: themed('color-primary');
-                        content: $dp-arrow-right;
                     }
-                    
                     .#{$dp-ns}yr-label, .#{$dp-ns}range-label {
                         line-height: 1.5;
                         white-space: nowrap;
