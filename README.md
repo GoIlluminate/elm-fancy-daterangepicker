@@ -28,10 +28,9 @@ init : (Model, Cmd Msg)
             | dateRangePicker = dateRangePicker
             , Cmd.map SetDateRangePicker dateRangePickerCmd
         }
+
 ```
-
 The `DateRangePicker` can be displayed in the view using the `DateRangePicker.view` function.  It returns its own message type so you should wrap it in one of your own messages using `Html.map`:
-
 ```elm
 type Msg
     = ...
