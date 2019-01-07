@@ -77,6 +77,11 @@
                         white-space: nowrap;
                     }
                 }
+                .#{$dp-ns}body--container {
+                    display: grid;
+                    grid-row-gap: 1px;
+                    background: themed('color-primary');
+                }
                 &.#{$dp-ns}full-calendar, &.#{$dp-ns}three-months {
                     .#{$dp-ns}qtr-row {
                         height: 100%;
