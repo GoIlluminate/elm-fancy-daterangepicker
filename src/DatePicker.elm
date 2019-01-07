@@ -1,6 +1,6 @@
 module DatePicker exposing
     ( Msg, DatePicker
-    , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate
+    , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate, getToday
     , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
     )
@@ -8,7 +8,7 @@ module DatePicker exposing
 {-| A customizable daterangepicker component.
 
 @docs Msg, DatePicker
-@docs init, update, subscriptions, isOpen, setOpen, view, getDate, setDate
+@docs init, update, subscriptions, isOpen, setOpen, view, getDate, setDate, getToday
 
 
 # Settings
@@ -613,6 +613,13 @@ setOpen open (DatePicker model) =
 getDate : DatePicker -> Maybe Date
 getDate (DatePicker model) =
     model.date
+
+
+{-| Expose today's date.
+-}
+getToday : DatePicker -> Date
+getToday (DatePicker model) =
+    model.today
 
 
 {-| Expose the current presets.

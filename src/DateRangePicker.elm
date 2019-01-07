@@ -3,12 +3,13 @@ module DateRangePicker exposing
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
+    , getToday
     )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DateRangePicker
-@docs init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange
+@docs init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
 
 
 # Settings
@@ -847,6 +848,13 @@ getMinDate (DateRangePicker model) =
 getMaxDate : DateRangePicker -> Maybe Date
 getMaxDate (DateRangePicker model) =
     Maybe.andThen .end model.enabledDateRange
+
+
+{-| Expose today's date.
+-}
+getToday : DateRangePicker -> Date
+getToday (DateRangePicker model) =
+    model.today
 
 
 {-| Sets the current daterange for the daterangepicker.
