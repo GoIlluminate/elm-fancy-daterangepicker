@@ -45,7 +45,6 @@ import DateRangePicker.Common.Internal
     exposing
         ( CalendarRange
         , EnabledDateRange
-        , FullYear
         , Months
         , chunksOfLeft
         , isDisabledDate
@@ -57,7 +56,6 @@ import DateRangePicker.Common.Internal
         , padMonthLeft
         , padMonthRight
         , prepareCalendarRange
-        , prepareYear
         , renderDaysOfWeek
         )
 import DateRangePicker.Date
@@ -93,14 +91,12 @@ type Msg
     | PrevCalendarRange
     | NextCalendarRange
     | SetDateRange DateRange
-    | Cancel Date
     | Save
     | SetDate Date
     | DoNothing
     | Click
     | MouseDown
     | MouseUp
-    | Done
     | Reset
     | TogglePresets Tab
     | HoverDay Date
@@ -605,59 +601,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                     , Cmd.none
                     )
 
-                Cancel date ->
-                    case ( model.startDate, model.endDate ) of
-                        ( Just _, Just _ ) ->
-                            ( { model
-                                | startDate = Just date
-                                , endDate = Nothing
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( Just start, Nothing ) ->
-                            let
-                                dateRange =
-                                    if dateLessThanOrEqualTo start date then
-                                        Just <| mkDateRange start date
-
-                                    else
-                                        Nothing
-                            in
-                            case dateRange of
-                                Just _ ->
-                                    ( { model
-                                        | endDate = Nothing
-                                        , startDate = Nothing
-                                        , dateRange = dateRange
-                                        , open = False
-                                        , forceOpen = False
-                                        , hoveredDate = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                                Nothing ->
-                                    ( { model
-                                        | startDate = Just date
-                                        , endDate = Nothing
-                                        , dateRange = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                        ( Nothing, Nothing ) ->
-                            ( { model
-                                | startDate = Just date
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( _, _ ) ->
-                            ( model, Cmd.none )
-
                 Save ->
                     ( { model
                         | open = False
@@ -745,36 +688,6 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                 MouseUp ->
                     ( { model | forceOpen = False }, Cmd.none )
-
-                Done ->
-                    let
-                        newModel =
-                            { model | open = False, forceOpen = False }
-                    in
-                    case newModel.dateRange of
-                        Just _ ->
-                            ( newModel, Cmd.none )
-
-                        Nothing ->
-                            case newModel.startDate of
-                                Just b ->
-                                    let
-                                        newDateRange =
-                                            mkDateRange b b
-                                    in
-                                    ( { newModel
-                                        | dateRange = Just newDateRange
-                                        , startDate = Nothing
-                                        , endDate = Nothing
-                                        , hoveredDate = Nothing
-                                        , calendarRange = prepareCalendarRange model.settings.calendarDisplay newDateRange.start
-                                        , showPresets = False
-                                      }
-                                    , Cmd.none
-                                    )
-
-                                Nothing ->
-                                    ( newModel, Cmd.none )
 
                 Reset ->
                     ( { model
@@ -997,7 +910,7 @@ setCalendarDisplay calendarDisplay (DateRangePicker model) =
                     Nothing ->
                         model.today
 
-                    Just { start, end } ->
+                    Just { end } ->
                         end
     in
     DateRangePicker { model | settings = newSettings, calendarRange = newCalendarRange }

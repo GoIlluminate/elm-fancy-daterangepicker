@@ -10,20 +10,13 @@ module DateRangePicker.Date exposing
 
 -}
 
-import Date exposing (Date, format, fromCalendarDate, numberToMonth)
-import Set
+import Date exposing (Date, format, fromCalendarDate)
 import Time exposing (Month(..), Weekday(..))
 
 
 {-| An opaque type to represent year as an Int.
 -}
 type alias Year =
-    Int
-
-
-{-| An opaque type to represent day as an Int.
--}
-type alias Day =
     Int
 
 
@@ -177,21 +170,6 @@ dateTuple date =
     ( Date.year date, monthToInt <| Date.month date, Date.day date )
 
 
-{-| An opaque function that takes a function f, and an integer n, then repeats f, n times.
--}
-repeat : (a -> a) -> Int -> a -> a
-repeat f =
-    let
-        go n x =
-            if n == 0 then
-                x
-
-            else
-                go (n - 1) (f x)
-    in
-    go
-
-
 {-| A function that takes a Date and returns the date representing the first of that month.
 -}
 startOfMonth : Date -> Date
@@ -218,10 +196,10 @@ endOfMonth date =
 startOfQuarter : Date -> Date
 startOfQuarter date =
     let
-        ( month1, month2, month3 ) =
+        ( startMonth, _, _ ) =
             getQuarter date
     in
-    fromCalendarDate (Date.year date) month1 1
+    fromCalendarDate (Date.year date) startMonth 1
 
 
 {-| A function that takes a Date and returns the date representing the last date of the quarter that the passed in date belongs to.
@@ -232,25 +210,10 @@ endOfQuarter date =
         year =
             Date.year date
 
-        ( month1, month2, month3 ) =
+        ( _, _, endMonth ) =
             getQuarter date
     in
-    fromCalendarDate year month3 (daysInMonth year month3)
-
-
-{-| A function that takes an Int for the day and returns a string, padding single digit days.
-
-  - Ex. dayToString 2 -> "02"
-  - Ex. dayToString 11 -> "11"
-
--}
-dayToString : Int -> String
-dayToString day =
-    if day < 10 then
-        "0" ++ String.fromInt day
-
-    else
-        String.fromInt day
+    fromCalendarDate year endMonth (daysInMonth year endMonth)
 
 
 {-| A function that takes a Weekday and returns it as an integer.
@@ -282,25 +245,6 @@ dayToInt day =
 
         Sat ->
             7
-
-
-{-| A function that takes a Month and returns a string represented as a number, padding single digit months.
-
-  - Ex. monthToString Jan -> "01"
-  - Ex. monthToString Dec -> "12"
-
--}
-monthToString : Month -> String
-monthToString month =
-    let
-        int =
-            monthToInt month
-    in
-    if int < 10 then
-        "0" ++ String.fromInt int
-
-    else
-        String.fromInt int
 
 
 {-| A function that takes a Month and returns it as an Int.
