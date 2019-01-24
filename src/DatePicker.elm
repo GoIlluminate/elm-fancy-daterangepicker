@@ -1,7 +1,7 @@
 module DatePicker exposing
     ( Msg, DatePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate, getToday
-    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay
+    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
     )
 
@@ -13,7 +13,7 @@ module DatePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView
 
 
 ## Presets
@@ -128,6 +128,7 @@ type alias Settings =
     , restrictedDateRange : RestrictedDateRange
     , formatDate : Date -> String
     , calendarDisplay : CalendarDisplay
+    , inputView : Maybe (String -> List (Html Msg))
     }
 
 
@@ -383,6 +384,7 @@ defaultSettings =
     , restrictedDateRange = Off
     , formatDate = formatDate
     , calendarDisplay = FullCalendar
+    , inputView = Nothing
     }
 
 
@@ -740,7 +742,7 @@ setRestrictedDateRange restrictedDateRange (DatePicker model) =
     DatePicker { model | settings = newSettings }
 
 
-{-| Sets the CalendarDisplay for the daterangepicker
+{-| Sets the CalendarDisplay for the datepicker
 -}
 setCalendarDisplay : CalendarDisplay -> DatePicker -> DatePicker
 setCalendarDisplay calendarDisplay (DatePicker model) =
@@ -761,6 +763,20 @@ setCalendarDisplay calendarDisplay (DatePicker model) =
                         d
     in
     DatePicker { model | settings = newSettings, calendarRange = newCalendarRange }
+
+
+{-| Sets the inputView function for the datepicker
+-}
+setInputView : Maybe (String -> List (Html Msg)) -> DatePicker -> DatePicker
+setInputView fn (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | inputView = fn }
+    in
+    DatePicker { model | settings = newSettings }
 
 
 {-| Subscribes to a mouse click
@@ -784,26 +800,37 @@ view (DatePicker ({ open, settings } as model)) =
                 |> Maybe.map Attrs.id
                 |> (List.singleton >> List.filterMap identity)
 
-        icon =
-            Maybe.withDefault (i [] [ text "📆" ]) settings.inputIcon
-
-        dateInput =
-            div
-                (List.concat
-                    [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
-                      , onClickNoDefault Click
-                      , Attrs.class "elm-fancy-daterangepicker--date-input"
-                      ]
-                    , settings.inputAttributes
-                    , potentialInputId
-                    ]
-                )
-                [ text <| Maybe.withDefault settings.placeholder model.inputText
-                , icon
+        dateInputAttrs =
+            List.concat
+                [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
+                  , onClickNoDefault Click
+                  , Attrs.class "elm-fancy-daterangepicker--date-input"
+                  ]
+                , settings.inputAttributes
+                , potentialInputId
                 ]
+
+        dateInputText =
+            Maybe.withDefault settings.placeholder model.inputText
+
+        inputView =
+            case settings.inputView of
+                Just fn ->
+                    div dateInputAttrs <| fn dateInputText
+
+                Nothing ->
+                    let
+                        icon =
+                            Maybe.withDefault (i [] []) settings.inputIcon
+                    in
+                    div
+                        dateInputAttrs
+                        [ text dateInputText
+                        , icon
+                        ]
     in
     div [ Attrs.class "elm-fancy-daterangepicker--container" ]
-        [ dateInput
+        [ inputView
         , if open then
             datePicker model
 
