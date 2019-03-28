@@ -1,7 +1,7 @@
 module DatePicker exposing
     ( Msg, DatePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate, getToday
-    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView
+    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
     )
 
@@ -13,7 +13,7 @@ module DatePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
 
 
 ## Presets
@@ -129,6 +129,7 @@ type alias Settings =
     , formatDate : Date -> String
     , calendarDisplay : CalendarDisplay
     , inputView : Maybe (String -> List (Html Msg))
+    , showPresetsTab : Bool
     }
 
 
@@ -385,6 +386,7 @@ defaultSettings =
     , formatDate = formatDate
     , calendarDisplay = FullCalendar
     , inputView = Nothing
+    , showPresetsTab = True
     }
 
 
@@ -779,6 +781,20 @@ setInputView fn (DatePicker model) =
     DatePicker { model | settings = newSettings }
 
 
+{-| Sets the showPresetsTab option for the datepicker
+-}
+setShowPresetsTab : Bool -> DatePicker -> DatePicker
+setShowPresetsTab bool (DatePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | showPresetsTab = bool }
+    in
+    DatePicker { model | settings = newSettings }
+
+
 {-| Subscribes to a mouse click
 -}
 subscriptions : DatePicker -> Sub Msg
@@ -919,20 +935,40 @@ renderHeader model =
 
             else
                 ""
+
+        showPresets =
+            model.settings.showPresetsTab
+
+        presetsTab =
+            if showPresets then
+                div
+                    [ onClickNoDefault <| TogglePresets Presets
+                    , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+                    , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
+                    ]
+                    [ text "Presets" ]
+
+            else
+                text ""
     in
-    div [ Attrs.class "elm-fancy-daterangepicker--header" ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--header", True )
+            , ( "elm-fancy-daterangepicker--show-presets", showPresets )
+            , ( "elm-fancy-daterangepicker--hide-presets", not showPresets )
+            ]
+        ]
         [ div
-            [ onClickNoDefault <| TogglePresets Calendar
+            [ if showPresets then
+                onClickNoDefault <| TogglePresets Calendar
+
+              else
+                Attrs.class ""
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
             ]
             [ text "Calendar" ]
-        , div
-            [ onClickNoDefault <| TogglePresets Presets
-            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
-            , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
-            ]
-            [ text "Presets" ]
+        , presetsTab
         ]
 
 
