@@ -195,7 +195,12 @@
             }
             .#{$dp-ns}header {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr);
+                &.#{$dp-ns}show-presets {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                &.#{$dp-ns}hide-presets {
+                    grid-template-columns: 1fr;
+                }
                 align-content: center;
                 color: themed('color-primary');
                 font-weight: bold;

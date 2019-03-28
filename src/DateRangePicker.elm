@@ -1,8 +1,8 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
-    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay
-    , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets, setInputView
+    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView, setShowPresetsTab
+    , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
     )
 
 {-| A customizable daterangepicker component.
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView, setShowPresetsTab
 
 
 ## Presets
@@ -135,6 +135,7 @@ type alias Settings =
     , formatDateRange : DateRange -> String
     , calendarDisplay : CalendarDisplay
     , inputView : Maybe (String -> List (Html Msg))
+    , showPresetsTab : Bool
     }
 
 
@@ -465,6 +466,7 @@ defaultSettings =
     , formatDateRange = formatDateRange
     , calendarDisplay = FullCalendar
     , inputView = Nothing
+    , showPresetsTab = True
     }
 
 
@@ -931,6 +933,20 @@ setInputView fn (DateRangePicker model) =
     DateRangePicker { model | settings = newSettings }
 
 
+{-| Sets the showPresetsTab option for the daterangepicker
+-}
+setShowPresetsTab : Bool -> DateRangePicker -> DateRangePicker
+setShowPresetsTab bool (DateRangePicker model) =
+    let
+        settings =
+            model.settings
+
+        newSettings =
+            { settings | showPresetsTab = bool }
+    in
+    DateRangePicker { model | settings = newSettings }
+
+
 {-| Sets the settings for the daterange picker
 -}
 setSettings : Settings -> DateRangePicker -> DateRangePicker
@@ -1078,20 +1094,40 @@ renderHeader model =
 
             else
                 ""
+
+        showPresets =
+            model.settings.showPresetsTab
+
+        presetsTab =
+            if showPresets then
+                div
+                    [ onClickNoDefault <| TogglePresets Presets
+                    , Attrs.class "elm-fancy-daterangepicker--presets-btn"
+                    , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
+                    ]
+                    [ text "Presets" ]
+
+            else
+                text ""
     in
-    div [ Attrs.class "elm-fancy-daterangepicker--header" ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--header", True )
+            , ( "elm-fancy-daterangepicker--show-presets", showPresets )
+            , ( "elm-fancy-daterangepicker--hide-presets", not showPresets )
+            ]
+        ]
         [ div
-            [ onClickNoDefault <| TogglePresets Calendar
+            [ if showPresets then
+                onClickNoDefault <| TogglePresets Calendar
+
+              else
+                Attrs.class ""
             , Attrs.class "elm-fancy-daterangepicker--presets-btn"
             , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
             ]
             [ text "Calendar" ]
-        , div
-            [ onClickNoDefault <| TogglePresets Presets
-            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
-            , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
-            ]
-            [ text "Presets" ]
+        , presetsTab
         ]
 
 
