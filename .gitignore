@@ -5,5 +5,4 @@ elm-stuff
 # output of elm-css
 .coverage
 node_modules
-*-lock.json
 .sass-cache
