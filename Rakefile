@@ -3,8 +3,8 @@ task :default => [:npm, :test, :watch]
 task :jenkins => [:npm, :test, :build]
 
 task :npm do
-    sh("npm install")
-    sh("cd example && npm install")
+    sh("npm ci")
+    sh("cd example && npm ci")
 end
 
 task :watch do
