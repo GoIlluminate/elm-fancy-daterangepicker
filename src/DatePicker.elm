@@ -1,7 +1,7 @@
 module DatePicker exposing
     ( Msg, DatePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDate, setDate, getToday
-    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
+    , Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDate, getPresets
     )
 
@@ -13,7 +13,7 @@ module DatePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
+@docs Settings, defaultSettings, setSettings, setDateFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, setCalendarDisplay, setInputView, setShowPresetsTab
 
 
 ## Presets
@@ -672,6 +672,13 @@ setInputName inputName (DatePicker model) =
             { settings | inputName = Just inputName }
     in
     DatePicker { model | settings = newSettings }
+
+
+{-| Sets the input text for the datepicker.
+-}
+setInputText : Maybe String -> DatePicker -> DatePicker
+setInputText inputText (DatePicker model) =
+    DatePicker { model | inputText = inputText }
 
 
 {-| Sets the id for the datepicker.
