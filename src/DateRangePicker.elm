@@ -1535,12 +1535,11 @@ selectDate date model =
             { model | endDate = Nothing, startDate = Just date }
 
         ( Just s, _ ) ->
-            saveSelection <|
-                if dateGreaterThanOrEqualTo date s then
-                    { model | endDate = Just date }
+            if dateGreaterThanOrEqualTo date s then
+                { model | endDate = Just date }
 
-                else
-                    { model | startDate = Just date, endDate = Just s }
+            else
+                { model | startDate = Just date, endDate = Just s }
 
 
 {-| An opaque function that updates the dateRange based on values
