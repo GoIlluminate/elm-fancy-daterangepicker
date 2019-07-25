@@ -155,16 +155,13 @@
                             @extend .#{$dp-ns}hover-date;
                         }
                         &.#{$dp-ns}hovered-range {
+                            color: themed('color-text-primary');
                             background: themed('color-dp-hover');
-                            font-weight: bold;
                         }
                     }
                     .#{$dp-ns}selected-range {
                         color: themed('color-text-primary');
                         background: themed('color-dp-hover');
-                        .#{$dp-ns}bubble {
-                            font-weight: bold;
-                        }
                     }
                     .#{$dp-ns}start {
                         &.#{$dp-ns}end {
@@ -190,6 +187,12 @@
                     }
                     .#{$dp-ns}bubble {
                         padding: 1px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        &.#{dp-ns}center-text {
+                        }
                     }
                 }
             }

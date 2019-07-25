@@ -96,7 +96,7 @@ type Msg
     | Reset
     | TogglePresets Tab
     | HoverDay Date
-    | OnHoverOut
+    | OnLeaveHover
 
 
 {-| The opaque model to be used within the DateRangePicker.
@@ -641,7 +641,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                 HoverDay date ->
                     ( { model | hoveredDate = Just date }, Cmd.none )
 
-                OnHoverOut ->
+                OnLeaveHover ->
                     ( { model | hoveredDate = Nothing }, Cmd.none )
 
                 DoNothing ->
@@ -1008,6 +1008,7 @@ renderCalendar model =
     div
         [ Attrs.class "elm-fancy-daterangepicker--calendar"
         , Attrs.class calendarDisplayClass
+        , Html.Events.onMouseLeave OnLeaveHover
         ]
         [ renderDateRangePickerHeader model
         , body
@@ -1352,12 +1353,13 @@ renderDay model date =
             ]
         , setDate_
         , Html.Events.onMouseOver <| HoverDay date
-        , Html.Events.onMouseOut <| OnHoverOut
         ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
-            [ text <|
-                String.fromInt <|
-                    day date
+            [ div [ Attrs.class "elm-fancy-daterangepicker--center-text" ]
+                [ text <|
+                    String.fromInt <|
+                        day date
+                ]
             ]
         ]
 
