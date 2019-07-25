@@ -96,6 +96,7 @@ type Msg
     | Reset
     | TogglePresets Tab
     | HoverDay Date
+    | OnHoverOut
 
 
 {-| The opaque model to be used within the DateRangePicker.
@@ -639,6 +640,9 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                 HoverDay date ->
                     ( { model | hoveredDate = Just date }, Cmd.none )
+
+                OnHoverOut ->
+                    ( { model | hoveredDate = Nothing }, Cmd.none )
 
                 DoNothing ->
                     ( model, Cmd.none )
@@ -1335,9 +1339,6 @@ renderDay model date =
 
             else
                 onClickNoDefault <| SelectDate date
-
-        hoverDate =
-            Html.Events.onMouseOver <| HoverDay date
     in
     div
         [ Attrs.classList
@@ -1350,7 +1351,8 @@ renderDay model date =
             , ( "elm-fancy-daterangepicker--end", isEnd_ )
             ]
         , setDate_
-        , hoverDate
+        , Html.Events.onMouseOver <| HoverDay date
+        , Html.Events.onMouseOut <| OnHoverOut
         ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
             [ text <|
@@ -1389,15 +1391,17 @@ to the model's startDate
 -}
 isStart : Model -> Date -> Bool
 isStart model date =
-    case model.startDate of
-        Just start ->
-            if model.endDate /= Nothing then
-                dateEqualTo start date
+    case ( model.startDate, model.endDate, model.hoveredDate ) of
+        ( Just start, Nothing, Just hovered ) ->
+            dateEqualTo start date && dateLessThanOrEqualTo date hovered || dateEqualTo hovered date && dateLessThanOrEqualTo date start
 
-            else
-                dateEqualTo start date && (model.hoveredDate |> Maybe.map (\h -> dateLessThanOrEqualTo date h) |> Maybe.withDefault False)
+        ( Just start, Just _, _ ) ->
+            dateEqualTo start date
 
-        Nothing ->
+        ( Just start, Nothing, Nothing ) ->
+            dateEqualTo start date
+
+        ( Nothing, _, _ ) ->
             False
 
 
@@ -1406,16 +1410,17 @@ to the model's endDate
 -}
 isEnd : Model -> Date -> Bool
 isEnd model date =
-    case model.startDate of
-        Just start ->
-            case model.endDate of
-                Just end ->
-                    dateEqualTo end date
+    case ( model.startDate, model.endDate, model.hoveredDate ) of
+        ( Just start, Nothing, Just hovered ) ->
+            dateEqualTo start date && dateGreaterThanOrEqualTo date hovered || dateEqualTo hovered date && dateGreaterThanOrEqualTo date start
 
-                Nothing ->
-                    dateEqualTo start date && (model.hoveredDate |> Maybe.map (\h -> dateGreaterThanOrEqualTo date h) |> Maybe.withDefault False)
+        ( Just _, Just end, _ ) ->
+            dateEqualTo end date
 
-        Nothing ->
+        ( Just start, Nothing, Nothing ) ->
+            dateEqualTo start date
+
+        ( Nothing, _, _ ) ->
             False
 
 
@@ -1548,18 +1553,16 @@ of startDate and endDate
 saveSelection : Model -> Model
 saveSelection ({ startDate, endDate } as model) =
     (\model_ -> { model_ | open = False }) <|
-        case startDate of
-            Just s ->
-                case endDate of
-                    Just e ->
-                        if dateLessThanOrEqualTo s e then
-                            { model | dateRange = Just { start = s, end = e } }
+        case ( startDate, endDate ) of
+            ( Just s, Just e ) ->
+                if dateLessThanOrEqualTo s e then
+                    { model | dateRange = Just { start = s, end = e } }
 
-                        else
-                            { model | dateRange = Just { start = e, end = s } }
+                else
+                    { model | dateRange = Just { start = e, end = s } }
 
-                    Nothing ->
-                        { model | dateRange = Just { start = s, end = s } }
+            ( Just s, Nothing ) ->
+                { model | dateRange = Just { start = s, end = s } }
 
-            Nothing ->
+            ( Nothing, _ ) ->
                 model

@@ -1212,8 +1212,7 @@ renderDay model date =
             isSelectedDate model date
 
         isToday_ =
-            isToday model
-                date
+            isToday model date
 
         setDate_ =
             if isDisabledDate_ then
