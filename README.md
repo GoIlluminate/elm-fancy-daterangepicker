@@ -325,6 +325,12 @@ from [here][scss].
 [compiled]: https://github.com/goilluminate/elm-fancy-daterangepicker/blob/master/css/daterangepicker.css
 [scss]: https://github.com/goilluminate/elm-fancy-daterangepicker/blob/master/css/daterangepicker.scss
 
+## `Map.!` compiler error
+
+If you run into the compiler error [`Map.!: given key is not an element in the
+map`](https://github.com/elm/compiler/issues/1851), try moving
+"justinmimbs/date" into your direct dependencies. It _may_ fix the error.
+
 ## Example
 
 ### Prerequisites
