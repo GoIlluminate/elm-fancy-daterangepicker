@@ -1330,7 +1330,7 @@ updateInputText : Model -> Model
 updateInputText model =
     case model.date of
         Just a ->
-            { model | inputText = Just <| formatDate a }
+            { model | inputText = Just <| model.settings.formatDate a }
 
         Nothing ->
             { model | inputText = Nothing }
