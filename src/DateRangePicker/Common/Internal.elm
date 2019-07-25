@@ -6,8 +6,6 @@ module DateRangePicker.Common.Internal exposing
     , Quarter
     , chunksOfLeft
     , isDisabledDate
-    , mkClass
-    , mkClassString
     , mkEnabledDateRangeFromRestrictedDateRange
     , noPresets
     , onClickNoDefault
@@ -377,28 +375,7 @@ chunksOfLeft k xs =
         [ xs ]
 
 
-{-| An opaque function that returns a class name or an empty string
-if the bool is true or not
--}
-mkClass : String -> Bool -> String
-mkClass cls bool =
-    if bool then
-        cls
-
-    else
-        ""
-
-
-{-| An opaque function that returns a class string from a list of string.
--}
-mkClassString : List String -> String
-mkClassString lst =
-    String.join " " <|
-        List.filter (\x -> x /= "")
-            lst
-
-
-{-| An opaque function that stop propagation of click event.
+{-| An opaque function that prevents default click events.
 -}
 onClickNoDefault : msg -> Html.Attribute msg
 onClickNoDefault message =
