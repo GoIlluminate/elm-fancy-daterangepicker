@@ -541,7 +541,6 @@ update msg (DatePicker ({ settings } as model)) =
                 Reset ->
                     ( { model
                         | selectedDate = Nothing
-                        , savedDate = Nothing
                         , showPresets = False
                       }
                     , initCmd
