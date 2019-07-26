@@ -88,9 +88,9 @@ type Msg
     | DoNothing
     | Click
     | Reset
-    | Save
     | TogglePresets Tab
-    | CancelClick
+    | Close
+    | Save
 
 
 {-| The opaque model to be used within the DatePicker.
@@ -99,7 +99,8 @@ type alias Model =
     { today : Date
     , inputText : Maybe String
     , open : Bool
-    , date : Maybe Date
+    , selectedDate : Maybe Date
+    , savedDate : Maybe Date
     , showPresets : Bool
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
@@ -411,7 +412,8 @@ initModel =
     { today = initDate
     , inputText = Nothing
     , open = False
-    , date = Nothing
+    , selectedDate = Nothing
+    , savedDate = Nothing
     , showPresets = False
     , presets = []
     , enabledDateRange = Nothing
@@ -453,9 +455,9 @@ update msg (DatePicker ({ settings } as model)) =
                             }
 
                         newDate =
-                            Maybe.map (\x -> getNewDate newModel x) model.date
+                            Maybe.map (\x -> getNewDate newModel x) model.selectedDate
                     in
-                    ( { newModel | date = newDate }, Cmd.none )
+                    ( { newModel | selectedDate = newDate }, Cmd.none )
 
                 PrevCalendarRange ->
                     let
@@ -501,10 +503,10 @@ update msg (DatePicker ({ settings } as model)) =
                             getNewDate model date
                     in
                     ( { model
-                        | date = Just newDate
+                        | selectedDate = Just newDate
                         , showPresets = False
+                        , selectedTab = Calendar
                         , calendarRange = prepareCalendarRange model.settings.calendarDisplay date
-                        , open = False
                       }
                     , Cmd.none
                     )
@@ -512,49 +514,60 @@ update msg (DatePicker ({ settings } as model)) =
                 Click ->
                     let
                         newCalendarRange =
-                            case model.date of
+                            case model.savedDate of
                                 Just a ->
                                     prepareCalendarRange model.settings.calendarDisplay a
 
                                 Nothing ->
                                     model.calendarRange
 
-                        newOpen =
-                            not model.open
+                        ( newDate, newOpen ) =
+                            if model.open then
+                                ( model.savedDate, False )
+
+                            else
+                                ( model.selectedDate, True )
                     in
                     ( { model
                         | open = newOpen
                         , selectedTab = Calendar
                         , calendarRange = newCalendarRange
+                        , selectedDate = newDate
+                        , savedDate = newDate
                       }
                     , Cmd.none
                     )
 
                 Reset ->
                     ( { model
-                        | date = Nothing
+                        | selectedDate = Nothing
                         , showPresets = False
                       }
                     , initCmd
                     )
 
                 TogglePresets tab ->
+                    let
+                        newShowPresets =
+                            case tab of
+                                Presets ->
+                                    True
+
+                                Calendar ->
+                                    False
+                    in
                     ( { model
-                        | showPresets = not model.showPresets
+                        | showPresets = newShowPresets
                         , selectedTab = tab
                       }
                     , Cmd.none
                     )
 
-                Save ->
-                    ( { model
-                        | open = False
-                      }
-                    , initCmd
-                    )
+                Close ->
+                    ( { model | open = False, selectedDate = model.savedDate }, Cmd.none )
 
-                CancelClick ->
-                    ( { model | open = False }, Cmd.none )
+                Save ->
+                    ( { model | open = False, savedDate = model.selectedDate }, Cmd.none )
 
                 DoNothing ->
                     ( model, Cmd.none )
@@ -580,7 +593,7 @@ setOpen open (DatePicker model) =
 -}
 getDate : DatePicker -> Maybe Date
 getDate (DatePicker model) =
-    model.date
+    model.savedDate
 
 
 {-| Expose today's date.
@@ -605,7 +618,7 @@ setDate date (DatePicker model) =
         newDate =
             Maybe.map (\a -> getNewDate model a) date
     in
-    DatePicker ({ model | date = newDate } |> updateInputText)
+    DatePicker ({ model | savedDate = newDate, selectedDate = newDate } |> updateInputText)
 
 
 {-| Sets the date formatter for the datepicker.
@@ -747,7 +760,7 @@ setCalendarDisplay calendarDisplay (DatePicker model) =
 
         newCalendarRange =
             prepareCalendarRange calendarDisplay <|
-                case model.date of
+                case model.savedDate of
                     Nothing ->
                         model.today
 
@@ -790,7 +803,7 @@ setShowPresetsTab bool (DatePicker model) =
 subscriptions : DatePicker -> Sub Msg
 subscriptions (DatePicker model) =
     if model.open then
-        Browser.Events.onClick (Json.succeed CancelClick)
+        Browser.Events.onClick (Json.succeed Close)
 
     else
         Sub.none
@@ -1242,7 +1255,7 @@ renderDay model date =
 -}
 isSelectedDate : Model -> Date -> Bool
 isSelectedDate model date =
-    case model.date of
+    case model.selectedDate of
         Just a ->
             dateEqualTo a date
 
@@ -1310,7 +1323,7 @@ model's selected dateRange
 -}
 updateInputText : Model -> Model
 updateInputText model =
-    case model.date of
+    case model.savedDate of
         Just a ->
             { model | inputText = Just <| model.settings.formatDate a }
 
