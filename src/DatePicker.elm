@@ -46,8 +46,6 @@ import DateRangePicker.Common.Internal
         , Months
         , chunksOfLeft
         , isDisabledDate
-        , mkClass
-        , mkClassString
         , mkEnabledDateRangeFromRestrictedDateRange
         , noPresets
         , onClickNoDefault
@@ -76,10 +74,8 @@ import Html
         , text
         )
 import Html.Attributes as Attrs
-import Html.Events
 import Json.Decode as Json
 import Task
-import Time exposing (Month(..), Weekday(..))
 
 
 {-| A type representing messages that are passed within the DatePicker.
@@ -91,8 +87,6 @@ type Msg
     | SetDate Date
     | DoNothing
     | Click
-    | MouseDown
-    | MouseUp
     | Reset
     | Save
     | TogglePresets Tab
@@ -105,7 +99,6 @@ type alias Model =
     { today : Date
     , inputText : Maybe String
     , open : Bool
-    , forceOpen : Bool
     , date : Maybe Date
     , showPresets : Bool
     , presets : List Preset
@@ -418,7 +411,6 @@ initModel =
     { today = initDate
     , inputText = Nothing
     , open = False
-    , forceOpen = False
     , date = Nothing
     , showPresets = False
     , presets = []
@@ -513,7 +505,6 @@ update msg (DatePicker ({ settings } as model)) =
                         , showPresets = False
                         , calendarRange = prepareCalendarRange model.settings.calendarDisplay date
                         , open = False
-                        , forceOpen = False
                       }
                     , Cmd.none
                     )
@@ -533,24 +524,16 @@ update msg (DatePicker ({ settings } as model)) =
                     in
                     ( { model
                         | open = newOpen
-                        , forceOpen = False
                         , selectedTab = Calendar
                         , calendarRange = newCalendarRange
                       }
                     , Cmd.none
                     )
 
-                MouseDown ->
-                    ( { model | forceOpen = True }, Cmd.none )
-
-                MouseUp ->
-                    ( { model | forceOpen = False }, Cmd.none )
-
                 Reset ->
                     ( { model
                         | date = Nothing
                         , showPresets = False
-                        , forceOpen = False
                       }
                     , initCmd
                     )
@@ -889,8 +872,6 @@ datePicker model =
         [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
         , Attrs.class tabClass
         , Attrs.class calendarDisplayClass
-        , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
-        , Html.Events.stopPropagationOn "mouseup" <| Json.succeed ( MouseUp, True )
         , onClickNoDefault DoNothing
         ]
         [ renderHeader model
@@ -1021,14 +1002,14 @@ renderPreset model preset =
             else
                 onClickNoDefault <|
                     SetDate preset.date
-
-        classString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--preset"
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledPreset
-                ]
     in
-    div [ Attrs.class classString, setDate_ ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--preset", True )
+            , ( "elm-fancy-daterangepicker--disabled", isDisabledPreset )
+            ]
+        , setDate_
+        ]
         [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text preset.name ]
         , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] [ text <| model.settings.formatDate preset.date ]
         ]
@@ -1045,17 +1026,17 @@ renderDatePickerHeader model =
         isDisabledDateRange =
             isDisabledDate model.enabledDateRange start
                 && isDisabledDate model.enabledDateRange end
-
-        rangeLabelClassString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--range-btn"
-                , "elm-fancy-daterangepicker--range-label"
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDateRange
-                ]
     in
     div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
-        , div [ Attrs.class rangeLabelClassString ] [ text model.calendarRange.name ]
+        , div
+            [ Attrs.classList
+                [ ( "elm-fancy-daterangepicker--range-btn", True )
+                , ( "elm-fancy-daterangepicker--range-label", True )
+                , ( "elm-fancy-daterangepicker--disabled", isDisabledDateRange )
+                ]
+            ]
+            [ text model.calendarRange.name ]
         , div [ Attrs.class "elm-fancy-daterangepicker--yr-btn elm-fancy-daterangepicker--yr-next", onClickNoDefault NextCalendarRange ] [ text "❯" ]
         ]
 
@@ -1134,14 +1115,15 @@ renderQuarter model months =
                                         onClickNoDefault <|
                                             SetDate start
 
-                                classString =
-                                    mkClassString
-                                        [ "elm-fancy-daterangepicker--qtr-label"
-                                        , mkClass "elm-fancy-daterangepicker--disabled" isDisabledQtr
-                                        ]
-
                                 qtrLabel =
-                                    div [ Attrs.class classString, setQtrDate ] [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
+                                    div
+                                        [ Attrs.classList
+                                            [ ( "elm-fancy-daterangepicker--qtr-label", True )
+                                            , ( "elm-fancy-daterangepicker--disabled", isDisabledQtr )
+                                            ]
+                                        , setQtrDate
+                                        ]
+                                        [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
                             in
                             div [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                 List.concat
@@ -1193,14 +1175,14 @@ renderMonth model m =
                         onClickNoDefault <|
                             SetDate startOfMonth_
 
-                classString =
-                    mkClassString
-                        [ "elm-fancy-daterangepicker--month-label"
-                        , mkClass "elm-fancy-daterangepicker--disabled" isDisabledMonth
-                        ]
-
                 monthDiv =
-                    div [ Attrs.class classString, setMonthDate ]
+                    div
+                        [ Attrs.classList
+                            [ ( "elm-fancy-daterangepicker--month-label", True )
+                            , ( "elm-fancy-daterangepicker--disabled", isDisabledMonth )
+                            ]
+                        , setMonthDate
+                        ]
                         [ text <|
                             formatMonth <|
                                 month a
@@ -1232,14 +1214,6 @@ renderDay model date =
         isToday_ =
             isToday model date
 
-        classString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--day"
-                , mkClass "elm-fancy-daterangepicker--today" isToday_
-                , mkClass "elm-fancy-daterangepicker--selected-range" isSelectedDate_
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDate_
-                ]
-
         setDate_ =
             if isDisabledDate_ then
                 onClickNoDefault DoNothing
@@ -1247,7 +1221,15 @@ renderDay model date =
             else
                 onClickNoDefault <| SetDate date
     in
-    div [ Attrs.class classString, setDate_ ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--day", True )
+            , ( "elm-fancy-daterangepicker--today", isToday_ )
+            , ( "elm-fancy-daterangepicker--selected-range", isSelectedDate_ )
+            , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
+            ]
+        , setDate_
+        ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
             [ text <|
                 String.fromInt <|

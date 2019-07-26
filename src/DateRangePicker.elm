@@ -47,8 +47,6 @@ import DateRangePicker.Common.Internal
         , Months
         , chunksOfLeft
         , isDisabledDate
-        , mkClass
-        , mkClassString
         , mkEnabledDateRangeFromRestrictedDateRange
         , noPresets
         , onClickNoDefault
@@ -89,17 +87,16 @@ type Msg
     = InitCurrentDate Date
     | PrevCalendarRange
     | NextCalendarRange
+    | SelectDate Date
     | SetDateRange DateRange
+    | Close
     | Save
-    | SetDate Date
     | DoNothing
     | Click
-    | MouseDown
-    | MouseUp
     | Reset
     | TogglePresets Tab
     | HoverDay Date
-    | CancelClick
+    | OnLeaveHover
 
 
 {-| The opaque model to be used within the DateRangePicker.
@@ -108,7 +105,6 @@ type alias Model =
     { today : Date
     , inputText : Maybe String
     , open : Bool
-    , forceOpen : Bool
     , dateRange : Maybe DateRange
     , startDate : Maybe Date
     , endDate : Maybe Date
@@ -498,7 +494,6 @@ initModel =
     { today = initDate
     , inputText = Nothing
     , open = False
-    , forceOpen = False
     , dateRange = Nothing
     , startDate = Nothing
     , endDate = Nothing
@@ -586,111 +581,43 @@ update msg (DateRangePicker ({ settings } as model)) =
                     in
                     ( { model | calendarRange = nextCalendarRange }, Cmd.none )
 
-                SetDateRange dateRange ->
-                    let
-                        newDateRange =
-                            getNewDateRange model dateRange
-                    in
-                    ( { model
-                        | dateRange = Just newDateRange
-                        , startDate = Nothing
-                        , endDate = Nothing
-                        , showPresets = False
-                        , calendarRange = prepareCalendarRange model.settings.calendarDisplay newDateRange.start
-                        , open = False
-                        , forceOpen = False
-                        , hoveredDate = Nothing
-                      }
-                    , Cmd.none
-                    )
-
                 Save ->
-                    ( { model
-                        | open = False
-                      }
-                    , initCmd
-                    )
+                    ( saveSelection model, Cmd.none )
 
-                SetDate date ->
-                    case ( model.startDate, model.endDate ) of
-                        ( Just _, Just _ ) ->
-                            ( { model
-                                | startDate = Just date
-                                , endDate = Nothing
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( Just start, Nothing ) ->
-                            let
-                                dateRange =
-                                    if dateLessThanOrEqualTo start date then
-                                        Just <| mkDateRange start date
-
-                                    else
-                                        Nothing
-                            in
-                            case dateRange of
-                                Just _ ->
-                                    ( { model
-                                        | endDate = Nothing
-                                        , startDate = Nothing
-                                        , dateRange = dateRange
-                                        , open = False
-                                        , forceOpen = False
-                                        , hoveredDate = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                                Nothing ->
-                                    ( { model
-                                        | startDate = Just date
-                                        , endDate = Nothing
-                                        , dateRange = Nothing
-                                      }
-                                    , Cmd.none
-                                    )
-
-                        ( Nothing, Nothing ) ->
-                            ( { model
-                                | startDate = Just date
-                                , dateRange = Nothing
-                              }
-                            , Cmd.none
-                            )
-
-                        ( _, _ ) ->
-                            ( model, Cmd.none )
+                Close ->
+                    ( { model | open = False, startDate = Maybe.map .start model.dateRange, endDate = Maybe.map .end model.dateRange }, Cmd.none )
 
                 Click ->
                     let
-                        newCalendarRange =
+                        ( newCalendarRange, startDate, endDate ) =
                             case model.dateRange of
                                 Just a ->
-                                    prepareCalendarRange model.settings.calendarDisplay a.start
+                                    ( prepareCalendarRange model.settings.calendarDisplay a.start, Just a.start, Just a.end )
 
                                 Nothing ->
-                                    model.calendarRange
-
-                        newOpen =
-                            not model.open
+                                    ( model.calendarRange, model.startDate, model.endDate )
                     in
                     ( { model
-                        | open = newOpen
-                        , forceOpen = False
+                        | open = not model.open
                         , selectedTab = Calendar
                         , calendarRange = newCalendarRange
+                        , startDate = startDate
+                        , endDate = endDate
                       }
                     , Cmd.none
                     )
 
-                MouseDown ->
-                    ( { model | forceOpen = True }, Cmd.none )
+                SelectDate date ->
+                    ( selectDate date model
+                    , Cmd.none
+                    )
 
-                MouseUp ->
-                    ( { model | forceOpen = False }, Cmd.none )
+                SetDateRange dateRange ->
+                    ( { model | dateRange = Just dateRange, startDate = Nothing, endDate = Nothing }
+                        |> selectDate dateRange.start
+                        |> selectDate dateRange.end
+                    , Cmd.none
+                    )
 
                 Reset ->
                     ( { model
@@ -699,7 +626,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , endDate = Nothing
                         , hoveredDate = Nothing
                         , showPresets = False
-                        , forceOpen = False
                       }
                     , initCmd
                     )
@@ -715,8 +641,8 @@ update msg (DateRangePicker ({ settings } as model)) =
                 HoverDay date ->
                     ( { model | hoveredDate = Just date }, Cmd.none )
 
-                CancelClick ->
-                    ( { model | open = False }, Cmd.none )
+                OnLeaveHover ->
+                    ( { model | hoveredDate = Nothing }, Cmd.none )
 
                 DoNothing ->
                     ( model, Cmd.none )
@@ -966,7 +892,7 @@ setSettings settings (DateRangePicker model) =
 subscriptions : DateRangePicker -> Sub Msg
 subscriptions (DateRangePicker model) =
     if model.open then
-        Browser.Events.onClick (Json.succeed CancelClick)
+        Browser.Events.onClick (Json.succeed Close)
 
     else
         Sub.none
@@ -1048,8 +974,6 @@ dateRangePicker model =
         [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
         , Attrs.class tabClass
         , Attrs.class calendarDisplayClass
-        , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseDown, True )
-        , Html.Events.stopPropagationOn "mousedown" <| Json.succeed ( MouseUp, True )
         , onClickNoDefault DoNothing
         ]
         [ renderHeader model
@@ -1084,6 +1008,7 @@ renderCalendar model =
     div
         [ Attrs.class "elm-fancy-daterangepicker--calendar"
         , Attrs.class calendarDisplayClass
+        , Html.Events.onMouseLeave OnLeaveHover
         ]
         [ renderDateRangePickerHeader model
         , body
@@ -1179,15 +1104,15 @@ renderPreset model preset =
                 onClickNoDefault DoNothing
 
             else
-                onClickNoDefault <| SetDateRange preset.dateRange
-
-        classString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--preset"
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledPreset
-                ]
+                onClickNoDefault <| SetDateRange <| preset.dateRange
     in
-    div [ Attrs.class classString, setDateRange_ ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--preset", True )
+            , ( "elm-fancy-daterangepicker--disabled", isDisabledPreset )
+            ]
+        , setDateRange_
+        ]
         [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text preset.name ]
         , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] [ text <| model.settings.formatDateRange preset.dateRange ]
         ]
@@ -1207,21 +1132,22 @@ renderDateRangePickerHeader model =
 
         setRange =
             if isDisabledDateRange then
-                onClickNoDefault DoNothing
+                DoNothing
 
             else
-                onClickNoDefault <| SetDateRange <| mkDateRange start end
-
-        rangeLabelClassString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--range-btn"
-                , "elm-fancy-daterangepicker--range-label"
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDateRange
-                ]
+                SetDateRange <| mkDateRange start end
     in
     div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
-        , div [ Attrs.class rangeLabelClassString, setRange ] [ text model.calendarRange.name ]
+        , div
+            [ Attrs.classList
+                [ ( "elm-fancy-daterangepicker--range-btn", True )
+                , ( "elm-fancy-daterangepicker--range-label", True )
+                , ( "elm-fancy-daterangepicker--disabled", isDisabledDateRange )
+                ]
+            , onClickNoDefault setRange
+            ]
+            [ text model.calendarRange.name ]
         , div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-next", onClickNoDefault NextCalendarRange ] [ text "❯" ]
         ]
 
@@ -1299,14 +1225,15 @@ renderQuarter model months =
                                     else
                                         onClickNoDefault <| SetDateRange <| mkDateRange start end
 
-                                classString =
-                                    mkClassString
-                                        [ "elm-fancy-daterangepicker--qtr-label"
-                                        , mkClass "elm-fancy-daterangepicker--disabled" isDisabledQtr
-                                        ]
-
                                 qtrLabel =
-                                    div [ Attrs.class classString, setQtrDateRange ] [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
+                                    div
+                                        [ Attrs.classList
+                                            [ ( "elm-fancy-daterangepicker--qtr-label", True )
+                                            , ( "elm-fancy-daterangepicker--disabled", isDisabledQtr )
+                                            ]
+                                        , setQtrDateRange
+                                        ]
+                                        [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
                             in
                             div [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                 List.concat
@@ -1357,14 +1284,14 @@ renderMonth model m =
                     else
                         onClickNoDefault <| SetDateRange <| mkDateRange (startOfMonth a) (endOfMonth a)
 
-                classString =
-                    mkClassString
-                        [ "elm-fancy-daterangepicker--month-label"
-                        , mkClass "elm-fancy-daterangepicker--disabled" isDisabledMonth
-                        ]
-
                 monthDiv =
-                    div [ Attrs.class classString, setMonthDateRange ]
+                    div
+                        [ Attrs.classList
+                            [ ( "elm-fancy-daterangepicker--month-label", True )
+                            , ( "elm-fancy-daterangepicker--disabled", isDisabledMonth )
+                            ]
+                        , setMonthDateRange
+                        ]
                         [ text <|
                             formatMonth <|
                                 month a
@@ -1407,32 +1334,32 @@ renderDay model date =
         isEnd_ =
             isEnd model date
 
-        classString =
-            mkClassString
-                [ "elm-fancy-daterangepicker--day"
-                , mkClass "elm-fancy-daterangepicker--today" isToday_
-                , mkClass "elm-fancy-daterangepicker--selected-range" <| isSelectedDateRange_ && not isStart_ && not isEnd_
-                , mkClass "elm-fancy-daterangepicker--hovered-range" isHoveredDateRange_
-                , mkClass "elm-fancy-daterangepicker--disabled" isDisabledDate_
-                , mkClass "elm-fancy-daterangepicker--start" isStart_
-                , mkClass "elm-fancy-daterangepicker--end" isEnd_
-                ]
-
         setDate_ =
             if isDisabledDate_ then
                 onClickNoDefault DoNothing
 
             else
-                onClickNoDefault <| SetDate date
-
-        hoverDate =
-            Html.Events.onMouseOver <| HoverDay date
+                onClickNoDefault <| SelectDate date
     in
-    div [ Attrs.class classString, setDate_, hoverDate ]
+    div
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--day", True )
+            , ( "elm-fancy-daterangepicker--today", isToday_ )
+            , ( "elm-fancy-daterangepicker--selected-range", isSelectedDateRange_ && not isStart_ && not isEnd_ )
+            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ )
+            , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
+            , ( "elm-fancy-daterangepicker--start", isStart_ )
+            , ( "elm-fancy-daterangepicker--end", isEnd_ )
+            ]
+        , setDate_
+        , Html.Events.onMouseOver <| HoverDay date
+        ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
-            [ text <|
-                String.fromInt <|
-                    day date
+            [ div [ Attrs.class "elm-fancy-daterangepicker--center-text" ]
+                [ text <|
+                    String.fromInt <|
+                        day date
+                ]
             ]
         ]
 
@@ -1441,61 +1368,24 @@ renderDay model date =
 -}
 isSelectedDateRange : Model -> Date -> Bool
 isSelectedDateRange model date =
-    case model.dateRange of
-        Just a ->
-            inRange date a
+    case ( model.startDate, model.endDate ) of
+        ( Just s, Just e ) ->
+            inRange date { start = s, end = e }
 
-        Nothing ->
-            isStartOrEnd model date
+        _ ->
+            False
 
 
 {-| An opaque function that checks if the given date is between the start date and hovered date.
 -}
 isHoveredDateRange : Model -> Date -> Bool
 isHoveredDateRange model date =
-    let
-        hoveredDateRange =
-            case ( model.startDate, model.hoveredDate ) of
-                ( Just startDate, Just hoveredDate ) ->
-                    if dateGreaterThanOrEqualTo hoveredDate startDate then
-                        Just <| mkDateRange startDate hoveredDate
+    case ( model.startDate, model.hoveredDate, model.endDate ) of
+        ( Just s, Just h, Nothing ) ->
+            inRange date { start = s, end = h } || inRange date { start = h, end = s }
 
-                    else
-                        Nothing
-
-                ( _, _ ) ->
-                    Nothing
-    in
-    case hoveredDateRange of
-        Just a ->
-            inRange date a
-
-        Nothing ->
+        _ ->
             False
-
-
-{-| An opaque function that checks if the passed in date is equal
-to the model's startDate or endDate
--}
-isStartOrEnd : Model -> Date -> Bool
-isStartOrEnd model date =
-    case model.dateRange of
-        Nothing ->
-            case ( model.startDate, model.endDate ) of
-                ( Just a, Just b ) ->
-                    dateEqualTo a date || dateEqualTo b date
-
-                ( Just a, _ ) ->
-                    dateEqualTo a date
-
-                ( _, Just b ) ->
-                    dateEqualTo b date
-
-                ( _, _ ) ->
-                    False
-
-        Just { start, end } ->
-            dateEqualTo start date || dateEqualTo end date
 
 
 {-| An opaque function that checks if the passed in date is equal
@@ -1503,17 +1393,18 @@ to the model's startDate
 -}
 isStart : Model -> Date -> Bool
 isStart model date =
-    case model.dateRange of
-        Just { start } ->
+    case ( model.startDate, model.endDate, model.hoveredDate ) of
+        ( Just start, Nothing, Just hovered ) ->
+            dateEqualTo start date && dateLessThanOrEqualTo date hovered || dateEqualTo hovered date && dateLessThanOrEqualTo date start
+
+        ( Just start, Just _, _ ) ->
             dateEqualTo start date
 
-        Nothing ->
-            case model.startDate of
-                Just a ->
-                    dateEqualTo a date
+        ( Just start, Nothing, Nothing ) ->
+            dateEqualTo start date
 
-                Nothing ->
-                    False
+        ( Nothing, _, _ ) ->
+            False
 
 
 {-| An opaque function that checks if the passed in date is equal
@@ -1521,29 +1412,18 @@ to the model's endDate
 -}
 isEnd : Model -> Date -> Bool
 isEnd model date =
-    let
-        fun =
-            Maybe.andThen
-                (\a ->
-                    Maybe.map
-                        (\sd ->
-                            dateEqualTo a date && dateGreaterThanOrEqualTo a sd
-                        )
-                        model.startDate
-                )
-                model.hoveredDate
-    in
-    case model.dateRange of
-        Just { end } ->
+    case ( model.startDate, model.endDate, model.hoveredDate ) of
+        ( Just start, Nothing, Just hovered ) ->
+            dateEqualTo start date && dateGreaterThanOrEqualTo date hovered || dateEqualTo hovered date && dateGreaterThanOrEqualTo date start
+
+        ( Just _, Just end, _ ) ->
             dateEqualTo end date
 
-        Nothing ->
-            case model.endDate of
-                Just a ->
-                    dateEqualTo a date
+        ( Just start, Nothing, Nothing ) ->
+            dateEqualTo start date
 
-                Nothing ->
-                    Maybe.withDefault False fun
+        ( Nothing, _, _ ) ->
+            False
 
 
 {-| An opaque function that checks if the passed in date is today.
@@ -1644,3 +1524,47 @@ formatDateRange dateRange =
         , " - "
         , formatDate dateRange.end
         ]
+
+
+{-| An opaque function that determines what should be done with a date
+when it is selected
+-}
+selectDate : Date -> Model -> Model
+selectDate date model =
+    case ( model.startDate, model.endDate ) of
+        ( Nothing, Nothing ) ->
+            { model | startDate = Just date }
+
+        ( Nothing, _ ) ->
+            { model | startDate = Just date }
+
+        ( Just _, Just _ ) ->
+            { model | endDate = Nothing, startDate = Just date }
+
+        ( Just s, _ ) ->
+            if dateGreaterThanOrEqualTo date s then
+                { model | endDate = Just date }
+
+            else
+                { model | startDate = Just date, endDate = Just s }
+
+
+{-| An opaque function that updates the dateRange based on values
+of startDate and endDate
+-}
+saveSelection : Model -> Model
+saveSelection ({ startDate, endDate } as model) =
+    (\model_ -> { model_ | open = False }) <|
+        case ( startDate, endDate ) of
+            ( Just s, Just e ) ->
+                if dateLessThanOrEqualTo s e then
+                    { model | dateRange = Just { start = s, end = e } }
+
+                else
+                    { model | dateRange = Just { start = e, end = s } }
+
+            ( Just s, Nothing ) ->
+                { model | dateRange = Just { start = s, end = s } }
+
+            ( Nothing, _ ) ->
+                model
