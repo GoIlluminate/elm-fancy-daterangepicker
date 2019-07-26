@@ -613,7 +613,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                     )
 
                 SetDateRange dateRange ->
-                    ( { model | dateRange = Just dateRange, startDate = Nothing, endDate = Nothing }
+                    ( { model | startDate = Nothing, endDate = Nothing, selectedTab = Calendar }
                         |> selectDate dateRange.start
                         |> selectDate dateRange.end
                     , Cmd.none
