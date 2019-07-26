@@ -505,6 +505,7 @@ update msg (DatePicker ({ settings } as model)) =
                     ( { model
                         | selectedDate = Just newDate
                         , showPresets = False
+                        , selectedTab = Calendar
                         , calendarRange = prepareCalendarRange model.settings.calendarDisplay date
                       }
                     , Cmd.none
