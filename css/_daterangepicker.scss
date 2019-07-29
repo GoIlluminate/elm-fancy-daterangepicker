@@ -24,24 +24,13 @@
             padding: 0px;
             margin: 0px;
             font-size: 14px;
-            display: grid;
+            display: flex;
             &.#{$dp-ns}calendar-tab {
-                grid-template-rows: 30px 1fr 50px;
-                &.#{$dp-ns}full-calendar, &.#{$dp-ns}three-months {
-                    width: 600px;
-                }
-                &.#{$dp-ns}two-months {
-                    width: 400px;
-                }
-                &.#{$dp-ns}one-month {
-                    width: 200px;
-                }
+                width: min-content;
             }
             &.#{$dp-ns}presets-tab {
-                grid-template-rows: 30px 1fr;
-                width: 400px;
+                //width: 400px;
             }
-            background: themed('color-border-primary');
             .#{$dp-ns}calendar {
                 -webkit-touch-callout: none; /* iOS Safari */
                 -webkit-user-select: none; /* Safari */
@@ -49,12 +38,6 @@
                 -moz-user-select: none; /* Firefox */
                 -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-                height: 100%;
-                width: 100%;
-                display: grid;
-                grid-template-columns: 1fr;
-                grid-auto-flow: dense;
-                grid-gap: 1px;
                 .#{$dp-ns}yr-label-wrapper, .#{$dp-ns}range-label-wrapper {
                     display: grid;
                     grid-template-columns: 25px 1fr 25px;
@@ -63,6 +46,7 @@
                     color: themed('color-text-black-white');
                     padding: 5px;
                     border-top: 1px solid themed('color-border-primary');
+                    border-bottom: 1px solid themed('color-border-primary');
                     .#{$dp-ns}yr-btn, .#{$dp-ns}range-btn {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -79,7 +63,6 @@
                 }
                 .#{$dp-ns}body--container {
                     display: grid;
-                    grid-row-gap: 1px;
                     background: themed('color-primary');
                 }
                 &.#{$dp-ns}full-calendar, &.#{$dp-ns}three-months {
@@ -88,7 +71,6 @@
                         width: 100%;
                         display: grid;
                         grid-auto-flow: dense;
-                        grid-gap: 1px;
                         grid-template-columns: 20px 1fr 1fr 1fr;
                         .#{$dp-ns}qtr-label {
                             display: grid;
@@ -108,7 +90,6 @@
                     width: 100%;
                     display: grid;
                     grid-auto-flow: dense;
-                    grid-gap: 1px;
                 }
                 &.#{$dp-ns}two-months {
                     .#{$dp-ns}months-row {
@@ -120,11 +101,16 @@
                         grid-template-columns: 1fr;
                     }
                 }
+                .#{dp-ns}month-wrapper {
+                    border-spacing: 1px;
+                    display: grid;
+                    grid-auto-flow: dense;
+                    grid-gap: 0;
+                }
                 .#{$dp-ns}month {
                     display: grid;
                     grid-auto-flow: dense;
-                    grid-gap: 0px;
-                    grid-template-rows: repeat(8, 1fr);
+                    grid-template-rows: repeat(6, 1fr);
                     grid-template-columns: repeat(7, 1fr);
                     text-align: center;
                     >div:first-child {
@@ -135,6 +121,7 @@
                         border-left: themed('color-secondary');
                     }
                     .#{$dp-ns}month-label {
+                        display: flex;
                         background: themed('color-secondary');
                         color: themed('color-text');
                         &:not(.#{$dp-ns}disabled) {
@@ -146,9 +133,11 @@
                         color: themed('color-text');
                     }
                     .#{$dp-ns}day-filler {
+                        border: solid .5px themed('color-border');
                         background: themed('color-secondary');
                     }
                     .#{$dp-ns}day {
+                        border: solid .5px themed('color-border');
                         color: themed('color-primary');
                         background: themed('color-secondary');
                         &:not(.#{$dp-ns}disabled) {
@@ -185,7 +174,7 @@
                         }
                     }
                     .#{$dp-ns}bubble {
-                        padding: 1px;
+                        padding: 0 3px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
@@ -224,43 +213,6 @@
                     }
                 }
             }
-            .#{$dp-ns}footer {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                border-top: themed('color-primary');
-                background: themed('color-secondary');
-                padding: 5px;
-                align-items: center;
-                margin-top: 1px;
-                .round-btns {
-                    border-radius: 15px;
-                    width: fit-content;
-                    height: fit-content;
-                    padding: 5px;
-                    width: 60px;
-                    text-align: center;
-                }
-                .round-btns:first-child { 
-                    border: 1px solid themed('color-border-primary');
-                    color: themed('color-border-primary');
-                    &:hover {
-                        cursor: pointer;
-                        background: themed('color-primary');
-                        color: themed('color-white');
-                    }
-                }
-                .round-btns:last-child {
-                    background-color: themed('color-primary');
-                    justify-self: right;
-                    border: 1px solid themed('color-primary');
-                    color: themed('color-white');
-                    &:hover {
-                        cursor: pointer;
-                        background: themed('color-secondary');
-                        color: themed('color-primary');
-                    }
-                }
-            }
             .#{$dp-ns}presets {
                 -webkit-touch-callout: none; /* iOS Safari */
                 -webkit-user-select: none; /* Safari */
@@ -268,44 +220,43 @@
                 -moz-user-select: none; /* Firefox */
                 -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-                height: 100%;
-                width: 100%;
-                display: grid;
-                grid-template-columns: 1fr;
-                grid-auto-flow: dense;
-                grid-gap: 1px;
+                display: flex;
+                height: min-content;
+                flex-direction: column;
+                background: themed('color-bg-light-gray');
                 .#{$dp-ns}preset {
+                    color: themed('color-text');
+                    border-bottom: 1px solid themed('color-border-primary');
+                    white-space: nowrap;
                     &:not(.#{$dp-ns}no-presets) {
                         @extend .#{$dp-ns}hover-date;
                     }
-                    display: grid;
-                    grid-template-columns: auto auto;
-                    background: themed('color-secondary');
-                    grid-gap: 5px;
-                    padding: 5px;
-                    .#{$dp-ns}preset-name {
-                        font-size: 14px;
-                    }
-                    .#{$dp-ns}preset-value {
-                        text-align: right;
-                    }
+                }
+                .#{$dp-ns}round-btns {
+                    color: themed('color-text');
+                    @extend .#{$dp-ns}hover-date;
+                }
+                .#{$dp-ns}presets-header {
+                    border-bottom: 2px solid themed('color-header-black-white');
+                    color: themed('color-header-text-black-white');
+                    font-weight: bold;
                 }
             }
         }
-        
+
         .#{$dp-ns}hover-date {
             cursor: pointer;
             &:hover {
                 background: rgba(themed('color-dp-hover'), 0.8);
             }
         }
-        
+
         .#{$dp-ns}disabled {
             text-decoration: line-through !important;
             cursor: not-allowed !important;
             color: themed('color-header-text');
         }
-        
+
         .#{dp-ns}btn {
             background: themed('color-bg-light-gray');
             color: grey;

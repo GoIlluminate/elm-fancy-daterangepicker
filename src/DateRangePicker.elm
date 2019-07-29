@@ -53,7 +53,6 @@ import DateRangePicker.Common.Internal
         , padMonthLeft
         , padMonthRight
         , prepareCalendarRange
-        , renderDaysOfWeek
         )
 import DateRangePicker.Date
     exposing
@@ -72,7 +71,12 @@ import Html
         , div
         , i
         , span
+        , table
+        , tbody
+        , td
         , text
+        , thead
+        , tr
         )
 import Html.Attributes as Attrs
 import Html.Events
@@ -94,7 +98,6 @@ type Msg
     | DoNothing
     | Click
     | Reset
-    | TogglePresets Tab
     | HoverDay Date
     | OnLeaveHover
 
@@ -113,7 +116,6 @@ type alias Model =
     , presets : List Preset
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
-    , selectedTab : Tab
     , calendarRange : CalendarRange
     }
 
@@ -161,13 +163,6 @@ type PresetOption
     | CustomOnly
     | AllPresets
     | NoPresets
-
-
-{-| A type representing what tab is selected.
--}
-type Tab
-    = Calendar
-    | Presets
 
 
 {-| A type representing what the value in PresetSettings is measured in.
@@ -502,7 +497,6 @@ initModel =
     , presets = []
     , enabledDateRange = Nothing
     , settings = defaultSettings
-    , selectedTab = Calendar
     , calendarRange = prepareCalendarRange FullCalendar initDate
     }
 
@@ -599,7 +593,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                     in
                     ( { model
                         | open = not model.open
-                        , selectedTab = Calendar
                         , calendarRange = newCalendarRange
                         , startDate = startDate
                         , endDate = endDate
@@ -613,7 +606,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                     )
 
                 SetDateRange dateRange ->
-                    ( { model | startDate = Nothing, endDate = Nothing, selectedTab = Calendar }
+                    ( { model | startDate = Nothing, endDate = Nothing }
                         |> selectDate dateRange.start
                         |> selectDate dateRange.end
                     , Cmd.none
@@ -628,14 +621,6 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , showPresets = False
                       }
                     , initCmd
-                    )
-
-                TogglePresets tab ->
-                    ( { model
-                        | showPresets = not model.showPresets
-                        , selectedTab = tab
-                      }
-                    , Cmd.none
                     )
 
                 HoverDay date ->
@@ -952,33 +937,21 @@ view (DateRangePicker ({ open, settings } as model)) =
 dateRangePicker : Model -> Html Msg
 dateRangePicker model =
     let
-        content =
-            if model.selectedTab == Presets then
-                renderPresets model
-
-            else
-                renderCalendar model
-
-        tabClass =
-            case model.selectedTab of
-                Calendar ->
-                    "elm-fancy-daterangepicker--calendar-tab"
-
-                _ ->
-                    "elm-fancy-daterangepicker--presets-tab"
-
         calendarDisplayClass =
             "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--wrapper elm-fancy-daterangepicker--box-shadow"
-        , Attrs.class tabClass
-        , Attrs.class calendarDisplayClass
+        [ Attrs.classList
+            [ ( "elm-fancy-daterangepicker--wrapper", True )
+            , ( "elm-fancy-daterangepicker--calendar-tab", True )
+            , ( calendarDisplayClass, True )
+            ]
         , onClickNoDefault DoNothing
         ]
-        [ renderHeader model
-        , content
-        , renderFooter model
+        [ div [ Attrs.class "elm-fancy-daterangepicker--box-shadow" ]
+            [ renderCalendar model
+            ]
+        , renderPresets model
         ]
 
 
@@ -1015,76 +988,19 @@ renderCalendar model =
         ]
 
 
-{-| An opaque function gets the Html Msg for the header of the daterange picker.
--}
-renderHeader : Model -> Html Msg
-renderHeader model =
-    let
-        getSelectedClass b =
-            if b then
-                "selected"
-
-            else
-                ""
-
-        showPresets =
-            model.settings.showPresetsTab
-
-        presetsTab =
-            if showPresets then
-                div
-                    [ onClickNoDefault <| TogglePresets Presets
-                    , Attrs.class "elm-fancy-daterangepicker--presets-btn"
-                    , Attrs.class <| getSelectedClass <| model.selectedTab == Presets
-                    ]
-                    [ text "Presets" ]
-
-            else
-                text ""
-    in
-    div
-        [ Attrs.classList
-            [ ( "elm-fancy-daterangepicker--header", True )
-            , ( "elm-fancy-daterangepicker--show-presets", showPresets )
-            , ( "elm-fancy-daterangepicker--hide-presets", not showPresets )
-            ]
-        ]
-        [ div
-            [ if showPresets then
-                onClickNoDefault <| TogglePresets Calendar
-
-              else
-                Attrs.class ""
-            , Attrs.class "elm-fancy-daterangepicker--presets-btn"
-            , Attrs.class <| getSelectedClass <| model.selectedTab == Calendar
-            ]
-            [ text "Calendar" ]
-        , presetsTab
-        ]
-
-
-{-| An opaque function gets the Html Msg for the footer of the daterange picker.
--}
-renderFooter : Model -> Html Msg
-renderFooter model =
-    case model.selectedTab of
-        Calendar ->
-            div [ Attrs.class "elm-fancy-daterangepicker--footer" ]
-                [ div [ Attrs.class "round-btns", onClickNoDefault Reset ] [ text "Reset" ]
-                , div [ Attrs.class "round-btns", onClickNoDefault Save ] [ text "Save" ]
-                ]
-
-        _ ->
-            span [] []
-
-
 {-| An opaque function that gets the Html Msg for the presets of the daterange picker.
 -}
 renderPresets : Model -> Html Msg
 renderPresets model =
     div [ Attrs.class "elm-fancy-daterangepicker--presets" ] <|
         if List.length model.presets > 0 then
-            List.map (renderPreset model) model.presets
+            List.concat
+                [ [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Presets" ] ]
+                , List.map (renderPreset model) model.presets
+                , [ div [ Attrs.class "elm-fancy-daterangepicker--round-btns", onClickNoDefault Reset ] [ text "Reset" ]
+                  , div [ Attrs.class "elm-fancy-daterangepicker--round-btns", onClickNoDefault Save ] [ text "Save" ]
+                  ]
+                ]
 
         else
             noPresets
@@ -1114,7 +1030,6 @@ renderPreset model preset =
         , setDateRange_
         ]
         [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text preset.name ]
-        , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] [ text <| model.settings.formatDateRange preset.dateRange ]
         ]
 
 
@@ -1284,8 +1199,8 @@ renderMonth model m =
                     else
                         onClickNoDefault <| SetDateRange <| mkDateRange (startOfMonth a) (endOfMonth a)
 
-                monthDiv =
-                    div
+                header =
+                    thead
                         [ Attrs.classList
                             [ ( "elm-fancy-daterangepicker--month-label", True )
                             , ( "elm-fancy-daterangepicker--disabled", isDisabledMonth )
@@ -1297,13 +1212,11 @@ renderMonth model m =
                                 month a
                         ]
             in
-            div [ Attrs.class "elm-fancy-daterangepicker--month" ] <|
-                List.concat
-                    [ [ monthDiv ]
-                    , renderDaysOfWeek
-                    , days
-                    , padMonthRight (42 - List.length days)
-                    ]
+            table [ Attrs.class "elm-fancy-daterangepicker--month-wrapper" ] <|
+                [ header
+                , List.concat [ days, padMonthRight (42 - List.length days) ]
+                    |> tbody [ Attrs.class "elm-fancy-daterangepicker--month" ]
+                ]
 
         _ ->
             text ""
@@ -1341,7 +1254,7 @@ renderDay model date =
             else
                 onClickNoDefault <| SelectDate date
     in
-    div
+    td
         [ Attrs.classList
             [ ( "elm-fancy-daterangepicker--day", True )
             , ( "elm-fancy-daterangepicker--today", isToday_ )

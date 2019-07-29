@@ -3,6 +3,7 @@
 $themes: (
   light: (
     color-header-text: $illum-color-gray,
+    color-header-black-white: rgb(100,100,100),
     color-primary: $illum-color-blue,
     color-dark-onhover: $illum-color-dark-blue,
     color-secondary: $illum-color-white,
@@ -24,6 +25,7 @@ $themes: (
   ),
   dark: (
     color-header-text: $illum-color-gray,
+    color-header-black-white: rgb(200,200,200),
     color-primary: $illum-color-blue,
     color-dark-onhover: $illum-color-dark-blue,
     color-secondary: rgb(33,33,33),

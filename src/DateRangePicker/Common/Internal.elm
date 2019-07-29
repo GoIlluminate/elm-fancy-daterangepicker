@@ -54,6 +54,7 @@ import Html
         ( Html
         , div
         , span
+        , td
         , text
         )
 import Html.Attributes as Attrs
@@ -243,7 +244,7 @@ padMonthLeft d =
             dd - 1
 
         go =
-            div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
+            td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
     List.repeat n go
 
@@ -256,7 +257,7 @@ padMonthRight : Int -> List (Html msg)
 padMonthRight n =
     let
         go =
-            div [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
+            td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
     in
     List.repeat n go
 

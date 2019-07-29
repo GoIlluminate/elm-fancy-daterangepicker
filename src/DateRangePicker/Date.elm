@@ -226,25 +226,25 @@ dayToInt : Weekday -> Int
 dayToInt day =
     case day of
         Sun ->
-            1
+            0
 
         Mon ->
-            2
+            1
 
         Tue ->
-            3
+            2
 
         Wed ->
-            4
+            3
 
         Thu ->
-            5
+            4
 
         Fri ->
-            6
+            5
 
         Sat ->
-            7
+            6
 
 
 {-| A function that takes a Month and returns it as an Int.
@@ -257,40 +257,40 @@ monthToInt : Month -> Int
 monthToInt month =
     case month of
         Jan ->
-            1
+            0
 
         Feb ->
-            2
+            1
 
         Mar ->
-            3
+            2
 
         Apr ->
-            4
+            3
 
         May ->
-            5
+            4
 
         Jun ->
-            6
+            5
 
         Jul ->
-            7
+            6
 
         Aug ->
-            8
+            7
 
         Sep ->
-            9
+            8
 
         Oct ->
-            10
+            9
 
         Nov ->
-            11
+            10
 
         Dec ->
-            12
+            11
 
 
 {-| A function that returns the number of days in the given month for the given year.
