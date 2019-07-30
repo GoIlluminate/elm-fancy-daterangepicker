@@ -237,16 +237,27 @@ day of the week.
 padMonthLeft : Date -> List (Html msg)
 padMonthLeft d =
     let
-        dd =
-            dayToInt <| Date.weekday d
+        lastPosition =
+            if emptySpots >= 0 then
+                [ getFiller True ]
 
-        n =
-            dd - 1
+            else
+                []
 
-        go =
-            td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
+        getFiller b =
+            td
+                [ Attrs.classList
+                    [ ( "elm-fancy-daterangepicker--day-filler", True )
+                    , ( "border-b", True )
+                    , ( "border-r", b )
+                    ]
+                ]
+                []
+
+        emptySpots =
+            (Date.weekday d |> dayToInt) - 1
     in
-    List.repeat n go
+    List.repeat emptySpots (getFiller False) ++ lastPosition
 
 
 {-| An opaque function that pads the end of the month with filler days in order to fill
@@ -255,11 +266,8 @@ calendar the same size.
 -}
 padMonthRight : Int -> List (Html msg)
 padMonthRight n =
-    let
-        go =
-            td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
-    in
-    List.repeat n go
+    td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
+        |> List.repeat n
 
 
 {-| An opaque function that makes the EnabledDateRange from settings.
@@ -340,7 +348,7 @@ renderDaysOfWeek =
             7 :: List.range 1 6
 
         go n =
-            div [ Attrs.class "elm-fancy-daterangepicker--dow" ]
+            td [ Attrs.class "elm-fancy-daterangepicker--dow" ]
                 [ text <|
                     formatDay <|
                         numberToWeekday n
