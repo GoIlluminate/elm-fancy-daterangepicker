@@ -21,21 +21,18 @@
             position:relative;
             margin-bottom: 10px;
             line-height: 1.5;
-            border-bottom: 1px solid themed('color-box-shadow');
+            border-bottom: 1px solid themed('color-grey-white');
             align-self: center;
             display: grid;
             grid-template-columns: 1fr 25px;
         }
         .#{$dp-ns}wrapper {
-            padding: 0px;
-            margin: 0px;
+            padding: 0;
+            margin: 0;
             font-size: 12px;
             display: flex;
             &.#{$dp-ns}calendar-tab {
                 width: min-content;
-            }
-            &.#{$dp-ns}presets-tab {
-                //width: 400px;
             }
             .#{$dp-ns}calendar {
                 -webkit-touch-callout: none; /* iOS Safari */
@@ -49,7 +46,7 @@
                     grid-template-columns: 25px 1fr 25px;
                     text-align: center;
                     background: themed('color-bg-light-gray');
-                    color: themed('color-text-black-white');
+                    color: themed('color-grey-white');
                     padding: 5px;
                     border-top: 1px solid themed('color-border-primary');
                     border-bottom: 1px solid themed('color-border-primary');
@@ -110,9 +107,9 @@
                 .#{$dp-ns}month-label {
                     align-items: center;
                     justify-content: center;
-                    background: themed('color-primary');
+                    background: themed('color-primary-dark');
+                    color: themed('color-white');
                     display: flex;
-
                     &:not(.#{$dp-ns}disabled) {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -137,10 +134,10 @@
                     grid-template-rows: repeat(6, 1fr);
                     grid-template-columns: repeat(7, 1fr);
                     .border-b {
-                        border-bottom: solid .5px themed('color-border');
+                        border-bottom: solid 1px themed('color-border');
                     }
                     .border-r {
-                        border-right: solid .5px themed('color-border');
+                        border-right: solid 1px themed('color-border');
                     }
                     .#{$dp-ns}day-filler {
                         background: themed('color-secondary');
@@ -163,17 +160,17 @@
                     }
                     .#{$dp-ns}start {
                         .#{$dp-ns}bubble {
-                            border-radius: 4px 0 0 4px;
+                            border-radius: 3px 0 0 3px;
                         }
                     }
                     .#{$dp-ns}end {
                         &.#{$dp-ns}start {
                             .#{$dp-ns}bubble {
-                                border-radius: 4px;
+                                border-radius: 3px;
                             }
                         }
                         .#{$dp-ns}bubble {
-                            border-radius: 0 4px 4px 0;
+                            border-radius: 0 3px 3px 0;
                         }
                     }
                     .#{$dp-ns}start, .#{$dp-ns}end {
@@ -190,9 +187,6 @@
                         align-items: center;
                         justify-content: center;
                         height: 100%;
-                        &.#{dp-ns}center-text {
-                            align-self: center;
-                        }
                     }
                 }
             }
@@ -235,8 +229,11 @@
                 display: flex;
                 height: min-content;
                 flex-direction: column;
-                background: themed('color-bg-light-gray');
+                background: themed('color-secondary');
+                margin-top: 30px;
+                @extend .#{$dp-ns}box-shadow;
                 .#{$dp-ns}preset {
+                    margin-left: 3px;
                     color: themed('color-text');
                     border-bottom: 1px solid themed('color-border-primary');
                     white-space: nowrap;
@@ -249,9 +246,9 @@
                     @extend .#{$dp-ns}hover-date;
                 }
                 .#{$dp-ns}presets-header {
-                    border-bottom: 2px solid themed('color-header-black-white');
-                    border-top: 1px solid themed('color-border-primary');
-                    color: themed('color-header-text-black-white');
+                    color: themed('color-header-black-white');
+                    border-bottom: 2px solid themed('color-border-primary');
+                    font-size: 13px;
                     font-weight: bold;
                 }
             }
@@ -270,26 +267,15 @@
             color: themed('color-header-text');
         }
 
-        .#{dp-ns}btn {
-            background: themed('color-bg-light-gray');
-            color: grey;
-            border-bottom: themed('color-primary');
-            padding:3px 8px 3px 8px;
-            cursor: pointer;
-            .fa-calendar {
-                color: themed('color-primary');
-            }
-        }
-
         .#{$dp-ns}today {
             font-weight: bold;
             text-decoration: underline;
         }
 
         .#{$dp-ns}box-shadow {
-            -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
-            -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
-            box-shadow:         0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
+            -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-grey-white'),0.4), 0 0 0 1px rgba(themed('color-grey-white'),0.08);
+            -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-grey-white'),0.4), 0 0 0 1px rgba(themed('color-grey-white'),0.08);
+            box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
         }
     }
 }

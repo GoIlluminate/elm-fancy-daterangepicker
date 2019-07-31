@@ -8,7 +8,7 @@ body, html {
   height: 100vh;
   width: 100vw;
   display: grid;
-  grid-template-rows: 75px 1fr 1fr;
+  grid-template-rows: 75px 1fr;
   grid-template-columns: 1fr;
   .calendar-display-options--container {
     display: grid;

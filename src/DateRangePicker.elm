@@ -1,7 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
-    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView, setShowPresetsTab
+    , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
     )
 
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView, setShowPresetsTab
+@docs Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
 
 
 ## Presets
@@ -31,30 +31,11 @@ import Date
         , month
         , year
         )
-import DateRangePicker.Common
-    exposing
-        ( CalendarDisplay(..)
-        , DateRange
-        , RestrictedDateRange(..)
-        , calendarDisplayToClassStr
-        , inRange
-        , mkDateRange
-        )
-import DateRangePicker.Common.Internal exposing (CalendarRange, EnabledDateRange, Months, chunksOfLeft, isDisabledDate, mkEnabledDateRangeFromRestrictedDateRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, prepareCalendarRange, renderDaysOfWeek)
-import DateRangePicker.Date exposing (dateEqualTo, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo, endOfMonth, formatDate, formatMonth, initDate, startOfMonth)
-import Html
-    exposing
-        ( Html
-        , div
-        , i
-        , span
-        , table
-        , tbody
-        , td
-        , text
-        , thead
-        , tr
-        )
+import DateRangePicker.Helper exposing (calendarDisplayToClassStr, chunksOfLeft, dateEqualTo, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo, dayToInt, endOfMonth, formatDate, formatMonth, inRange, initDate, isDisabledDate, mkEnabledDateRangeFromRestrictedDateRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, prepareCalendarRange, renderDaysOfWeek, startOfMonth)
+import DateRangePicker.Types exposing (CalendarDisplay(..), CalendarRange, DateRange, EnabledDateRange, Months, RestrictedDateRange(..))
+import DateRangePicker.Update
+import DateRangePicker.View
+import Html exposing (Html, div, i, span, table, tbody, td, text, thead, tr)
 import Html.Attributes as Attrs
 import Html.Events
 import Json.Decode as Json
@@ -70,10 +51,9 @@ type Msg
     | NextCalendarRange
     | SelectDate Date
     | SetDateRange DateRange
-    | Close
     | Done
     | DoNothing
-    | Click
+    | OpenDateRange
     | Clear
     | HoverDay Date
     | OnLeaveHover
@@ -110,7 +90,6 @@ type alias Settings =
     , formatDateRange : DateRange -> String
     , calendarDisplay : CalendarDisplay
     , inputView : Maybe (String -> List (Html Msg))
-    , showPresetsTab : Bool
     }
 
 
@@ -287,7 +266,7 @@ mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
                     today
     in
     { name = name
-    , dateRange = mkDateRange start end
+    , dateRange = { start = start, end = end }
     }
 
 
@@ -305,7 +284,7 @@ mkPresetFromDateRange name dateRange =
 mkPresetFromDates : String -> Date -> Date -> Preset
 mkPresetFromDates name start end =
     { name = name
-    , dateRange = mkDateRange start end
+    , dateRange = { start = start, end = end }
     }
 
 
@@ -434,7 +413,6 @@ defaultSettings =
     , formatDateRange = formatDateRange
     , calendarDisplay = FullCalendar
     , inputView = Nothing
-    , showPresetsTab = True
     }
 
 
@@ -553,12 +531,9 @@ update msg (DateRangePicker ({ settings } as model)) =
                     ( { model | calendarRange = nextCalendarRange }, Cmd.none )
 
                 Done ->
-                    ( saveSelection model, Cmd.none )
+                    ( updateDateRange { model | open = False }, Cmd.none )
 
-                Close ->
-                    ( { model | open = False, startDate = Maybe.map .start model.dateRange, endDate = Maybe.map .end model.dateRange }, Cmd.none )
-
-                Click ->
+                OpenDateRange ->
                     let
                         ( newCalendarRange, startDate, endDate ) =
                             case model.dateRange of
@@ -569,7 +544,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                     ( model.calendarRange, model.startDate, model.endDate )
                     in
                     ( { model
-                        | open = not model.open
+                        | open = True
                         , calendarRange = newCalendarRange
                         , startDate = startDate
                         , endDate = endDate
@@ -583,7 +558,18 @@ update msg (DateRangePicker ({ settings } as model)) =
                     )
 
                 SetDateRange dateRange ->
-                    ( { model | startDate = Nothing, endDate = Nothing }
+                    let
+                        calendarDateRange =
+                            { start = model.calendarRange.start, end = model.calendarRange.end }
+
+                        newCalendarRange =
+                            if inRange dateRange.start calendarDateRange || inRange dateRange.end calendarDateRange then
+                                model.calendarRange
+
+                            else
+                                prepareCalendarRange model.settings.calendarDisplay dateRange.start
+                    in
+                    ( { model | startDate = Nothing, endDate = Nothing, calendarRange = newCalendarRange }
                         |> selectDate dateRange.start
                         |> selectDate dateRange.end
                     , Cmd.none
@@ -828,20 +814,6 @@ setInputView fn (DateRangePicker model) =
     DateRangePicker { model | settings = newSettings }
 
 
-{-| Sets the showPresetsTab option for the daterangepicker
--}
-setShowPresetsTab : Bool -> DateRangePicker -> DateRangePicker
-setShowPresetsTab bool (DateRangePicker model) =
-    let
-        settings =
-            model.settings
-
-        newSettings =
-            { settings | showPresetsTab = bool }
-    in
-    DateRangePicker { model | settings = newSettings }
-
-
 {-| Sets the settings for the daterange picker
 -}
 setSettings : Settings -> DateRangePicker -> DateRangePicker
@@ -873,7 +845,7 @@ view (DateRangePicker ({ open, settings } as model)) =
         dateInputAttrs =
             List.concat
                 [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
-                  , onClickNoDefault Click
+                  , onClickNoDefault OpenDateRange
                   , Attrs.class "elm-fancy-daterangepicker--date-input"
                   ]
                 , settings.inputAttributes
@@ -1027,10 +999,12 @@ renderDateRangePickerHeader model =
                 DoNothing
 
             else
-                SetDateRange <| mkDateRange start end
+                SetDateRange <| { start = start, end = end }
     in
     div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
+
+        --        , input [] [ text "Select year" ]
         , div
             [ Attrs.classList
                 [ ( "elm-fancy-daterangepicker--range-btn", True )
@@ -1115,7 +1089,7 @@ renderQuarter model months =
                                         onClickNoDefault DoNothing
 
                                     else
-                                        onClickNoDefault <| SetDateRange <| mkDateRange start end
+                                        onClickNoDefault <| SetDateRange <| { start = start, end = end }
 
                                 qtrLabel =
                                     td
@@ -1174,7 +1148,7 @@ renderMonth includeWeeks model m =
                         onClickNoDefault DoNothing
 
                     else
-                        onClickNoDefault <| SetDateRange <| mkDateRange (startOfMonth a) (endOfMonth a)
+                        onClickNoDefault <| SetDateRange <| { start = startOfMonth a, end = endOfMonth a }
 
                 listOfWeeks =
                     if includeWeeks then
@@ -1216,7 +1190,7 @@ renderDay : Model -> Date -> Html Msg
 renderDay model date =
     let
         dayOfWeek =
-            Date.weekday date |> DateRangePicker.Date.dayToInt
+            Date.weekday date |> dayToInt
 
         dayOfMonth =
             day date
@@ -1257,18 +1231,16 @@ renderDay model date =
             , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
             , ( "elm-fancy-daterangepicker--start", isStart_ )
             , ( "elm-fancy-daterangepicker--end", isEnd_ )
-            , ( "border-b", dayOfMonth - dayOfWeek <= 30 )
+            , ( "border-b", dayOfMonth - dayOfWeek < 30 )
             , ( "border-r", dayOfWeek /= 6 )
             ]
         , setDate_
         , Html.Events.onMouseOver <| HoverDay date
         ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
-            [ div [ Attrs.class "elm-fancy-daterangepicker--center-text" ]
-                [ text <|
-                    String.fromInt <|
-                        day date
-                ]
+        [ td [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
+            [ text <|
+                String.fromInt <|
+                    day date
             ]
         ]
 
@@ -1353,20 +1325,20 @@ getNewDateRange model dateRange =
                 ( Just start, Just end ) ->
                     let
                         newStart =
-                            if inRange dateRange.start <| mkDateRange start end then
+                            if inRange dateRange.start <| { start = start, end = end } then
                                 dateRange.start
 
                             else
                                 start
 
                         newEnd =
-                            if inRange dateRange.end <| mkDateRange start end then
+                            if inRange dateRange.end <| { start = start, end = end } then
                                 dateRange.end
 
                             else
                                 end
                     in
-                    mkDateRange newStart newEnd
+                    { start = newStart, end = newEnd }
 
                 ( Just start, Nothing ) ->
                     let
@@ -1384,7 +1356,7 @@ getNewDateRange model dateRange =
                             else
                                 start
                     in
-                    mkDateRange newStart newEnd
+                    { start = newStart, end = newEnd }
 
                 ( Nothing, Just end ) ->
                     let
@@ -1402,7 +1374,7 @@ getNewDateRange model dateRange =
                             else
                                 end
                     in
-                    mkDateRange newStart newEnd
+                    { start = newStart, end = newEnd }
 
                 ( Nothing, Nothing ) ->
                     dateRange
@@ -1452,28 +1424,27 @@ selectDate date model =
 
         ( Just s, _ ) ->
             if dateGreaterThanOrEqualTo date s then
-                { model | endDate = Just date }
+                { model | endDate = Just date } |> updateDateRange
 
             else
-                { model | startDate = Just date, endDate = Just s }
+                { model | startDate = Just date, endDate = Just s } |> updateDateRange
 
 
 {-| An opaque function that updates the dateRange based on values
 of startDate and endDate
 -}
-saveSelection : Model -> Model
-saveSelection ({ startDate, endDate } as model) =
-    (\model_ -> { model_ | open = False }) <|
-        case ( startDate, endDate ) of
-            ( Just s, Just e ) ->
-                if dateLessThanOrEqualTo s e then
-                    { model | dateRange = Just { start = s, end = e } }
+updateDateRange : Model -> Model
+updateDateRange ({ startDate, endDate } as model) =
+    case ( startDate, endDate ) of
+        ( Just s, Just e ) ->
+            if dateLessThanOrEqualTo s e then
+                { model | dateRange = Just { start = s, end = e } }
 
-                else
-                    { model | dateRange = Just { start = e, end = s } }
+            else
+                { model | dateRange = Just { start = e, end = s } }
 
-            ( Just s, Nothing ) ->
-                { model | dateRange = Just { start = s, end = s } }
+        ( Just s, Nothing ) ->
+            { model | dateRange = Just { start = s, end = s } }
 
-            ( Nothing, _ ) ->
-                model
+        ( Nothing, _ ) ->
+            model
