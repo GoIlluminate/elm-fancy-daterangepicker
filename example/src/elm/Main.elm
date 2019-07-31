@@ -5,16 +5,8 @@ import Date
     exposing
         ( Date
         )
-import DateRangePicker
-    exposing
-        ( defaultSettings
-        , getDateRange
-        , setCalendarDisplay
-        , setInputIcon
-        , setSettings
-        )
-import DateRangePicker.Helper exposing (calendarDisplayToDisplayStr, formatDate)
-import DateRangePicker.Types exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..))
+import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
+import DateRangePicker.Helper exposing (formatDate)
 import Html exposing (Html, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
@@ -105,10 +97,10 @@ update msg ({ dateRangePicker } as model) =
                             { model
                                 | dateRangePicker = newDateRangePicker
                                 , dateRange = newDateRange
-                                , yearsInRange = Just <| DateRangePicker.Helper.yearsInRange dr
-                                , monthsInRange = Just <| DateRangePicker.Helper.monthsInRange dr
-                                , weeksInRange = Just <| DateRangePicker.Helper.weeksInRange dr
-                                , daysInRange = Just <| DateRangePicker.Helper.daysInRange dr
+                                , yearsInRange = Just <| DateRangePicker.yearsInRange dr
+                                , monthsInRange = Just <| DateRangePicker.monthsInRange dr
+                                , weeksInRange = Just <| DateRangePicker.weeksInRange dr
+                                , daysInRange = Just <| DateRangePicker.daysInRange dr
                             }
             in
             ( updatedModel
@@ -235,3 +227,19 @@ subscriptions model =
     Sub.batch
         [ Sub.map SetDateRangePicker <| DateRangePicker.subscriptions model.dateRangePicker
         ]
+
+
+calendarDisplayToDisplayStr : CalendarDisplay -> String
+calendarDisplayToDisplayStr calendarDisplay =
+    case calendarDisplay of
+        FullCalendar ->
+            "FullCalendar"
+
+        ThreeMonths ->
+            "ThreeMonths"
+
+        TwoMonths ->
+            "TwoMonths"
+
+        OneMonth ->
+            "OneMonth"

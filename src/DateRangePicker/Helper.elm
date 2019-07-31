@@ -1,7 +1,7 @@
-module DateRangePicker.Helper exposing (calendarDisplayToClassStr, calendarDisplayToDisplayStr, chunksOfLeft, dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, dateTuple, dayToInt, daysInMonth, daysInRange, endOfMonth, endOfQuarter, formatDate, formatDay, formatMonth, getQuarter, inRange, initDate, isDisabledDate, isLeapYear, mkEnabledDateRange, mkEnabledDateRangeFromRestrictedDateRange, monthAbbr, monthToInt, monthsInRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, prepareCalendarRange, renderDaysOfWeek, startOfMonth, startOfQuarter, weeksInRange, yearsInRange)
+module DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, dateTuple, dayToInt, daysInMonth, daysInRange, endOfMonth, endOfQuarter, formatDate, formatDay, formatMonth, getQuarter, inRange, initDate, isDisabledDate, isLeapYear, mkDateRange, monthAbbr, monthToInt, monthsInRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth, startOfQuarter, weeksInRange, yearsInRange)
 
 import Date exposing (Date, Unit(..), format, fromCalendarDate)
-import DateRangePicker.Types exposing (CalendarDisplay(..), CalendarRange, DateRange, EnabledDateRange, Quarter, RestrictedDateRange(..), Year)
+import DateRangePicker.Types exposing (CalendarRange, DateRange, EnabledDateRange, Quarter, Year)
 import Html exposing (Html, div, span, td, text)
 import Html.Attributes as Attrs
 import Html.Events as Events
@@ -175,8 +175,6 @@ endOfMonth date =
     fromCalendarDate y m (daysInMonth y m)
 
 
-{-| A function that takes a Date and returns the date representing the first date of the quarter that the passed in date belongs to.
--}
 startOfQuarter : Date -> Date
 startOfQuarter date =
     let
@@ -427,76 +425,34 @@ getQuarter date =
 -----------------------------------------------------------------------------------------------------------------------
 
 
-{-| A function to check if a given date is within a
-given dateRange.
--}
+mkDateRange : Date -> Date -> DateRange
+mkDateRange start end =
+    { start = start, end = end }
+
+
 inRange : Date -> DateRange -> Bool
 inRange date { start, end } =
     dateLessThanOrEqualTo start date && dateGreaterThanOrEqualTo end date
 
 
-{-| A function that gets the class string for the CalendarDisplay
--}
-calendarDisplayToClassStr : CalendarDisplay -> String
-calendarDisplayToClassStr calendarDisplay =
-    case calendarDisplay of
-        FullCalendar ->
-            "full-calendar"
-
-        ThreeMonths ->
-            "three-months"
-
-        TwoMonths ->
-            "two-months"
-
-        OneMonth ->
-            "one-month"
-
-
-{-| A function that gets the display string for the CalendarDisplay
--}
-calendarDisplayToDisplayStr : CalendarDisplay -> String
-calendarDisplayToDisplayStr calendarDisplay =
-    case calendarDisplay of
-        FullCalendar ->
-            "FullCalendar"
-
-        ThreeMonths ->
-            "ThreeMonths"
-
-        TwoMonths ->
-            "TwoMonths"
-
-        OneMonth ->
-            "OneMonth"
-
-
-{-| A function that returns the number of years as a whole number in the daterange
--}
 yearsInRange : DateRange -> Int
 yearsInRange dateRange =
-    Date.diff Years dateRange.start dateRange.end
+    Date.diff Date.Years dateRange.start dateRange.end
 
 
-{-| A function that returns the number of months as a whole number in the daterange
--}
 monthsInRange : DateRange -> Int
 monthsInRange dateRange =
-    Date.diff Months dateRange.start dateRange.end
+    Date.diff Date.Months dateRange.start dateRange.end
 
 
-{-| A function that returns the number of weeks as a whole number in the daterange
--}
 weeksInRange : DateRange -> Int
 weeksInRange dateRange =
-    Date.diff Weeks dateRange.start dateRange.end
+    Date.diff Date.Weeks dateRange.start dateRange.end
 
 
-{-| A function that returns the number of days as a whole number in the daterange
--}
 daysInRange : DateRange -> Int
 daysInRange dateRange =
-    Date.diff Days dateRange.start dateRange.end
+    Date.diff Date.Days dateRange.start dateRange.end
 
 
 
@@ -524,60 +480,6 @@ isDisabledDate enabledDateRange date =
 
                 ( Nothing, Nothing ) ->
                     False
-
-
-{-| An opaque function that prepares the full year based on the given date.
--}
-prepareCalendarRange : CalendarDisplay -> Date -> CalendarRange
-prepareCalendarRange calendarDisplay date =
-    let
-        yr =
-            Date.year date
-
-        ( start, end ) =
-            case calendarDisplay of
-                FullCalendar ->
-                    ( fromCalendarDate yr Jan 1
-                    , fromCalendarDate yr Dec 31
-                    )
-
-                ThreeMonths ->
-                    ( startOfQuarter date, endOfQuarter date )
-
-                TwoMonths ->
-                    ( startOfMonth date, endOfMonth <| Date.add Date.Months 1 date )
-
-                OneMonth ->
-                    ( startOfMonth date, endOfMonth date )
-
-        dates =
-            Date.range Date.Day 1 start (Date.add Date.Days 1 end)
-
-        name =
-            case calendarDisplay of
-                FullCalendar ->
-                    String.fromInt yr
-
-                ThreeMonths ->
-                    String.join " - "
-                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
-                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
-                        ]
-
-                TwoMonths ->
-                    String.join " - "
-                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
-                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
-                        ]
-
-                OneMonth ->
-                    String.join " " [ formatMonth <| Date.month start, String.fromInt yr ]
-
-        months =
-            List.map (\x -> Tuple.first x :: Tuple.second x) <|
-                LE.groupWhile (\x y -> Date.month x == Date.month y) dates
-    in
-    CalendarRange name start end months
 
 
 {-| An opaque function taht pads the month from the left with filler days
@@ -618,75 +520,6 @@ padMonthRight : Int -> List (Html msg)
 padMonthRight n =
     td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
         |> List.repeat n
-
-
-{-| An opaque function that makes the EnabledDateRange from settings.
-
-
-## EnabledDateRange is Nothing if RestrictedDateRange is Off
-
--}
-mkEnabledDateRangeFromRestrictedDateRange : RestrictedDateRange -> Date -> Maybe EnabledDateRange
-mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today =
-    case restrictedDateRange of
-        Off ->
-            mkEnabledDateRange Nothing Nothing
-
-        ToPresent ->
-            mkEnabledDateRange Nothing (Just today)
-
-        FromPresent ->
-            mkEnabledDateRange (Just today) Nothing
-
-        Past ->
-            let
-                yesterday =
-                    Date.add Date.Days -1 today
-            in
-            mkEnabledDateRange Nothing (Just yesterday)
-
-        Future ->
-            let
-                tomorrow =
-                    Date.add Date.Days 1 today
-            in
-            mkEnabledDateRange (Just tomorrow) Nothing
-
-        Between start end ->
-            mkEnabledDateRange (Just start) (Just end)
-
-        To date ->
-            mkEnabledDateRange Nothing (Just date)
-
-        From date ->
-            mkEnabledDateRange (Just date) Nothing
-
-
-{-| An opaque function that makes an EnabledDateRange from two Maybe Dates
--}
-mkEnabledDateRange : Maybe Date -> Maybe Date -> Maybe EnabledDateRange
-mkEnabledDateRange start end =
-    case ( start, end ) of
-        ( Just a, Just b ) ->
-            Just <|
-                { start = Just a
-                , end = Just b
-                }
-
-        ( Just a, Nothing ) ->
-            Just <|
-                { start = Just a
-                , end = Nothing
-                }
-
-        ( Nothing, Just b ) ->
-            Just <|
-                { start = Nothing
-                , end = Just b
-                }
-
-        ( Nothing, Nothing ) ->
-            Nothing
 
 
 {-| An opaque function that gets the Days of the Week Html Msg for the calendar.

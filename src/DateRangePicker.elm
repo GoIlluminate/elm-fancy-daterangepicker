@@ -3,6 +3,7 @@ module DateRangePicker exposing
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
+    , CalendarDisplay(..), DateRange, RestrictedDateRange(..), daysInRange, inRange, mkDateRange, monthAbbr, monthsInRange, startOfQuarter, weeksInRange, yearsInRange
     )
 
 {-| A customizable daterangepicker component.
@@ -31,16 +32,21 @@ import Date
         , month
         , year
         )
-import DateRangePicker.Helper exposing (calendarDisplayToClassStr, chunksOfLeft, dateEqualTo, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo, dayToInt, endOfMonth, formatDate, formatMonth, inRange, initDate, isDisabledDate, mkEnabledDateRangeFromRestrictedDateRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, prepareCalendarRange, renderDaysOfWeek, startOfMonth)
-import DateRangePicker.Types exposing (CalendarDisplay(..), CalendarRange, DateRange, EnabledDateRange, Months, RestrictedDateRange(..))
+import DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo, dayToInt, endOfMonth, formatDate, formatMonth, inRange, initDate, isDisabledDate, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth)
+import DateRangePicker.Types exposing (CalendarRange, EnabledDateRange, Months)
 import DateRangePicker.Update
 import DateRangePicker.View
 import Html exposing (Html, div, i, span, table, tbody, td, text, thead, tr)
 import Html.Attributes as Attrs
 import Html.Events
 import Json.Decode as Json
+import List.Extra as LE
 import Task
 import Time exposing (Month(..), Weekday(..))
+
+
+type alias DateRange =
+    DateRangePicker.Types.DateRange
 
 
 {-| A type representing messages that are passed within the DateRangePicker.
@@ -57,6 +63,44 @@ type Msg
     | Clear
     | HoverDay Date
     | OnLeaveHover
+
+
+{-| A type representing how the calendar will be displayed
+
+  - _FullCalendar_ = the datepicker displays all 12 months when open
+  - _ThreeMonths_ = the datepicker displays 3 months at a time
+  - _TwoMonths_ = the datepicker displays 2 months at a time
+  - _OneMonth_ = the datepicker displays 1 month at a time
+
+-}
+type CalendarDisplay
+    = FullCalendar
+    | ThreeMonths
+    | TwoMonths
+    | OneMonth
+
+
+{-| A type representing a restricted range for the datepicker. All dates not within the restricted date range will be disabled.
+
+  - _Off_ = no restrictions, any date to any date can be chosen.
+  - _ToPresent_ = from any date in the past up to today (including today)
+  - _FromPresent_ = from today to any date in the future
+  - _Past_ = from any date in the past up to yesterday (excluding today)
+  - _Future_ = from tomorrow up to any date in the future
+  - _Between_ date date = only between the two given dates [start - end] (inclusive)
+  - _To_ date = from any date in the past up to the given date (inclusive)
+  - _From_ date = from the given date up to any date in the future (inclusive)
+
+-}
+type RestrictedDateRange
+    = Off
+    | ToPresent
+    | FromPresent
+    | Past
+    | Future
+    | Between Date Date
+    | To Date
+    | From Date
 
 
 {-| The opaque model to be used within the DateRangePicker.
@@ -1438,13 +1482,222 @@ updateDateRange ({ startDate, endDate } as model) =
     case ( startDate, endDate ) of
         ( Just s, Just e ) ->
             if dateLessThanOrEqualTo s e then
-                { model | dateRange = Just { start = s, end = e } }
+                { model | dateRange = Just <| mkDateRange s e }
 
             else
-                { model | dateRange = Just { start = e, end = s } }
+                { model | dateRange = Just <| mkDateRange e s }
 
         ( Just s, Nothing ) ->
-            { model | dateRange = Just { start = s, end = s } }
+            { model | dateRange = Just <| mkDateRange s s }
 
         ( Nothing, _ ) ->
             model
+
+
+{-| A function that creates a DateRange by taking in two dates (start and end).
+This function assumes that start <= end
+-}
+mkDateRange : Date -> Date -> DateRange
+mkDateRange =
+    DateRangePicker.Helper.mkDateRange
+
+
+{-| A function to check if a given date is within a
+given dateRange.
+-}
+inRange : Date -> DateRange -> Bool
+inRange =
+    DateRangePicker.Helper.inRange
+
+
+{-| A function that returns the number of years as a whole number in the daterange
+-}
+yearsInRange : DateRange -> Int
+yearsInRange =
+    DateRangePicker.Helper.yearsInRange
+
+
+{-| A function that returns the number of months as a whole number in the daterange
+-}
+monthsInRange : DateRange -> Int
+monthsInRange =
+    DateRangePicker.Helper.monthsInRange
+
+
+{-| A function that returns the number of weeks as a whole number in the daterange
+-}
+weeksInRange : DateRange -> Int
+weeksInRange =
+    DateRangePicker.Helper.weeksInRange
+
+
+{-| A function that returns the number of days as a whole number in the daterange
+-}
+daysInRange : DateRange -> Int
+daysInRange =
+    DateRangePicker.Helper.daysInRange
+
+
+{-| A function that takes a Date and returns the date representing the first date of the quarter that the passed in date belongs to.
+-}
+startOfQuarter : Date -> Date
+startOfQuarter =
+    DateRangePicker.Helper.startOfQuarter
+
+
+{-| A function that takes a Date and returns the date representing the first date of the quarter that the passed in date belongs to.
+-}
+endOfQuarter : Date -> Date
+endOfQuarter =
+    DateRangePicker.Helper.endOfQuarter
+
+
+{-| An opaque function that prepares the full year based on the given date.
+-}
+prepareCalendarRange : CalendarDisplay -> Date -> CalendarRange
+prepareCalendarRange calendarDisplay date =
+    let
+        yr =
+            Date.year date
+
+        ( start, end ) =
+            case calendarDisplay of
+                FullCalendar ->
+                    ( fromCalendarDate yr Jan 1
+                    , fromCalendarDate yr Dec 31
+                    )
+
+                ThreeMonths ->
+                    ( startOfQuarter date, endOfQuarter date )
+
+                TwoMonths ->
+                    ( startOfMonth date, endOfMonth <| Date.add Date.Months 1 date )
+
+                OneMonth ->
+                    ( startOfMonth date, endOfMonth date )
+
+        dates =
+            Date.range Date.Day 1 start (Date.add Date.Days 1 end)
+
+        name =
+            case calendarDisplay of
+                FullCalendar ->
+                    String.fromInt yr
+
+                ThreeMonths ->
+                    String.join " - "
+                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
+                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
+                        ]
+
+                TwoMonths ->
+                    String.join " - "
+                        [ String.join " " [ monthAbbr <| Date.month start, String.fromInt yr ]
+                        , String.join " " [ monthAbbr <| Date.month end, String.fromInt yr ]
+                        ]
+
+                OneMonth ->
+                    String.join " " [ formatMonth <| Date.month start, String.fromInt yr ]
+
+        months =
+            List.map (\x -> Tuple.first x :: Tuple.second x) <|
+                LE.groupWhile (\x y -> Date.month x == Date.month y) dates
+    in
+    CalendarRange name start end months
+
+
+{-| A function that formats a Month into the abbreviated string.
+
+  - Ex. Jan -> "Jan"
+
+-}
+monthAbbr : Month -> String
+monthAbbr =
+    DateRangePicker.Helper.monthAbbr
+
+
+{-| An opaque function that makes the EnabledDateRange from settings.
+
+
+## EnabledDateRange is Nothing if RestrictedDateRange is Off
+
+-}
+mkEnabledDateRangeFromRestrictedDateRange : RestrictedDateRange -> Date -> Maybe EnabledDateRange
+mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today =
+    case restrictedDateRange of
+        Off ->
+            mkEnabledDateRange Nothing Nothing
+
+        ToPresent ->
+            mkEnabledDateRange Nothing (Just today)
+
+        FromPresent ->
+            mkEnabledDateRange (Just today) Nothing
+
+        Past ->
+            let
+                yesterday =
+                    Date.add Date.Days -1 today
+            in
+            mkEnabledDateRange Nothing (Just yesterday)
+
+        Future ->
+            let
+                tomorrow =
+                    Date.add Date.Days 1 today
+            in
+            mkEnabledDateRange (Just tomorrow) Nothing
+
+        Between start end ->
+            mkEnabledDateRange (Just start) (Just end)
+
+        To date ->
+            mkEnabledDateRange Nothing (Just date)
+
+        From date ->
+            mkEnabledDateRange (Just date) Nothing
+
+
+{-| An opaque function that makes an EnabledDateRange from two Maybe Dates
+-}
+mkEnabledDateRange : Maybe Date -> Maybe Date -> Maybe EnabledDateRange
+mkEnabledDateRange start end =
+    case ( start, end ) of
+        ( Just a, Just b ) ->
+            Just <|
+                { start = Just a
+                , end = Just b
+                }
+
+        ( Just a, Nothing ) ->
+            Just <|
+                { start = Just a
+                , end = Nothing
+                }
+
+        ( Nothing, Just b ) ->
+            Just <|
+                { start = Nothing
+                , end = Just b
+                }
+
+        ( Nothing, Nothing ) ->
+            Nothing
+
+
+{-| A function that gets the class string for the CalendarDisplay
+-}
+calendarDisplayToClassStr : CalendarDisplay -> String
+calendarDisplayToClassStr calendarDisplay =
+    case calendarDisplay of
+        FullCalendar ->
+            "full-calendar"
+
+        ThreeMonths ->
+            "three-months"
+
+        TwoMonths ->
+            "two-months"
+
+        OneMonth ->
+            "one-month"
