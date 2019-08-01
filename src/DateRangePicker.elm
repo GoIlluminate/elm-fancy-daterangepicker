@@ -71,6 +71,8 @@ type Msg
     | EndSelection (Maybe Date)
     | SelectSingleDate Date
     | SelectDateRange DateRange
+    | StartSelectionOnShift String
+    | CancelShift String
     | SelectPresetOption Preset
     | Done
     | DoNothing
@@ -132,7 +134,8 @@ type alias Model =
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
     , calendarRange : CalendarRange
-    , isRange : Bool
+    , isMouseDown : Bool
+    , isShiftDown : Bool
     , selectedPreset : PresetType
     }
 
@@ -598,7 +601,8 @@ initModel =
     , enabledDateRange = Nothing
     , settings = defaultSettings
     , calendarRange = prepareCalendarRange FullCalendar initDate
-    , isRange = False
+    , isMouseDown = False
+    , isShiftDown = False
     , selectedPreset = NoneSelected
     }
 
@@ -628,7 +632,7 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                         newModel =
                             { model
-                                | today = fromCalendarDate (year date |> Debug.log "") (month date |> Debug.log "") (day date |> Debug.log "")
+                                | today = fromCalendarDate (year date) (month date) (day date)
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
                                 , calendarRange = prepareCalendarRange settings.calendarDisplay date
@@ -700,14 +704,14 @@ update msg (DateRangePicker ({ settings } as model)) =
                     )
 
                 StartSelection date ->
-                    ( setStart date { model | isRange = True }
+                    ( setStart date { model | isMouseDown = True }
                         |> setSelectedPreset NoneSelected
                     , Cmd.none
                     )
 
                 EndSelection date ->
                     ( setEnd date model
-                        |> (\model_ -> { model_ | isRange = False })
+                        |> (\model_ -> { model_ | isMouseDown = False })
                         |> setSelectedPreset NoneSelected
                     , Cmd.none
                     )
@@ -731,6 +735,22 @@ update msg (DateRangePicker ({ settings } as model)) =
                         |> setSelectedPreset NoneSelected
                     , Cmd.none
                     )
+
+                StartSelectionOnShift s ->
+                    if s == "Shift" then
+                        ( { model | isShiftDown = True, endDate = Nothing }
+                        , Cmd.none
+                        )
+
+                    else
+                        ( model, Cmd.none )
+
+                CancelShift s ->
+                    if s == "Shift" then
+                        ( { model | isShiftDown = False, endDate = Maybe.map .end model.dateRange }, Cmd.none )
+
+                    else
+                        ( model, Cmd.none )
 
                 Clear ->
                     ( { model
@@ -998,25 +1018,31 @@ setSettings settings (DateRangePicker model) =
 -}
 subscriptions : DateRangePicker -> Sub Msg
 subscriptions (DateRangePicker model) =
-    case ( model.open, model.isRange ) of
-        ( True, True ) ->
-            Sub.batch
-                [ Browser.Events.onClick (Json.succeed Done)
-                , Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
-                , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
+    let
+        shiftSubs =
+            if model.isShiftDown then
+                [ Browser.Events.onKeyUp (Json.field "key" Json.string |> Json.map CancelShift)
+                , Browser.Events.onVisibilityChange (CancelShift "Shift" |> always)
                 ]
 
-        ( False, True ) ->
-            Sub.batch
+            else
+                [ Browser.Events.onKeyDown (Json.field "key" Json.string |> Json.map StartSelectionOnShift)
+                ]
+
+        mouseSubs =
+            if model.isMouseDown then
                 [ Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
                 , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
                 ]
 
-        ( True, False ) ->
-            Browser.Events.onClick (Json.succeed Done)
+            else
+                []
+    in
+    if model.open then
+        Browser.Events.onClick (Json.succeed Done) :: List.concat [ shiftSubs, mouseSubs ] |> Sub.batch
 
-        ( False, False ) ->
-            Sub.none
+    else
+        Sub.none
 
 
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
@@ -1407,14 +1433,17 @@ renderDay model date =
             isEnd model date
 
         setDate_ =
-            case ( isDisabledDate_, model.settings.disableRange ) of
-                ( True, _ ) ->
+            case ( isDisabledDate_, model.settings.disableRange, model.isShiftDown ) of
+                ( True, _, _ ) ->
                     onClickNoDefault DoNothing
 
-                ( _, True ) ->
+                ( False, True, _ ) ->
                     SelectSingleDate date |> onClickNoDefault
 
-                ( _, False ) ->
+                ( False, False, True ) ->
+                    Just date |> EndSelection |> onClickNoDefault
+
+                ( False, False, False ) ->
                     StartSelection date |> DateRangePicker.Helper.mouseDownNoDefault
     in
     td
@@ -1422,7 +1451,7 @@ renderDay model date =
             [ ( "elm-fancy-daterangepicker--day", True )
             , ( "elm-fancy-daterangepicker--today", isToday_ )
             , ( "elm-fancy-daterangepicker--selected-range", isSelectedDateRange_ && not isStart_ && not isEnd_ )
-            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ && model.isRange )
+            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ && (model.isMouseDown || model.isShiftDown) )
             , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
             , ( "elm-fancy-daterangepicker--start", isStart_ )
             , ( "elm-fancy-daterangepicker--end", isEnd_ )
