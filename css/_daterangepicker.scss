@@ -27,6 +27,8 @@
             grid-template-columns: 1fr 25px;
         }
         .#{$dp-ns}wrapper {
+            border-top: 1px solid themed('color-border-primary');
+            border-bottom: 1px solid themed('color-border-primary');
             padding: 0;
             margin: 0;
             font-size: 12px;
@@ -48,7 +50,6 @@
                     background: themed('color-bg-light-gray');
                     color: themed('color-grey-white');
                     padding: 5px;
-                    border-top: 1px solid themed('color-border-primary');
                     border-bottom: 1px solid themed('color-border-primary');
                     .#{$dp-ns}yr-btn, .#{$dp-ns}range-btn {
                         @extend .#{$dp-ns}hover-date;
@@ -190,6 +191,19 @@
                     }
                 }
             }
+            .#{$dp-ns}larger-months {
+                .#{$dp-ns}month-wrapper {
+                    .#{$dp-ns}day {
+                        font-size: 14px;
+                    }
+                    .#{$dp-ns}dow {
+                        font-size: 11px;
+                    }
+                    .#{$dp-ns}month-label {
+                        font-size: 14px;
+                    }
+                }
+            }
             .#{$dp-ns}header {
                 display: grid;
                 &.#{$dp-ns}show-presets {
@@ -227,11 +241,8 @@
                 -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
                 display: flex;
-                height: min-content;
                 flex-direction: column;
                 background: themed('color-secondary');
-                margin-top: 30px;
-                @extend .#{$dp-ns}box-shadow;
                 .#{$dp-ns}preset {
                     margin-left: 3px;
                     color: themed('color-text');
@@ -241,13 +252,27 @@
                         @extend .#{$dp-ns}hover-date;
                     }
                 }
-                .#{$dp-ns}round-btns {
+                .#{$dp-ns}buttons {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    margin-top: auto;
+                }
+                .#{$dp-ns}btn {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 3px;
+                    font-size: 14px;
                     color: themed('color-text');
                     @extend .#{$dp-ns}hover-date;
                 }
                 .#{$dp-ns}presets-header {
+                    height: 28px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
                     color: themed('color-header-black-white');
-                    border-bottom: 2px solid themed('color-border-primary');
+                    border-bottom: 1px solid themed('color-border-primary');
                     font-size: 13px;
                     font-weight: bold;
                 }

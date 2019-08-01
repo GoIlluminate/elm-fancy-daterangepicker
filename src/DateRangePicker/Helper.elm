@@ -1,4 +1,4 @@
-module DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, dateTuple, dayToInt, daysInMonth, daysInRange, endOfMonth, endOfQuarter, formatDate, formatDay, formatMonth, getQuarter, inRange, initDate, isDisabledDate, isLeapYear, mkDateRange, monthAbbr, monthToInt, monthsInRange, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth, startOfQuarter, weeksInRange, yearsInRange)
+module DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, dateTuple, dayToInt, daysInMonth, daysInRange, endOfMonth, endOfQuarter, formatDate, formatDay, formatMonth, getQuarter, inRange, initDate, isDisabledDate, isLeapYear, mkDateRange, monthAbbr, monthToInt, monthsInRange, mouseDownNoDefault, mouseUpNoDefault, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth, startOfQuarter, weeksInRange, yearsInRange)
 
 import Date exposing (Date, Unit(..), format, fromCalendarDate)
 import DateRangePicker.Types exposing (CalendarRange, DateRange, EnabledDateRange, Quarter, Year)
@@ -579,12 +579,32 @@ onClickNoDefault message =
             }
 
 
+{-| An opaque function that prevents default click events.
+-}
+mouseDownNoDefault : msg -> Html.Attribute msg
+mouseDownNoDefault message =
+    Events.custom "mousedown" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+
+
+{-| An opaque function that prevents default click events.
+-}
+mouseUpNoDefault : msg -> Html.Attribute msg
+mouseUpNoDefault message =
+    Events.custom "mouseup" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+
+
 {-| An opaque function that returns a no presets available Html msg
 -}
 noPresets : List (Html msg)
 noPresets =
-    [ div [ Attrs.class "elm-fancy-daterangepicker--preset elm-fancy-daterangepicker--no-presets" ]
-        [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text "No presets available..." ]
-        , span [ Attrs.class "elm-fancy-daterangepicker--preset-value" ] []
-        ]
-    ]
+    [ text "" ]

@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
-    , CalendarDisplay(..), DateRange, RestrictedDateRange(..), daysInRange, inRange, mkDateRange, monthAbbr, monthsInRange, startOfQuarter, weeksInRange, yearsInRange
+    , CalendarDisplay(..), DateRange, PresetType(..), RestrictedDateRange(..), daysInRange, defaultSingleSelectPresets, getSelectedPreset, inRange, mkDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
     )
 
 {-| A customizable daterangepicker component.
@@ -24,18 +24,28 @@ module DateRangePicker exposing
 -}
 
 import Browser.Events
-import Date
+import Date exposing (Date, day, fromCalendarDate, month, year)
+import DateRangePicker.Helper
     exposing
-        ( Date
-        , day
-        , fromCalendarDate
-        , month
-        , year
+        ( chunksOfLeft
+        , dateEqualTo
+        , dateGreaterThanOrEqualTo
+        , dateLessThanOrEqualTo
+        , dayToInt
+        , endOfMonth
+        , formatDate
+        , formatMonth
+        , inRange
+        , initDate
+        , isDisabledDate
+        , noPresets
+        , onClickNoDefault
+        , padMonthLeft
+        , padMonthRight
+        , renderDaysOfWeek
+        , startOfMonth
         )
-import DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo, dayToInt, endOfMonth, formatDate, formatMonth, inRange, initDate, isDisabledDate, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth)
 import DateRangePicker.Types exposing (CalendarRange, EnabledDateRange, Months)
-import DateRangePicker.Update
-import DateRangePicker.View
 import Html exposing (Html, div, i, span, table, tbody, td, text, thead, tr)
 import Html.Attributes as Attrs
 import Html.Events
@@ -45,24 +55,28 @@ import Task
 import Time exposing (Month(..), Weekday(..))
 
 
+{-| A type representing a date range with a start date and end date.
+-}
 type alias DateRange =
     DateRangePicker.Types.DateRange
 
 
-{-| A type representing messages that are passed within the DateRangePicker.
+{-| A type representing msgs that are fired from the update function.
 -}
 type Msg
     = InitCurrentDate Date
     | PrevCalendarRange
     | NextCalendarRange
-    | SelectDate Date
-    | SetDateRange DateRange
+    | StartSelection Date
+    | EndSelection (Maybe Date)
+    | SelectSingleDate Date
+    | SelectDateRange DateRange
+    | SelectPresetOption Preset
     | Done
     | DoNothing
-    | OpenDateRange
+    | ToggleDateRangePicker
     | Clear
     | HoverDay Date
-    | OnLeaveHover
 
 
 {-| A type representing how the calendar will be displayed
@@ -118,6 +132,8 @@ type alias Model =
     , enabledDateRange : Maybe EnabledDateRange
     , settings : Settings
     , calendarRange : CalendarRange
+    , isRange : Bool
+    , selectedPreset : PresetType
     }
 
 
@@ -134,6 +150,7 @@ type alias Settings =
     , formatDateRange : DateRange -> String
     , calendarDisplay : CalendarDisplay
     , inputView : Maybe (String -> List (Html Msg))
+    , disableRange : Bool
     }
 
 
@@ -213,6 +230,20 @@ type alias PresetSetting =
     }
 
 
+{-| A type that can be used for calculating relative presets outside of the daterangepicker.
+-}
+type PresetType
+    = Today
+    | Yesterday
+    | PastWeek
+    | PastMonth
+    | PastYear
+    | WeeksFromToday Int
+    | MonthsFromToday Int
+    | EndOfTime
+    | NoneSelected
+
+
 {-| A type that represents a preset daterange.
 
   - _name_ = Name of the preset. i.e. "Past Month"
@@ -222,6 +253,7 @@ type alias PresetSetting =
 type alias Preset =
     { name : String
     , dateRange : DateRange
+    , presetDateOption : PresetType
     }
 
 
@@ -240,7 +272,11 @@ mkPresets settings date =
             settings.presetOptions
 
         defaultPresets_ =
-            defaultPresets date
+            if settings.disableRange then
+                defaultSingleSelectPresets date
+
+            else
+                defaultPresets date
 
         customPresetsFromSettings_ =
             List.map (mkPresetFromSetting date) presetOptions.presetSettings
@@ -311,24 +347,27 @@ mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
     in
     { name = name
     , dateRange = { start = start, end = end }
+    , presetDateOption = NoneSelected
     }
 
 
 {-| A function that creates a Preset from a name and a dateRange
 -}
-mkPresetFromDateRange : String -> DateRange -> Preset
-mkPresetFromDateRange name dateRange =
+mkPresetFromDateRange : String -> DateRange -> PresetType -> Preset
+mkPresetFromDateRange name dateRange preset =
     { name = name
     , dateRange = dateRange
+    , presetDateOption = preset
     }
 
 
 {-| A function that creates a Preset from a name, startDate, and endDate
 -}
-mkPresetFromDates : String -> Date -> Date -> Preset
-mkPresetFromDates name start end =
+mkPresetFromDates : String -> Date -> Date -> PresetType -> Preset
+mkPresetFromDates name start end preset =
     { name = name
     , dateRange = { start = start, end = end }
+    , presetDateOption = preset
     }
 
 
@@ -341,8 +380,19 @@ defaultPresets today =
     , presetPastWeek today
     , presetPastMonth today
     , presetPastYear today
-    , presetLastYear today
-    , presetLastMonth today
+    ]
+
+
+{-| An opaque function used to make the default presets
+-}
+defaultSingleSelectPresets : Date -> List Preset
+defaultSingleSelectPresets today =
+    [ presetOneWeekFromToday today
+    , presetTwoWeeksFromToday today
+    , presetOneMonthFromToday today
+    , presetThreeMonthsFromToday today
+    , presetSixMonthsFromToday today
+    , presetEndOfTime
     ]
 
 
@@ -350,7 +400,7 @@ defaultPresets today =
 -}
 presetToday : Date -> Preset
 presetToday today =
-    mkPresetFromDates "Today" today today
+    mkPresetFromDates "Today" today today Today
 
 
 {-| An opaque function for the default preset "Yesterday"
@@ -364,7 +414,7 @@ presetYesterday today =
         end =
             Date.add Date.Days -1 today
     in
-    mkPresetFromDates "Yesterday" start end
+    mkPresetFromDates "Yesterday" start end Yesterday
 
 
 {-| An opaque function for the default preset "Past Week"
@@ -378,7 +428,7 @@ presetPastWeek today =
         end =
             today
     in
-    mkPresetFromDates "Past Week" start end
+    mkPresetFromDates "Past Week" start end PastWeek
 
 
 {-| An opaque function for the default preset "Past Month"
@@ -392,7 +442,7 @@ presetPastMonth today =
         end =
             today
     in
-    mkPresetFromDates "Past Month" start end
+    mkPresetFromDates "Past Month" start end PastMonth
 
 
 {-| An opaque function for the default preset "Past Year"
@@ -406,41 +456,91 @@ presetPastYear today =
         end =
             today
     in
-    mkPresetFromDates "Past Year" start end
+    mkPresetFromDates "Past Year" start end PastYear
 
 
-{-| An opaque function for the default preset "Last Year"
+{-| An opaque function for the default preset "One Week From Today"
 -}
-presetLastYear : Date -> Preset
-presetLastYear today =
+presetOneWeekFromToday : Date -> Preset
+presetOneWeekFromToday today =
     let
-        newYear =
-            year <| Date.add Date.Years -1 today
-
         start =
-            fromCalendarDate newYear Jan 1
+            Date.add Date.Weeks 1 today
 
         end =
-            fromCalendarDate newYear Dec 31
+            Date.add Date.Weeks 1 today
     in
-    mkPresetFromDates "Last Year" start end
+    mkPresetFromDates "One Week From Today" start end (WeeksFromToday 1)
 
 
-{-| An opaque function for the default preset "Last Month"
+{-| An opaque function for the default preset "Two Weeks From Today"
 -}
-presetLastMonth : Date -> Preset
-presetLastMonth today =
+presetTwoWeeksFromToday : Date -> Preset
+presetTwoWeeksFromToday today =
     let
-        newMonth =
-            Date.add Date.Months -1 today
-
         start =
-            startOfMonth newMonth
+            Date.add Date.Weeks 2 today
 
         end =
-            endOfMonth newMonth
+            Date.add Date.Weeks 2 today
     in
-    mkPresetFromDates "Last Month" start end
+    mkPresetFromDates "Two Week From Today" start end (WeeksFromToday 2)
+
+
+{-| An opaque function for the default preset "One Month From Today"
+-}
+presetOneMonthFromToday : Date -> Preset
+presetOneMonthFromToday today =
+    let
+        start =
+            Date.add Date.Months 1 today
+
+        end =
+            Date.add Date.Months 1 today
+    in
+    mkPresetFromDates "One Month From Today" start end (MonthsFromToday 1)
+
+
+{-| An opaque function for the default preset "Three Months From Today"
+-}
+presetThreeMonthsFromToday : Date -> Preset
+presetThreeMonthsFromToday today =
+    let
+        start =
+            Date.add Date.Months 3 today
+
+        end =
+            Date.add Date.Months 3 today
+    in
+    mkPresetFromDates "Three Months From Today" start end (MonthsFromToday 3)
+
+
+{-| An opaque function for the default preset "Six Months From Today"
+-}
+presetSixMonthsFromToday : Date -> Preset
+presetSixMonthsFromToday today =
+    let
+        start =
+            Date.add Date.Months 6 today
+
+        end =
+            Date.add Date.Months 6 today
+    in
+    mkPresetFromDates "Six Months From Today" start end (MonthsFromToday 6)
+
+
+{-| An opaque function for the default preset "Six Months From Today"
+-}
+presetEndOfTime : Preset
+presetEndOfTime =
+    let
+        start =
+            Date.fromCalendarDate 9999 Dec 31
+
+        end =
+            Date.fromCalendarDate 9999 Dec 31
+    in
+    mkPresetFromDates "End Of Time" start end EndOfTime
 
 
 {-| A record of default settings for the daterangepicker.
@@ -457,6 +557,7 @@ defaultSettings =
     , formatDateRange = formatDateRange
     , calendarDisplay = FullCalendar
     , inputView = Nothing
+    , disableRange = False
     }
 
 
@@ -497,6 +598,8 @@ initModel =
     , enabledDateRange = Nothing
     , settings = defaultSettings
     , calendarRange = prepareCalendarRange FullCalendar initDate
+    , isRange = False
+    , selectedPreset = NoneSelected
     }
 
 
@@ -525,7 +628,7 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                         newModel =
                             { model
-                                | today = fromCalendarDate (year date) (month date) (day date)
+                                | today = fromCalendarDate (year date |> Debug.log "") (month date |> Debug.log "") (day date |> Debug.log "")
                                 , presets = presets
                                 , enabledDateRange = enabledDateRange
                                 , calendarRange = prepareCalendarRange settings.calendarDisplay date
@@ -577,7 +680,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                 Done ->
                     ( updateDateRange { model | open = False }, Cmd.none )
 
-                OpenDateRange ->
+                ToggleDateRangePicker ->
                     let
                         ( newCalendarRange, startDate, endDate ) =
                             case model.dateRange of
@@ -588,7 +691,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                                     ( model.calendarRange, model.startDate, model.endDate )
                     in
                     ( { model
-                        | open = True
+                        | open = not model.open
                         , calendarRange = newCalendarRange
                         , startDate = startDate
                         , endDate = endDate
@@ -596,26 +699,36 @@ update msg (DateRangePicker ({ settings } as model)) =
                     , Cmd.none
                     )
 
-                SelectDate date ->
-                    ( selectDate date model
+                StartSelection date ->
+                    ( setStart date { model | isRange = True }
+                        |> setSelectedPreset NoneSelected
                     , Cmd.none
                     )
 
-                SetDateRange dateRange ->
-                    let
-                        calendarDateRange =
-                            { start = model.calendarRange.start, end = model.calendarRange.end }
+                EndSelection date ->
+                    ( setEnd date model
+                        |> (\model_ -> { model_ | isRange = False })
+                        |> setSelectedPreset NoneSelected
+                    , Cmd.none
+                    )
 
-                        newCalendarRange =
-                            if inRange dateRange.start calendarDateRange || inRange dateRange.end calendarDateRange then
-                                model.calendarRange
+                SelectSingleDate date ->
+                    ( setStart date model
+                        |> setEnd (Just date)
+                        |> updateDateRange
+                        |> setSelectedPreset NoneSelected
+                    , Cmd.none
+                    )
 
-                            else
-                                prepareCalendarRange model.settings.calendarDisplay dateRange.start
-                    in
-                    ( { model | startDate = Nothing, endDate = Nothing, calendarRange = newCalendarRange }
-                        |> selectDate dateRange.start
-                        |> selectDate dateRange.end
+                SelectPresetOption preset ->
+                    ( selectDateRange preset.dateRange model
+                        |> setSelectedPreset preset.presetDateOption
+                    , Cmd.none
+                    )
+
+                SelectDateRange dateRange ->
+                    ( selectDateRange dateRange model
+                        |> setSelectedPreset NoneSelected
                     , Cmd.none
                     )
 
@@ -627,14 +740,12 @@ update msg (DateRangePicker ({ settings } as model)) =
                         , hoveredDate = Nothing
                         , showPresets = False
                       }
+                        |> setSelectedPreset NoneSelected
                     , initCmd
                     )
 
                 HoverDay date ->
                     ( { model | hoveredDate = Just date }, Cmd.none )
-
-                OnLeaveHover ->
-                    ( { model | hoveredDate = Nothing }, Cmd.none )
 
                 DoNothing ->
                     ( model, Cmd.none )
@@ -661,6 +772,13 @@ setOpen open (DateRangePicker model) =
 getDateRange : DateRangePicker -> Maybe DateRange
 getDateRange (DateRangePicker model) =
     model.dateRange
+
+
+{-| Expose the currently selected preset.
+-}
+getSelectedPreset : DateRangePicker -> PresetType
+getSelectedPreset (DateRangePicker model) =
+    model.selectedPreset
 
 
 {-| Expose the current presets.
@@ -821,6 +939,17 @@ setRestrictedDateRange restrictedDateRange (DateRangePicker model) =
     DateRangePicker { model | settings = newSettings }
 
 
+{-| Sets whether range selection is disabled for the daterangepicker.
+-}
+setDisableRange : Bool -> DateRangePicker -> DateRangePicker
+setDisableRange isDisabled (DateRangePicker ({ settings } as model)) =
+    let
+        newSettings =
+            { settings | disableRange = isDisabled }
+    in
+    DateRangePicker { model | settings = newSettings }
+
+
 {-| Sets the CalendarDisplay for the daterangepicker
 -}
 setCalendarDisplay : CalendarDisplay -> DateRangePicker -> DateRangePicker
@@ -869,11 +998,25 @@ setSettings settings (DateRangePicker model) =
 -}
 subscriptions : DateRangePicker -> Sub Msg
 subscriptions (DateRangePicker model) =
-    if model.open then
-        Browser.Events.onClick (Json.succeed Done)
+    case ( model.open, model.isRange ) of
+        ( True, True ) ->
+            Sub.batch
+                [ Browser.Events.onClick (Json.succeed Done)
+                , Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
+                ]
 
-    else
-        Sub.none
+        ( False, True ) ->
+            Sub.batch
+                [ Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
+                ]
+
+        ( True, False ) ->
+            Browser.Events.onClick (Json.succeed Done)
+
+        ( False, False ) ->
+            Sub.none
 
 
 {-| The daterange picker view. The date range passed is whatever date range it should treat as selected.
@@ -889,7 +1032,7 @@ view (DateRangePicker ({ open, settings } as model)) =
         dateInputAttrs =
             List.concat
                 [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
-                  , onClickNoDefault OpenDateRange
+                  , onClickNoDefault ToggleDateRangePicker
                   , Attrs.class "elm-fancy-daterangepicker--date-input"
                   ]
                 , settings.inputAttributes
@@ -937,13 +1080,12 @@ dateRangePicker model =
         [ Attrs.classList
             [ ( "elm-fancy-daterangepicker--wrapper", True )
             , ( "elm-fancy-daterangepicker--calendar-tab", True )
+            , ( "elm-fancy-daterangepicker--box-shadow", True )
             , ( calendarDisplayClass, True )
             ]
         , onClickNoDefault DoNothing
         ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--box-shadow" ]
-            [ renderCalendar model
-            ]
+        [ renderCalendar model
         , renderPresets model
         ]
 
@@ -974,7 +1116,6 @@ renderCalendar model =
     div
         [ Attrs.class "elm-fancy-daterangepicker--calendar"
         , Attrs.class calendarDisplayClass
-        , Html.Events.onMouseLeave OnLeaveHover
         ]
         [ renderDateRangePickerHeader model
         , body
@@ -988,10 +1129,14 @@ renderPresets model =
     div [ Attrs.class "elm-fancy-daterangepicker--presets" ] <|
         if List.length model.presets > 0 then
             List.concat
-                [ [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Presets" ] ]
+                [ --                 [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Select Year" ] ]
+                  --                ,
+                  [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Presets" ] ]
                 , List.map (renderPreset model) model.presets
-                , [ div [ Attrs.class "elm-fancy-daterangepicker--round-btns", onClickNoDefault Clear ] [ text "Clear" ]
-                  , div [ Attrs.class "elm-fancy-daterangepicker--round-btns", onClickNoDefault Done ] [ text "Done" ]
+                , [ div [ Attrs.class "elm-fancy-daterangepicker--buttons" ]
+                        [ div [ Attrs.class "elm-fancy-daterangepicker--btn", onClickNoDefault Clear ] [ text "Clear" ]
+                        , div [ Attrs.class "elm-fancy-daterangepicker--btn", onClickNoDefault Done ] [ text "Done" ]
+                        ]
                   ]
                 ]
 
@@ -1013,7 +1158,7 @@ renderPreset model preset =
                 onClickNoDefault DoNothing
 
             else
-                onClickNoDefault <| SetDateRange <| preset.dateRange
+                onClickNoDefault <| SelectPresetOption preset
     in
     div
         [ Attrs.classList
@@ -1043,7 +1188,7 @@ renderDateRangePickerHeader model =
                 DoNothing
 
             else
-                SetDateRange <| { start = start, end = end }
+                SelectDateRange <| { start = start, end = end }
     in
     div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
         [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
@@ -1070,21 +1215,23 @@ renderFullCalendarBody model =
         quarters =
             chunksOfLeft 3 model.calendarRange.months
     in
-    List.map (renderQuarter model) quarters
+    List.map (renderQuarter False model) quarters
 
 
 {-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for ThreeMonths
 -}
 renderThreeMonthsBody : Model -> List (Html Msg)
 renderThreeMonthsBody model =
-    [ renderQuarter model model.calendarRange.months ]
+    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ]
+        [ renderQuarter True model model.calendarRange.months ]
+    ]
 
 
 {-| An opaque function that gets the List (Html Msg) for the body of the dateRangePicker for TwoMonths
 -}
 renderTwoMonthsBody : Model -> List (Html Msg)
 renderTwoMonthsBody model =
-    [ div [ Attrs.class "elm-fancy-daterangepicker--months-row" ] <|
+    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ] <|
         List.map (renderMonth True model) model.calendarRange.months
     ]
 
@@ -1093,15 +1240,15 @@ renderTwoMonthsBody model =
 -}
 renderOneMonthBody : Model -> List (Html Msg)
 renderOneMonthBody model =
-    [ div [ Attrs.class "elm-fancy-daterangepicker--months-row" ] <|
+    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ] <|
         List.map (renderMonth True model) model.calendarRange.months
     ]
 
 
 {-| An opaque function that gets the Html Msg for a given Quarter.
 -}
-renderQuarter : Model -> Months -> Html Msg
-renderQuarter model months =
+renderQuarter : Bool -> Model -> Months -> Html Msg
+renderQuarter listWeeksPastFirstQ model months =
     let
         firstMonthOfQtr =
             List.head months
@@ -1133,7 +1280,7 @@ renderQuarter model months =
                                         onClickNoDefault DoNothing
 
                                     else
-                                        onClickNoDefault <| SetDateRange <| { start = start, end = end }
+                                        onClickNoDefault <| SelectDateRange <| { start = start, end = end }
 
                                 qtrLabel =
                                     td
@@ -1148,7 +1295,7 @@ renderQuarter model months =
                             tr [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
                                 List.concat
                                     [ [ qtrLabel ]
-                                    , List.map (renderMonth (Date.quarter start == 1) model) months
+                                    , List.map (renderMonth (Date.quarter start == 1 || listWeeksPastFirstQ) model) months
                                     ]
 
                         ( _, _ ) ->
@@ -1192,7 +1339,7 @@ renderMonth includeWeeks model m =
                         onClickNoDefault DoNothing
 
                     else
-                        onClickNoDefault <| SetDateRange <| { start = startOfMonth a, end = endOfMonth a }
+                        onClickNoDefault <| SelectDateRange <| { start = startOfMonth a, end = endOfMonth a }
 
                 listOfWeeks =
                     if includeWeeks then
@@ -1260,18 +1407,22 @@ renderDay model date =
             isEnd model date
 
         setDate_ =
-            if isDisabledDate_ then
-                onClickNoDefault DoNothing
+            case ( isDisabledDate_, model.settings.disableRange ) of
+                ( True, _ ) ->
+                    onClickNoDefault DoNothing
 
-            else
-                onClickNoDefault <| SelectDate date
+                ( _, True ) ->
+                    SelectSingleDate date |> onClickNoDefault
+
+                ( _, False ) ->
+                    StartSelection date |> DateRangePicker.Helper.mouseDownNoDefault
     in
     td
         [ Attrs.classList
             [ ( "elm-fancy-daterangepicker--day", True )
             , ( "elm-fancy-daterangepicker--today", isToday_ )
             , ( "elm-fancy-daterangepicker--selected-range", isSelectedDateRange_ && not isStart_ && not isEnd_ )
-            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ )
+            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ && model.isRange )
             , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
             , ( "elm-fancy-daterangepicker--start", isStart_ )
             , ( "elm-fancy-daterangepicker--end", isEnd_ )
@@ -1444,34 +1595,60 @@ updateInputText model =
 -}
 formatDateRange : DateRange -> String
 formatDateRange dateRange =
-    String.concat
-        [ formatDate dateRange.start
-        , " - "
-        , formatDate dateRange.end
-        ]
+    if dateRange.start /= dateRange.end then
+        String.concat
+            [ formatDate dateRange.start
+            , " - "
+            , formatDate dateRange.end
+            ]
+
+    else
+        formatDate dateRange.start
 
 
-{-| An opaque function that determines what should be done with a date
-when it is selected
+{-| An opaque function that sets the start date.
 -}
-selectDate : Date -> Model -> Model
-selectDate date model =
-    case ( model.startDate, model.endDate ) of
-        ( Nothing, Nothing ) ->
-            { model | startDate = Just date }
+setStart : Date -> Model -> Model
+setStart date model =
+    { model | startDate = Just date, endDate = Nothing }
 
-        ( Nothing, _ ) ->
-            { model | startDate = Just date }
 
-        ( Just _, Just _ ) ->
-            { model | endDate = Nothing, startDate = Just date }
+{-| An opaque function that sets the end date with some conditions.
+-}
+setEnd : Maybe Date -> Model -> Model
+setEnd date model =
+    if Maybe.map2 dateGreaterThanOrEqualTo date model.startDate |> Maybe.withDefault False then
+        { model | endDate = date } |> updateDateRange
 
-        ( Just s, _ ) ->
-            if dateGreaterThanOrEqualTo date s then
-                { model | endDate = Just date } |> updateDateRange
+    else
+        { model | endDate = model.startDate, startDate = date }
+
+
+{-| An opaque function that sets the selected preset option if a preset was used to select the daterange.
+-}
+setSelectedPreset : PresetType -> Model -> Model
+setSelectedPreset preset model =
+    { model | selectedPreset = preset }
+
+
+{-| An opaque function that sets daterange.
+-}
+selectDateRange : DateRange -> Model -> Model
+selectDateRange dateRange model =
+    let
+        calendarDateRange =
+            { start = model.calendarRange.start, end = model.calendarRange.end }
+
+        newCalendarRange =
+            if inRange dateRange.start calendarDateRange || inRange dateRange.end calendarDateRange then
+                model.calendarRange
 
             else
-                { model | startDate = Just date, endDate = Just s } |> updateDateRange
+                prepareCalendarRange model.settings.calendarDisplay dateRange.start
+    in
+    { model | startDate = Nothing, endDate = Nothing, calendarRange = newCalendarRange }
+        |> setStart dateRange.start
+        |> setEnd (Just dateRange.end)
 
 
 {-| An opaque function that updates the dateRange based on values
@@ -1685,7 +1862,7 @@ mkEnabledDateRange start end =
             Nothing
 
 
-{-| A function that gets the class string for the CalendarDisplay
+{-| An opaque function that gets the class string for the CalendarDisplay
 -}
 calendarDisplayToClassStr : CalendarDisplay -> String
 calendarDisplayToClassStr calendarDisplay =

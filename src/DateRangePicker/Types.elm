@@ -10,8 +10,6 @@ type alias Year =
     Int
 
 
-{-| A type representing a date range with a start date and end date.
--}
 type alias DateRange =
     { start : Date
     , end : Date

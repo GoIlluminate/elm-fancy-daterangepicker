@@ -5,7 +5,7 @@ import Date
     exposing
         ( Date
         )
-import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
+import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setDisableRange, setInputIcon, setSettings)
 import DateRangePicker.Helper exposing (formatDate)
 import Html exposing (Html, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
