@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
     , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
-    , CalendarDisplay(..), DateRange, PresetType(..), RestrictedDateRange(..), daysInRange, defaultSingleSelectPresets, getSelectedPreset, inRange, mkDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
+    , CalendarDisplay(..), DateRange, PresetType(..), RestrictedDateRange(..), daysInRange, defaultSingleSelectPresets, getSelectedPreset, inRange, mkDateRange, mkEnabledDateRangeFromRestrictedDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
     )
 
 {-| A customizable daterangepicker component.
