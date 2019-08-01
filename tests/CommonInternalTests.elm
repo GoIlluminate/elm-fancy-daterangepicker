@@ -312,5 +312,5 @@ testIsDisabledDateFromRestrictedDateRange restrictedDateRange date output =
     in
     isDisabledDate
         enabledDateRange
-        date
+        (Date.add Date.Days 1 date)
         |> equal output
