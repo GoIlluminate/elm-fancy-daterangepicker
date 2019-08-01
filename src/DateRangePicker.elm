@@ -713,6 +713,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                     ( setEnd date model
                         |> (\model_ -> { model_ | isMouseDown = False })
                         |> setSelectedPreset NoneSelected
+                        |> updateDateRange
                     , Cmd.none
                     )
 
@@ -738,16 +739,28 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                 StartSelectionOnShift s ->
                     if s == "Shift" then
-                        ( { model | isShiftDown = True, endDate = Nothing }
-                        , Cmd.none
-                        )
+                        case Maybe.map2 dateGreaterThanOrEqualTo model.hoveredDate model.startDate of
+                            Just True ->
+                                ( { model | isShiftDown = True, endDate = Nothing }
+                                , Cmd.none
+                                )
+
+                            Just False ->
+                                ( { model | isShiftDown = True, startDate = model.endDate, endDate = Nothing }
+                                , Cmd.none
+                                )
+
+                            Nothing ->
+                                ( { model | isShiftDown = True, endDate = Nothing }
+                                , Cmd.none
+                                )
 
                     else
                         ( model, Cmd.none )
 
                 CancelShift s ->
                     if s == "Shift" then
-                        ( { model | isShiftDown = False, endDate = Maybe.map .end model.dateRange }, Cmd.none )
+                        ( { model | isShiftDown = False, endDate = Maybe.map .end model.dateRange, startDate = Maybe.map .start model.dateRange }, Cmd.none )
 
                     else
                         ( model, Cmd.none )
@@ -1647,7 +1660,7 @@ setStart date model =
 setEnd : Maybe Date -> Model -> Model
 setEnd date model =
     if Maybe.map2 dateGreaterThanOrEqualTo date model.startDate |> Maybe.withDefault False then
-        { model | endDate = date } |> updateDateRange
+        { model | endDate = date }
 
     else
         { model | endDate = model.startDate, startDate = date }
@@ -1678,6 +1691,7 @@ selectDateRange dateRange model =
     { model | startDate = Nothing, endDate = Nothing, calendarRange = newCalendarRange }
         |> setStart dateRange.start
         |> setEnd (Just dateRange.end)
+        |> updateDateRange
 
 
 {-| An opaque function that updates the dateRange based on values
