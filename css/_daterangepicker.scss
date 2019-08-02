@@ -298,8 +298,8 @@
         }
 
         .#{$dp-ns}box-shadow {
-            -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-grey-white'),0.4), 0 0 0 1px rgba(themed('color-grey-white'),0.08);
-            -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-grey-white'),0.4), 0 0 0 1px rgba(themed('color-grey-white'),0.08);
+            -moz-box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
+            -webkit-box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
             box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
         }
     }
