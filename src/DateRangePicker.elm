@@ -1485,7 +1485,11 @@ renderDay model date =
                     Just date |> EndSelection |> onClickNoDefault
 
                 ( False, False, False ) ->
-                    StartSelection date |> DateRangePicker.Helper.mouseDownNoDefault
+                    if model.isMouseDown then
+                        Just date |> EndSelection |> onClickNoDefault
+
+                    else
+                        StartSelection date |> DateRangePicker.Helper.mouseDownNoDefault
     in
     td
         [ Attrs.classList
