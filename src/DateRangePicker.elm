@@ -73,6 +73,8 @@ type Msg
     | SelectDateRange DateRange
     | StartSelectionOnShift String
     | CancelShift String
+    | UpdateCounter
+    | TerminateBadState
     | SelectPresetOption Preset
     | Done
     | DoNothing
@@ -137,6 +139,7 @@ type alias Model =
     , isMouseDown : Bool
     , isShiftDown : Bool
     , selectedPreset : PresetType
+    , terminationCounter : Int
     }
 
 
@@ -604,6 +607,7 @@ initModel =
     , isMouseDown = False
     , isShiftDown = False
     , selectedPreset = NoneSelected
+    , terminationCounter = 2
     }
 
 
@@ -710,8 +714,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                     )
 
                 EndSelection date ->
-                    ( setEnd date model
-                        |> (\model_ -> { model_ | isMouseDown = False })
+                    ( setEnd date { model | isMouseDown = False }
                         |> setSelectedPreset NoneSelected
                         |> updateDateRange
                     , Cmd.none
@@ -764,6 +767,33 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                     else
                         ( model, Cmd.none )
+
+                UpdateCounter ->
+                    ( { model
+                        | terminationCounter =
+                            if model.terminationCounter >= 2 then
+                                model.terminationCounter
+
+                            else
+                                model.terminationCounter + 1
+                      }
+                    , Cmd.none
+                    )
+
+                TerminateBadState ->
+                    if model.terminationCounter < 0 then
+                        ( { model
+                            | isShiftDown = False
+                            , isMouseDown = False
+                            , endDate = Maybe.map .end model.dateRange
+                            , startDate = Maybe.map .start model.dateRange
+                            , terminationCounter = 2
+                          }
+                        , Cmd.none
+                        )
+
+                    else
+                        ( { model | terminationCounter = model.terminationCounter - 1 }, Cmd.none )
 
                 Clear ->
                     ( { model
@@ -1036,6 +1066,8 @@ subscriptions (DateRangePicker model) =
             if model.isShiftDown then
                 [ Browser.Events.onKeyUp (Json.field "key" Json.string |> Json.map CancelShift)
                 , Browser.Events.onVisibilityChange (CancelShift "Shift" |> always)
+                , Browser.Events.onKeyDown (Json.field "key" Json.string |> Json.map (always UpdateCounter))
+                , Time.every 200 (always TerminateBadState)
                 ]
 
             else
