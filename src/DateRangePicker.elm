@@ -1,15 +1,14 @@
 module DateRangePicker exposing
     ( Msg, DateRangePicker
-    , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
+    , init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday, CalendarDisplay(..), DateRange, RestrictedDateRange(..), daysInRange, inRange, mkDateRange, mkEnabledDateRangeFromRestrictedDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
     , Settings, defaultSettings, setSettings, setDateRangeFormat, setPlaceholder, setInputName, setInputText, setInputId, setInputIcon, setInputAttributes, setPresetOptions, setRestrictedDateRange, formatDateRange, getMinDate, getMaxDate, setCalendarDisplay, setInputView
-    , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
-    , CalendarDisplay(..), DateRange, PresetType(..), RestrictedDateRange(..), daysInRange, defaultSingleSelectPresets, getSelectedPreset, inRange, mkDateRange, mkEnabledDateRangeFromRestrictedDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
+    , PresetOptions, PresetOption(..), Preset, PresetSetting, PresetInterval(..), PresetRelativeToToday(..), defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets, PresetType(..), defaultSingleSelectPresets, getSelectedPreset
     )
 
 {-| A customizable daterangepicker component.
 
 @docs Msg, DateRangePicker
-@docs init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday
+@docs init, update, subscriptions, isOpen, setOpen, view, getDateRange, setDateRange, getToday, CalendarDisplay, DateRange, RestrictedDateRange, daysInRange, inRange, mkDateRange, mkEnabledDateRangeFromRestrictedDateRange, monthAbbr, monthsInRange, setDisableRange, startOfQuarter, weeksInRange, yearsInRange
 
 
 # Settings
@@ -19,7 +18,7 @@ module DateRangePicker exposing
 
 ## Presets
 
-@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets
+@docs PresetOptions, PresetOption, Preset, PresetSetting, PresetInterval, PresetRelativeToToday, defaultPresetOptions, defaultPresets, mkPresetFromDateRange, mkPresetFromDates, getPresets, PresetType, defaultSingleSelectPresets, getSelectedPreset
 
 -}
 

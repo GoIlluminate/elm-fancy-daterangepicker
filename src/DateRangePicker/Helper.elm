@@ -482,7 +482,7 @@ isDisabledDate enabledDateRange date =
                     False
 
 
-{-| An opaque function taht pads the month from the left with filler days
+{-| An opaque function that pads the month from the left with filler days
 in order to get the first of the month to line up correctly with the correct
 day of the week.
 -}
