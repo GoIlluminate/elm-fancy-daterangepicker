@@ -1,29 +1,13 @@
-module DateRangePicker.Date exposing
-    ( initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, monthAbbr
-    , dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
-    )
+module DateRangePicker.Helper exposing (chunksOfLeft, dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, dateTuple, dayToInt, daysInMonth, daysInRange, endOfMonth, endOfQuarter, formatDate, formatDay, formatMonth, getQuarter, inRange, initDate, isDisabledDate, isLeapYear, mkDateRange, monthAbbr, monthToInt, monthsInRange, mouseDownNoDefault, mouseUpNoDefault, noPresets, onClickNoDefault, padMonthLeft, padMonthRight, renderDaysOfWeek, startOfMonth, startOfQuarter, weeksInRange, yearsInRange)
 
-{-| A custom Date Helper Library.
-
-@docs initDate, dateTuple, formatDate, formatDay, formatMonth, dayToInt, monthToInt, daysInMonth, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, monthAbbr
-@docs dateEqualTo, dateGreaterThan, dateLessThan, dateGreaterThanOrEqualTo, dateLessThanOrEqualTo
-
--}
-
-import Date exposing (Date, format, fromCalendarDate)
+import Date exposing (Date, Unit(..), format, fromCalendarDate)
+import DateRangePicker.Types exposing (CalendarRange, DateRange, EnabledDateRange, Quarter, Year)
+import Html exposing (Html, div, span, td, text)
+import Html.Attributes as Attrs
+import Html.Events as Events
+import Json.Decode as Json
+import List.Extra as LE
 import Time exposing (Month(..), Weekday(..))
-
-
-{-| An opaque type to represent year as an Int.
--}
-type alias Year =
-    Int
-
-
-{-| An opaque type to represent quarter as a triple of Months.
--}
-type alias Quarter =
-    ( Month, Month, Month )
 
 
 {-| A function that initializes a date.
@@ -191,8 +175,6 @@ endOfMonth date =
     fromCalendarDate y m (daysInMonth y m)
 
 
-{-| A function that takes a Date and returns the date representing the first date of the quarter that the passed in date belongs to.
--}
 startOfQuarter : Date -> Date
 startOfQuarter date =
     let
@@ -226,25 +208,25 @@ dayToInt : Weekday -> Int
 dayToInt day =
     case day of
         Sun ->
-            1
+            0
 
         Mon ->
-            2
+            1
 
         Tue ->
-            3
+            2
 
         Wed ->
-            4
+            3
 
         Thu ->
-            5
+            4
 
         Fri ->
-            6
+            5
 
         Sat ->
-            7
+            6
 
 
 {-| A function that takes a Month and returns it as an Int.
@@ -257,40 +239,40 @@ monthToInt : Month -> Int
 monthToInt month =
     case month of
         Jan ->
-            1
+            0
 
         Feb ->
-            2
+            1
 
         Mar ->
-            3
+            2
 
         Apr ->
-            4
+            3
 
         May ->
-            5
+            4
 
         Jun ->
-            6
+            5
 
         Jul ->
-            7
+            6
 
         Aug ->
-            8
+            7
 
         Sep ->
-            9
+            8
 
         Oct ->
-            10
+            9
 
         Nov ->
-            11
+            10
 
         Dec ->
-            12
+            11
 
 
 {-| A function that returns the number of days in the given month for the given year.
@@ -341,7 +323,7 @@ daysInMonth year month =
 
 {-| An opaque function to determine whether a given year is a leap year.
 -}
-isLeapYear : Year -> Bool
+isLeapYear : DateRangePicker.Types.Year -> Bool
 isLeapYear year =
     modBy 400 year == 0 || modBy 100 year /= 0 && modBy 4 year == 0
 
@@ -437,3 +419,192 @@ getQuarter date =
 
         Dec ->
             q4
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+mkDateRange : Date -> Date -> DateRange
+mkDateRange start end =
+    { start = start, end = end }
+
+
+inRange : Date -> DateRange -> Bool
+inRange date { start, end } =
+    dateLessThanOrEqualTo start date && dateGreaterThanOrEqualTo end date
+
+
+yearsInRange : DateRange -> Int
+yearsInRange dateRange =
+    Date.diff Date.Years dateRange.start dateRange.end
+
+
+monthsInRange : DateRange -> Int
+monthsInRange dateRange =
+    Date.diff Date.Months dateRange.start dateRange.end
+
+
+weeksInRange : DateRange -> Int
+weeksInRange dateRange =
+    Date.diff Date.Weeks dateRange.start dateRange.end
+
+
+daysInRange : DateRange -> Int
+daysInRange dateRange =
+    Date.diff Date.Days dateRange.start dateRange.end
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+{-| An opaque function to check if the given date is a disabled date.
+-}
+isDisabledDate : Maybe EnabledDateRange -> Date -> Bool
+isDisabledDate enabledDateRange date =
+    case enabledDateRange of
+        Nothing ->
+            False
+
+        Just dateRange ->
+            case ( dateRange.start, dateRange.end ) of
+                ( Just start, Just end ) ->
+                    not <| inRange date <| { start = start, end = end }
+
+                ( Just start, Nothing ) ->
+                    dateLessThan date start
+
+                ( Nothing, Just end ) ->
+                    dateGreaterThan date end
+
+                ( Nothing, Nothing ) ->
+                    False
+
+
+{-| An opaque function taht pads the month from the left with filler days
+in order to get the first of the month to line up correctly with the correct
+day of the week.
+-}
+padMonthLeft : Date -> List (Html msg)
+padMonthLeft d =
+    let
+        lastPosition =
+            if emptySpots >= 0 then
+                [ getFiller True ]
+
+            else
+                []
+
+        getFiller b =
+            td
+                [ Attrs.classList
+                    [ ( "elm-fancy-daterangepicker--day-filler", True )
+                    , ( "border-b", True )
+                    , ( "border-r", b )
+                    ]
+                ]
+                []
+
+        emptySpots =
+            (Date.weekday d |> dayToInt) - 1
+    in
+    List.repeat emptySpots (getFiller False) ++ lastPosition
+
+
+{-| An opaque function that pads the end of the month with filler days in order to fill
+the month with 42 total days (days + filler days) to keep the size of each month in the
+calendar the same size.
+-}
+padMonthRight : Int -> List (Html msg)
+padMonthRight n =
+    td [ Attrs.class "elm-fancy-daterangepicker--day-filler" ] []
+        |> List.repeat n
+
+
+{-| An opaque function that gets the Days of the Week Html Msg for the calendar.
+-}
+renderDaysOfWeek : List (Html msg)
+renderDaysOfWeek =
+    let
+        days =
+            7 :: List.range 1 6
+
+        dayOfWeek n =
+            td [ Attrs.class "elm-fancy-daterangepicker--dow" ]
+                [ text <|
+                    formatDay <|
+                        Date.numberToWeekday n
+                ]
+    in
+    List.map dayOfWeek days
+
+
+{-| An opaque recursive function that chunks a list of a into a
+list of lists of a of equal chunks.
+
+
+## Example:
+
+    chunksOfLeft 3 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ] =
+        [ [ 1, 2, 3 ]
+        , [ 4, 5, 6 ]
+        , [ 7, 8, 9 ]
+        , [ 10, 11, 12 ]
+        ]
+
+-}
+chunksOfLeft : Int -> List a -> List (List a)
+chunksOfLeft k xs =
+    let
+        len =
+            List.length xs
+    in
+    if len > k then
+        List.take k xs :: chunksOfLeft k (List.drop k xs)
+
+    else
+        [ xs ]
+
+
+{-| An opaque function that prevents default click events.
+-}
+onClickNoDefault : msg -> Html.Attribute msg
+onClickNoDefault message =
+    Events.custom "click" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = True
+            }
+
+
+{-| An opaque function that prevents default click events.
+-}
+mouseDownNoDefault : msg -> Html.Attribute msg
+mouseDownNoDefault message =
+    Events.custom "mousedown" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+
+
+{-| An opaque function that prevents default click events.
+-}
+mouseUpNoDefault : msg -> Html.Attribute msg
+mouseUpNoDefault message =
+    Events.custom "mouseup" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+
+
+{-| An opaque function that returns a no presets available Html msg
+-}
+noPresets : List (Html msg)
+noPresets =
+    [ text "" ]

@@ -1,15 +1,7 @@
 module DateTests exposing (dateTestSuite)
 
 import Date exposing (Date, fromCalendarDate)
-import DateRangePicker.Date
-    exposing
-        ( dateEqualTo
-        , dateGreaterThan
-        , dateGreaterThanOrEqualTo
-        , dateLessThan
-        , dateLessThanOrEqualTo
-        , daysInMonth
-        )
+import DateRangePicker.Helper exposing (dateEqualTo, dateGreaterThan, dateGreaterThanOrEqualTo, dateLessThan, dateLessThanOrEqualTo, daysInMonth)
 import Expect
     exposing
         ( Expectation

@@ -1,8 +1,9 @@
 module CommonInternalTests exposing (commonInternalTestSuite)
 
 import Date exposing (Date, fromCalendarDate)
-import DateRangePicker.Common as Common exposing (DateRange, RestrictedDateRange(..), inRange, mkDateRange)
-import DateRangePicker.Common.Internal as CI exposing (EnabledDateRange, mkEnabledDateRangeFromRestrictedDateRange)
+import DateRangePicker exposing (DateRange, RestrictedDateRange(..), inRange, mkDateRange, mkEnabledDateRangeFromRestrictedDateRange)
+import DateRangePicker.Helper exposing (isDisabledDate)
+import DateRangePicker.Types exposing (EnabledDateRange)
 import Expect
     exposing
         ( Expectation
@@ -293,7 +294,7 @@ testIsDisabledDate :
     -> Bool
     -> Expectation
 testIsDisabledDate enabledDateRange date output =
-    CI.isDisabledDate
+    isDisabledDate
         enabledDateRange
         date
         |> equal output
@@ -309,7 +310,7 @@ testIsDisabledDateFromRestrictedDateRange restrictedDateRange date output =
         enabledDateRange =
             mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today
     in
-    CI.isDisabledDate
+    isDisabledDate
         enabledDateRange
         date
         |> equal output

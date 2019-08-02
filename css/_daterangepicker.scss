@@ -1,4 +1,10 @@
 .#{$dp-ns}container {
+    table, tbody, td {
+        border-spacing: 2px;
+    }
+    thead {
+        border-spacing: 0;
+    }
     @include themify($themes) {
         i.fa {
             margin-left: 5px;
@@ -15,33 +21,21 @@
             position:relative;
             margin-bottom: 10px;
             line-height: 1.5;
-            border-bottom: 1px solid themed('color-box-shadow');
+            border-bottom: 1px solid themed('color-grey-white');
             align-self: center;
             display: grid;
             grid-template-columns: 1fr 25px;
         }
         .#{$dp-ns}wrapper {
-            padding: 0px;
-            margin: 0px;
-            font-size: 14px;
-            display: grid;
+            border-top: 1px solid themed('color-border-primary');
+            border-bottom: 1px solid themed('color-border-primary');
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+            display: flex;
             &.#{$dp-ns}calendar-tab {
-                grid-template-rows: 30px 1fr 50px;
-                &.#{$dp-ns}full-calendar, &.#{$dp-ns}three-months {
-                    width: 600px;
-                }
-                &.#{$dp-ns}two-months {
-                    width: 400px;
-                }
-                &.#{$dp-ns}one-month {
-                    width: 200px;
-                }
+                width: min-content;
             }
-            &.#{$dp-ns}presets-tab {
-                grid-template-rows: 30px 1fr;
-                width: 400px;
-            }
-            background: themed('color-border-primary');
             .#{$dp-ns}calendar {
                 -webkit-touch-callout: none; /* iOS Safari */
                 -webkit-user-select: none; /* Safari */
@@ -49,20 +43,14 @@
                 -moz-user-select: none; /* Firefox */
                 -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-                height: 100%;
-                width: 100%;
-                display: grid;
-                grid-template-columns: 1fr;
-                grid-auto-flow: dense;
-                grid-gap: 1px;
                 .#{$dp-ns}yr-label-wrapper, .#{$dp-ns}range-label-wrapper {
                     display: grid;
                     grid-template-columns: 25px 1fr 25px;
                     text-align: center;
                     background: themed('color-bg-light-gray');
-                    color: themed('color-text-black-white');
+                    color: themed('color-grey-white');
                     padding: 5px;
-                    border-top: 1px solid themed('color-border-primary');
+                    border-bottom: 1px solid themed('color-border-primary');
                     .#{$dp-ns}yr-btn, .#{$dp-ns}range-btn {
                         @extend .#{$dp-ns}hover-date;
                     }
@@ -79,8 +67,7 @@
                 }
                 .#{$dp-ns}body--container {
                     display: grid;
-                    grid-row-gap: 1px;
-                    background: themed('color-primary');
+                    background: themed('color-bg-light-gray');
                 }
                 &.#{$dp-ns}full-calendar, &.#{$dp-ns}three-months {
                     .#{$dp-ns}qtr-row {
@@ -88,7 +75,6 @@
                         width: 100%;
                         display: grid;
                         grid-auto-flow: dense;
-                        grid-gap: 1px;
                         grid-template-columns: 20px 1fr 1fr 1fr;
                         .#{$dp-ns}qtr-label {
                             display: grid;
@@ -108,7 +94,6 @@
                     width: 100%;
                     display: grid;
                     grid-auto-flow: dense;
-                    grid-gap: 1px;
                 }
                 &.#{$dp-ns}two-months {
                     .#{$dp-ns}months-row {
@@ -120,35 +105,46 @@
                         grid-template-columns: 1fr;
                     }
                 }
+                .#{$dp-ns}month-label {
+                    align-items: center;
+                    justify-content: center;
+                    background: themed('color-primary-dark');
+                    color: themed('color-white');
+                    display: flex;
+                    &:not(.#{$dp-ns}disabled) {
+                        @extend .#{$dp-ns}hover-date;
+                    }
+                }
+                .#{$dp-ns}week-days {
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                }
+                .#{$dp-ns}dow {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    font-size: 9px;
+                    font-weight: normal;
+                    background: themed('color-secondary');
+                    color: themed('color-text');
+                }
                 .#{$dp-ns}month {
+                    border: solid 1px themed('color-border');
                     display: grid;
                     grid-auto-flow: dense;
-                    grid-gap: 0px;
-                    grid-template-rows: repeat(8, 1fr);
+                    grid-template-rows: repeat(6, 1fr);
                     grid-template-columns: repeat(7, 1fr);
-                    text-align: center;
-                    >div:first-child {
-                        grid-column-start: 1;
-                        grid-column-end: 8;
+                    .border-b {
+                        border-bottom: solid 1px themed('color-border');
                     }
-                    > div.dow:not(:first-child) {
-                        border-left: themed('color-secondary');
-                    }
-                    .#{$dp-ns}month-label {
-                        background: themed('color-secondary');
-                        color: themed('color-text');
-                        &:not(.#{$dp-ns}disabled) {
-                            @extend .#{$dp-ns}hover-date;
-                        }
-                    }
-                    .#{$dp-ns}dow {
-                        background: themed('color-secondary');
-                        color: themed('color-text');
+                    .border-r {
+                        border-right: solid 1px themed('color-border');
                     }
                     .#{$dp-ns}day-filler {
                         background: themed('color-secondary');
                     }
                     .#{$dp-ns}day {
+                        font-size: 11.5px;
                         color: themed('color-primary');
                         background: themed('color-secondary');
                         &:not(.#{$dp-ns}disabled) {
@@ -164,34 +160,47 @@
                         background: themed('color-dp-hover');
                     }
                     .#{$dp-ns}start {
-                        &.#{$dp-ns}end {
-                            background: themed('color-secondary') !important;
-                        }
-                        &:not(.#{$dp-ns}end) {
-                            background: linear-gradient(to left, themed('color-dp-hover') 50%, themed('color-secondary') 50%) !important;
+                        .#{$dp-ns}bubble {
+                            border-radius: 3px 0 0 3px;
                         }
                     }
                     .#{$dp-ns}end {
-                        background: linear-gradient(to right, themed('color-dp-hover') 50%, themed('color-secondary') 50%) !important;
+                        &.#{$dp-ns}start {
+                            .#{$dp-ns}bubble {
+                                border-radius: 3px;
+                            }
+                        }
+                        .#{$dp-ns}bubble {
+                            border-radius: 0 3px 3px 0;
+                        }
                     }
                     .#{$dp-ns}start, .#{$dp-ns}end {
+                        background: themed('color-dp-hover');
                         .#{$dp-ns}bubble {
                             background: themed('color-primary');
                             color: themed('color-white');
-                            width: 75%;
-                            height: 100%;
-                            border-radius: 75%;
-                            margin: auto;
                         }
                     }
                     .#{$dp-ns}bubble {
-                        padding: 1px;
+                        box-sizing: border-box;
+                        padding: 0 4px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         height: 100%;
-                        &.#{dp-ns}center-text {
-                        }
+                    }
+                }
+            }
+            .#{$dp-ns}larger-months {
+                .#{$dp-ns}month-wrapper {
+                    .#{$dp-ns}day {
+                        font-size: 14px;
+                    }
+                    .#{$dp-ns}dow {
+                        font-size: 11px;
+                    }
+                    .#{$dp-ns}month-label {
+                        font-size: 14px;
                     }
                 }
             }
@@ -224,43 +233,6 @@
                     }
                 }
             }
-            .#{$dp-ns}footer {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                border-top: themed('color-primary');
-                background: themed('color-secondary');
-                padding: 5px;
-                align-items: center;
-                margin-top: 1px;
-                .round-btns {
-                    border-radius: 15px;
-                    width: fit-content;
-                    height: fit-content;
-                    padding: 5px;
-                    width: 60px;
-                    text-align: center;
-                }
-                .round-btns:first-child { 
-                    border: 1px solid themed('color-border-primary');
-                    color: themed('color-border-primary');
-                    &:hover {
-                        cursor: pointer;
-                        background: themed('color-primary');
-                        color: themed('color-white');
-                    }
-                }
-                .round-btns:last-child {
-                    background-color: themed('color-primary');
-                    justify-self: right;
-                    border: 1px solid themed('color-primary');
-                    color: themed('color-white');
-                    &:hover {
-                        cursor: pointer;
-                        background: themed('color-secondary');
-                        color: themed('color-primary');
-                    }
-                }
-            }
             .#{$dp-ns}presets {
                 -webkit-touch-callout: none; /* iOS Safari */
                 -webkit-user-select: none; /* Safari */
@@ -268,53 +240,56 @@
                 -moz-user-select: none; /* Firefox */
                 -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-                height: 100%;
-                width: 100%;
-                display: grid;
-                grid-template-columns: 1fr;
-                grid-auto-flow: dense;
-                grid-gap: 1px;
+                display: flex;
+                flex-direction: column;
+                background: themed('color-secondary');
                 .#{$dp-ns}preset {
+                    margin-left: 3px;
+                    color: themed('color-text');
+                    border-bottom: 1px solid themed('color-border-primary');
+                    white-space: nowrap;
                     &:not(.#{$dp-ns}no-presets) {
                         @extend .#{$dp-ns}hover-date;
                     }
+                }
+                .#{$dp-ns}buttons {
                     display: grid;
-                    grid-template-columns: auto auto;
-                    background: themed('color-secondary');
-                    grid-gap: 5px;
-                    padding: 5px;
-                    .#{$dp-ns}preset-name {
-                        font-size: 14px;
-                    }
-                    .#{$dp-ns}preset-value {
-                        text-align: right;
-                    }
+                    grid-template-columns: 1fr 1fr;
+                    margin-top: auto;
+                }
+                .#{$dp-ns}btn {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 3px;
+                    font-size: 14px;
+                    color: themed('color-text');
+                    @extend .#{$dp-ns}hover-date;
+                }
+                .#{$dp-ns}presets-header {
+                    height: 28px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    color: themed('color-header-black-white');
+                    border-bottom: 1px solid themed('color-border-primary');
+                    font-size: 13px;
+                    font-weight: bold;
                 }
             }
         }
-        
+
         .#{$dp-ns}hover-date {
             cursor: pointer;
             &:hover {
                 background: rgba(themed('color-dp-hover'), 0.8);
             }
         }
-        
+
         .#{$dp-ns}disabled {
-            text-decoration: line-through !important;
-            cursor: not-allowed !important;
+            text-decoration: line-through;
+            cursor: not-allowed;
             color: themed('color-header-text');
-        }
-        
-        .#{dp-ns}btn {
-            background: themed('color-bg-light-gray');
-            color: grey;
-            border-bottom: themed('color-primary');
-            padding:3px 8px 3px 8px;
-            cursor: pointer;
-            .fa-calendar {
-                color: themed('color-primary');
-            }
         }
 
         .#{$dp-ns}today {
@@ -323,9 +298,9 @@
         }
 
         .#{$dp-ns}box-shadow {
-            -moz-box-shadow:    0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
-            -webkit-box-shadow: 0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
-            box-shadow:         0 3px 8px 0 rgba(themed('color-box-shadow'),0.4), 0 0 0 1px rgba(themed('color-box-shadow'),0.08);
+            -moz-box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
+            -webkit-box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
+            box-shadow: 3px 3px 14px 0 rgba(themed('color-grey-white'),0.4);
         }
     }
 }
