@@ -352,7 +352,7 @@ mkPresetFromSetting today { name, interval, presetRelativeToToday, value } =
                     today
     in
     { name = name
-    , dateRange = { start = start, end = end }
+    , dateRange = mkDateRange start end
     , presetDateOption = NoneSelected
     }
 
@@ -372,7 +372,7 @@ mkPresetFromDateRange name dateRange preset =
 mkPresetFromDates : String -> Date -> Date -> PresetType -> Preset
 mkPresetFromDates name start end preset =
     { name = name
-    , dateRange = { start = start, end = end }
+    , dateRange = mkDateRange start end
     , presetDateOption = preset
     }
 
@@ -1104,7 +1104,7 @@ view (DateRangePicker ({ open, settings } as model)) =
             List.concat
                 [ [ Attrs.name <| Maybe.withDefault "" settings.inputName
                   , onClickNoDefault ToggleDateRangePicker
-                  , Attrs.class "elm-fancy-daterangepicker--date-input"
+                  , Attrs.class (classPrefix ++ "date-input")
                   ]
                 , settings.inputAttributes
                 , potentialInputId
@@ -1129,7 +1129,7 @@ view (DateRangePicker ({ open, settings } as model)) =
                         , icon
                         ]
     in
-    div [ Attrs.class "elm-fancy-daterangepicker--container" ]
+    div [ Attrs.class (classPrefix ++ "container") ]
         [ inputView
         , if open then
             dateRangePicker model
@@ -1145,13 +1145,13 @@ dateRangePicker : Model -> Html Msg
 dateRangePicker model =
     let
         calendarDisplayClass =
-            "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
+            classPrefix ++ calendarDisplayToClassStr model.settings.calendarDisplay
     in
     div
         [ Attrs.classList
-            [ ( "elm-fancy-daterangepicker--wrapper", True )
-            , ( "elm-fancy-daterangepicker--calendar-tab", True )
-            , ( "elm-fancy-daterangepicker--box-shadow", True )
+            [ ( classPrefix ++ "wrapper", True )
+            , ( classPrefix ++ "calendar-tab", True )
+            , ( classPrefix ++ "box-shadow", True )
             , ( calendarDisplayClass, True )
             ]
         , onClickNoDefault DoNothing
@@ -1167,10 +1167,10 @@ renderCalendar : Model -> Html Msg
 renderCalendar model =
     let
         calendarDisplayClass =
-            "elm-fancy-daterangepicker--" ++ calendarDisplayToClassStr model.settings.calendarDisplay
+            classPrefix ++ calendarDisplayToClassStr model.settings.calendarDisplay
 
         body =
-            table [ Attrs.class "elm-fancy-daterangepicker--body--container" ] <|
+            table [ Attrs.class (classPrefix ++ "body--container") ] <|
                 case model.settings.calendarDisplay of
                     FullCalendar ->
                         renderFullCalendarBody model
@@ -1185,7 +1185,7 @@ renderCalendar model =
                         renderOneMonthBody model
     in
     div
-        [ Attrs.class "elm-fancy-daterangepicker--calendar"
+        [ Attrs.class (classPrefix ++ "calendar")
         , Attrs.class calendarDisplayClass
         ]
         [ renderDateRangePickerHeader model
@@ -1197,16 +1197,14 @@ renderCalendar model =
 -}
 renderPresets : Model -> Html Msg
 renderPresets model =
-    div [ Attrs.class "elm-fancy-daterangepicker--presets" ] <|
+    div [ Attrs.class (classPrefix ++ "presets") ] <|
         if List.length model.presets > 0 then
             List.concat
-                [ --                 [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Select Year" ] ]
-                  --                ,
-                  [ div [ Attrs.class "elm-fancy-daterangepicker--presets-header" ] [ text "Presets" ] ]
+                [ [ div [ Attrs.class (classPrefix ++ "presets-header") ] [ text "Presets" ] ]
                 , List.map (renderPreset model) model.presets
-                , [ div [ Attrs.class "elm-fancy-daterangepicker--buttons" ]
-                        [ div [ Attrs.class "elm-fancy-daterangepicker--btn", onClickNoDefault Clear ] [ text "Clear" ]
-                        , div [ Attrs.class "elm-fancy-daterangepicker--btn", onClickNoDefault Done ] [ text "Done" ]
+                , [ div [ Attrs.class (classPrefix ++ "buttons") ]
+                        [ div [ Attrs.class (classPrefix ++ "btn"), onClickNoDefault Clear ] [ text "Clear" ]
+                        , div [ Attrs.class (classPrefix ++ "btn"), onClickNoDefault Done ] [ text "Done" ]
                         ]
                   ]
                 ]
@@ -1233,12 +1231,12 @@ renderPreset model preset =
     in
     div
         [ Attrs.classList
-            [ ( "elm-fancy-daterangepicker--preset", True )
-            , ( "elm-fancy-daterangepicker--disabled", isDisabledPreset )
+            [ ( classPrefix ++ "preset", True )
+            , ( classPrefix ++ "disabled", isDisabledPreset )
             ]
         , setDateRange_
         ]
-        [ span [ Attrs.class "elm-fancy-daterangepicker--preset-name" ] [ text preset.name ]
+        [ span [ Attrs.class (classPrefix ++ "preset-name") ] [ text preset.name ]
         ]
 
 
@@ -1259,22 +1257,20 @@ renderDateRangePickerHeader model =
                 DoNothing
 
             else
-                SelectDateRange <| { start = start, end = end }
+                SelectDateRange <| mkDateRange start end
     in
-    div [ Attrs.class "elm-fancy-daterangepicker--yr-label-wrapper" ]
-        [ div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-prev", onClickNoDefault PrevCalendarRange ] [ text "❮" ]
-
-        --        , input [] [ text "Select year" ]
+    div [ Attrs.class (classPrefix ++ "yr-label-wrapper") ]
+        [ div [ Attrs.classList [ ( classPrefix ++ "range-btn", True ), ( classPrefix ++ "range-prev", True ) ], onClickNoDefault PrevCalendarRange ] [ text "❮" ]
         , div
             [ Attrs.classList
-                [ ( "elm-fancy-daterangepicker--range-btn", True )
-                , ( "elm-fancy-daterangepicker--range-label", True )
-                , ( "elm-fancy-daterangepicker--disabled", isDisabledDateRange )
+                [ ( classPrefix ++ "range-btn", True )
+                , ( classPrefix ++ "range-label", True )
+                , ( classPrefix ++ "disabled", isDisabledDateRange )
                 ]
             , onClickNoDefault setRange
             ]
             [ text model.calendarRange.name ]
-        , div [ Attrs.class "elm-fancy-daterangepicker--range-btn elm-fancy-daterangepicker--range-next", onClickNoDefault NextCalendarRange ] [ text "❯" ]
+        , div [ Attrs.classList [ ( classPrefix ++ "range-btn", True ), ( classPrefix ++ "range-next", True ) ], onClickNoDefault NextCalendarRange ] [ text "❯" ]
         ]
 
 
@@ -1293,7 +1289,7 @@ renderFullCalendarBody model =
 -}
 renderThreeMonthsBody : Model -> List (Html Msg)
 renderThreeMonthsBody model =
-    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ]
+    [ div [ Attrs.classList [ ( classPrefix ++ "months-row", True ), ( classPrefix ++ "larger-months", True ) ] ]
         [ renderQuarter True model model.calendarRange.months ]
     ]
 
@@ -1302,7 +1298,7 @@ renderThreeMonthsBody model =
 -}
 renderTwoMonthsBody : Model -> List (Html Msg)
 renderTwoMonthsBody model =
-    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ] <|
+    [ div [ Attrs.classList [ ( classPrefix ++ "months-row", True ), ( classPrefix ++ "larger-months", True ) ] ] <|
         List.map (renderMonth True model) model.calendarRange.months
     ]
 
@@ -1311,7 +1307,7 @@ renderTwoMonthsBody model =
 -}
 renderOneMonthBody : Model -> List (Html Msg)
 renderOneMonthBody model =
-    [ div [ Attrs.classList [ ( "elm-fancy-daterangepicker--months-row", True ), ( "elm-fancy-daterangepicker--larger-months", True ) ] ] <|
+    [ div [ Attrs.classList [ ( classPrefix ++ "months-row", True ), ( classPrefix ++ "larger-months", True ) ] ] <|
         List.map (renderMonth True model) model.calendarRange.months
     ]
 
@@ -1351,19 +1347,19 @@ renderQuarter listWeeksPastFirstQ model months =
                                         onClickNoDefault DoNothing
 
                                     else
-                                        onClickNoDefault <| SelectDateRange <| { start = start, end = end }
+                                        onClickNoDefault <| SelectDateRange <| mkDateRange start end
 
                                 qtrLabel =
                                     td
                                         [ Attrs.classList
-                                            [ ( "elm-fancy-daterangepicker--qtr-label", True )
-                                            , ( "elm-fancy-daterangepicker--disabled", isDisabledQtr )
+                                            [ ( classPrefix ++ "qtr-label", True )
+                                            , ( classPrefix ++ "disabled", isDisabledQtr )
                                             ]
                                         , setQtrDateRange
                                         ]
                                         [ text <| "Q" ++ (String.fromInt <| Date.quarter start) ]
                             in
-                            tr [ Attrs.class "elm-fancy-daterangepicker--qtr-row" ] <|
+                            tr [ Attrs.class (classPrefix ++ "qtr-row") ] <|
                                 List.concat
                                     [ [ qtrLabel ]
                                     , List.map (renderMonth (Date.quarter start == 1 || listWeeksPastFirstQ) model) months
@@ -1410,11 +1406,11 @@ renderMonth includeWeeks model m =
                         onClickNoDefault DoNothing
 
                     else
-                        onClickNoDefault <| SelectDateRange <| { start = startOfMonth a, end = endOfMonth a }
+                        onClickNoDefault <| SelectDateRange <| mkDateRange (startOfMonth a) (endOfMonth a)
 
                 listOfWeeks =
                     if includeWeeks then
-                        tr [ Attrs.class "elm-fancy-daterangepicker--week-days" ] renderDaysOfWeek
+                        tr [ Attrs.class (classPrefix ++ "week-days") ] renderDaysOfWeek
 
                     else
                         text ""
@@ -1425,8 +1421,8 @@ renderMonth includeWeeks model m =
                         [ listOfWeeks
                         , tr
                             [ Attrs.classList
-                                [ ( "elm-fancy-daterangepicker--month-label", True )
-                                , ( "elm-fancy-daterangepicker--disabled", isDisabledMonth )
+                                [ ( classPrefix ++ "month-label", True )
+                                , ( classPrefix ++ "disabled", isDisabledMonth )
                                 ]
                             , setMonthDateRange
                             ]
@@ -1436,10 +1432,10 @@ renderMonth includeWeeks model m =
                             ]
                         ]
             in
-            table [ Attrs.class "elm-fancy-daterangepicker--month-wrapper" ] <|
+            table [ Attrs.class (classPrefix ++ "month-wrapper") ] <|
                 [ header
                 , List.concat [ days, padMonthRight (42 - List.length days) ]
-                    |> tbody [ Attrs.class "elm-fancy-daterangepicker--month" ]
+                    |> tbody [ Attrs.class (classPrefix ++ "month") ]
                 ]
 
         _ ->
@@ -1493,23 +1489,22 @@ renderDay model date =
     in
     td
         [ Attrs.classList
-            [ ( "elm-fancy-daterangepicker--day", True )
-            , ( "elm-fancy-daterangepicker--today", isToday_ )
-            , ( "elm-fancy-daterangepicker--selected-range", isSelectedDateRange_ && not isStart_ && not isEnd_ )
-            , ( "elm-fancy-daterangepicker--hovered-range", isHoveredDateRange_ && (model.isMouseDown || model.isShiftDown) )
-            , ( "elm-fancy-daterangepicker--disabled", isDisabledDate_ )
-            , ( "elm-fancy-daterangepicker--start", isStart_ )
-            , ( "elm-fancy-daterangepicker--end", isEnd_ )
+            [ ( classPrefix ++ "day", True )
+            , ( classPrefix ++ "today", isToday_ )
+            , ( classPrefix ++ "selected-range", isSelectedDateRange_ && not isStart_ && not isEnd_ )
+            , ( classPrefix ++ "hovered-range", isHoveredDateRange_ && (model.isMouseDown || model.isShiftDown) )
+            , ( classPrefix ++ "disabled", isDisabledDate_ )
+            , ( classPrefix ++ "start", isStart_ )
+            , ( classPrefix ++ "end", isEnd_ )
             , ( "border-b", dayOfMonth - dayOfWeek < 30 )
             , ( "border-r", dayOfWeek /= 6 )
             ]
         , setDate_
         , Html.Events.onMouseOver <| HoverDay date
         ]
-        [ td [ Attrs.class "elm-fancy-daterangepicker--bubble" ]
+        [ td [ Attrs.class (classPrefix ++ "bubble") ]
             [ text <|
-                String.fromInt <|
-                    day date
+                String.fromInt dayOfMonth
             ]
         ]
 
@@ -1520,7 +1515,7 @@ isSelectedDateRange : Model -> Date -> Bool
 isSelectedDateRange model date =
     case ( model.startDate, model.endDate ) of
         ( Just s, Just e ) ->
-            inRange date { start = s, end = e }
+            mkDateRange s e |> inRange date
 
         _ ->
             False
@@ -1532,7 +1527,7 @@ isHoveredDateRange : Model -> Date -> Bool
 isHoveredDateRange model date =
     case ( model.startDate, model.hoveredDate, model.endDate ) of
         ( Just s, Just h, Nothing ) ->
-            inRange date { start = s, end = h } || inRange date { start = h, end = s }
+            inRange date (mkDateRange s h) || inRange date (mkDateRange h s)
 
         _ ->
             False
@@ -1594,20 +1589,20 @@ getNewDateRange model dateRange =
                 ( Just start, Just end ) ->
                     let
                         newStart =
-                            if inRange dateRange.start <| { start = start, end = end } then
+                            if inRange dateRange.start <| mkDateRange start end then
                                 dateRange.start
 
                             else
                                 start
 
                         newEnd =
-                            if inRange dateRange.end <| { start = start, end = end } then
+                            if inRange dateRange.end <| mkDateRange start end then
                                 dateRange.end
 
                             else
                                 end
                     in
-                    { start = newStart, end = newEnd }
+                    mkDateRange newStart newEnd
 
                 ( Just start, Nothing ) ->
                     let
@@ -1625,7 +1620,7 @@ getNewDateRange model dateRange =
                             else
                                 start
                     in
-                    { start = newStart, end = newEnd }
+                    mkDateRange newStart newEnd
 
                 ( Nothing, Just end ) ->
                     let
@@ -1643,7 +1638,7 @@ getNewDateRange model dateRange =
                             else
                                 end
                     in
-                    { start = newStart, end = newEnd }
+                    mkDateRange newStart newEnd
 
                 ( Nothing, Nothing ) ->
                     dateRange
@@ -1711,7 +1706,7 @@ selectDateRange : DateRange -> Model -> Model
 selectDateRange dateRange model =
     let
         calendarDateRange =
-            { start = model.calendarRange.start, end = model.calendarRange.end }
+            mkDateRange model.calendarRange.start model.calendarRange.end
 
         newCalendarRange =
             if inRange dateRange.start calendarDateRange || inRange dateRange.end calendarDateRange then
@@ -1915,26 +1910,14 @@ mkEnabledDateRangeFromRestrictedDateRange restrictedDateRange today =
 mkEnabledDateRange : Maybe Date -> Maybe Date -> Maybe EnabledDateRange
 mkEnabledDateRange start end =
     case ( start, end ) of
-        ( Just a, Just b ) ->
-            Just <|
-                { start = Just a
-                , end = Just b
-                }
-
-        ( Just a, Nothing ) ->
-            Just <|
-                { start = Just a
-                , end = Nothing
-                }
-
-        ( Nothing, Just b ) ->
-            Just <|
-                { start = Nothing
-                , end = Just b
-                }
-
         ( Nothing, Nothing ) ->
             Nothing
+
+        ( _, _ ) ->
+            Just <|
+                { start = start
+                , end = end
+                }
 
 
 {-| An opaque function that gets the class string for the CalendarDisplay
@@ -1953,3 +1936,8 @@ calendarDisplayToClassStr calendarDisplay =
 
         OneMonth ->
             "one-month"
+
+
+classPrefix : String
+classPrefix =
+    "elm-fancy-daterangepicker--"

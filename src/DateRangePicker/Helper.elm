@@ -530,14 +530,14 @@ renderDaysOfWeek =
         days =
             7 :: List.range 1 6
 
-        go n =
+        dayOfWeek n =
             td [ Attrs.class "elm-fancy-daterangepicker--dow" ]
                 [ text <|
                     formatDay <|
                         Date.numberToWeekday n
                 ]
     in
-    List.map go days
+    List.map dayOfWeek days
 
 
 {-| An opaque recursive function that chunks a list of a into a
