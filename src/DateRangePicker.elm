@@ -607,7 +607,7 @@ initModel =
     , isMouseDown = False
     , isShiftDown = False
     , selectedPreset = NoneSelected
-    , terminationCounter = 2
+    , terminationCounter = 10
     }
 
 
@@ -763,7 +763,14 @@ update msg (DateRangePicker ({ settings } as model)) =
 
                 CancelShift s ->
                     if s == "Shift" then
-                        ( { model | isShiftDown = False, endDate = Maybe.map .end model.dateRange, startDate = Maybe.map .start model.dateRange }, Cmd.none )
+                        ( { model
+                            | isShiftDown = False
+                            , terminationCounter = 10
+                            , endDate = Maybe.map .end model.dateRange
+                            , startDate = Maybe.map .start model.dateRange
+                          }
+                        , Cmd.none
+                        )
 
                     else
                         ( model, Cmd.none )
@@ -787,7 +794,7 @@ update msg (DateRangePicker ({ settings } as model)) =
                             , isMouseDown = False
                             , endDate = Maybe.map .end model.dateRange
                             , startDate = Maybe.map .start model.dateRange
-                            , terminationCounter = 2
+                            , terminationCounter = 10
                           }
                         , Cmd.none
                         )
@@ -1067,7 +1074,7 @@ subscriptions (DateRangePicker model) =
                 [ Browser.Events.onKeyUp (Json.field "key" Json.string |> Json.map CancelShift)
                 , Browser.Events.onVisibilityChange (CancelShift "Shift" |> always)
                 , Browser.Events.onKeyDown (Json.field "key" Json.string |> Json.map (always UpdateCounter))
-                , Time.every 200 (always TerminateBadState)
+                , Time.every 100 (always TerminateBadState)
                 ]
 
             else
