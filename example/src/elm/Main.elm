@@ -5,16 +5,22 @@ import Date
     exposing
         ( Date
         )
-import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setDisableRange, setInputIcon, setSettings)
+import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
 import DateRangePicker.Helper exposing (formatDate)
+import DateRangeSelector exposing (initModel)
 import Html exposing (Html, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
+import Task
+import Time exposing (Posix, Zone)
 
 
 type Msg
     = SetDateRangePicker DateRangePicker.Msg
     | ChangeCalendarDisplay CalendarDisplay
+    | NewTime Posix
+    | NewZone Zone
+    | NewSelectorMsgs DateRangeSelector.Msg
 
 
 type alias Model =
@@ -26,6 +32,9 @@ type alias Model =
     , monthsInRange : Maybe Int
     , weeksInRange : Maybe Int
     , daysInRange : Maybe Int
+    , dateSelector : DateRangeSelector.Model
+    , today : Maybe Posix
+    , zone : Maybe Zone
     }
 
 
@@ -53,8 +62,15 @@ init =
       , monthsInRange = Nothing
       , weeksInRange = Nothing
       , daysInRange = Nothing
+      , dateSelector = initModel
+      , today = Nothing
+      , zone = Nothing
       }
-    , Cmd.batch [ Cmd.map SetDateRangePicker dateRangePickerCmd ]
+    , Cmd.batch
+        [ Cmd.map SetDateRangePicker dateRangePickerCmd
+        , Task.perform NewTime Time.now
+        , Task.perform NewZone Time.here
+        ]
     )
 
 
@@ -119,12 +135,35 @@ update msg ({ dateRangePicker } as model) =
             , Cmd.none
             )
 
+        NewTime posix ->
+            ( { model | today = Just posix }, Cmd.none )
+
+        NewSelectorMsgs msg_ ->
+            let
+                ( newDateRangePicker, dateRangePickerCmd ) =
+                    DateRangeSelector.update msg_ model.dateSelector
+            in
+            ( { model | dateSelector = newDateRangePicker }, Cmd.map NewSelectorMsgs dateRangePickerCmd )
+
+        NewZone zone ->
+            ( { model | zone = Just zone }, Cmd.none )
+
 
 view : Model -> Html Msg
 view model =
+    let
+        selector =
+            case ( model.today, model.zone ) of
+                ( Just t, Just z ) ->
+                    div [ class "theme-light" ] [ DateRangeSelector.view t z model.dateSelector ]
+
+                _ ->
+                    text ""
+    in
     div [ class "main" ]
         [ calendarDisplayOptions model
         , dateRangePickers model
+        , Html.map NewSelectorMsgs selector
         ]
 
 
