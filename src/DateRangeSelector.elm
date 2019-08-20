@@ -1,16 +1,18 @@
 module DateRangeSelector exposing (CalendarType, Model, Msg, PosixRange, Selection(..), initModel, openModel, update, view)
 
+import Browser.Events
 import Date exposing (Date)
 import DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
-import DateRangePicker.Helper exposing (formatMonth)
+import DateRangePicker.Helper exposing (formatMonth, onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
 import Derberos.Date.Core exposing (DateRecord, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Html exposing (Attribute, Html, div, input, table, tbody, td, text, thead)
 import Html.Attributes as Attrs
 import Html.Events exposing (onClick)
-import Keyboard exposing (Key(..))
+import Json.Decode as Json
+import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Events exposing (Event(..))
 import Return2 as R2
 import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
@@ -25,6 +27,12 @@ type Msg
     | OnInputFinish
     | OnInputChange String
     | Reset
+    | StartSelection Posix
+    | EndSelection Posix
+    | KeyDown RawKey
+    | KeyUp RawKey
+    | TerminateBadState
+    | CancelShift
 
 
 type alias DateRange =
@@ -152,6 +160,20 @@ update msg model =
         Reset ->
             R2.withNoCmd { model | inputText = "", selection = Unselected }
 
+        StartSelection posix ->
+            R2.withNoCmd
+                { model
+                    | isMouseDown = True
+                    , selection = Selecting { start = posix, end = posix }
+                }
+
+        EndSelection posix ->
+            R2.withNoCmd
+                { model
+                    | isMouseDown = False
+                    , selection = Selecting { start = posix, end = posix }
+                }
+
 
 updateCalendarRange : Model -> Int -> PosixRange -> ( Model, Cmd Msg )
 updateCalendarRange model intervalChange currentVisibleRange =
@@ -183,9 +205,40 @@ updateCalendarRange model intervalChange currentVisibleRange =
             updateWithIntervalFunc addMonths visibleRange
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    let
+        shiftSubs =
+            if model.isShiftDown then
+                [ Keyboard.ups KeyUp
+                , Browser.Events.onVisibilityChange CancelShift
+                , Keyboard.downs KeyDown
+                , Time.every 100 (always TerminateBadState)
+                ]
+
+            else
+                [ Keyboard.downs KeyDown ]
+
+        mouseSubs =
+            if model.isMouseDown then
+                [ Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
+                ]
+
+            else
+                []
+    in
+    if model.open then
+        List.concat [ shiftSubs, mouseSubs ] |> Sub.batch
+
+    else
+        Sub.none
+
+
 view : Posix -> Zone -> Model -> Html Msg
 view today zone model =
     let
+        -- todo check out the zones used for this, in the morning the zone screws up the date being set in the input box
         visibleRange =
             calcRange today zone model
     in
@@ -364,6 +417,13 @@ dayCalendarView zone currentMonth currentDay today model =
 
             else
                 []
+
+        setDate =
+            if model.isShiftDown || model.isMouseDown then
+                Just currentDay |> EndSelection |> onClickNoDefault
+
+            else
+                StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
     in
     td [ Attrs.class "day" ] content
 
