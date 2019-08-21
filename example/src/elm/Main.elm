@@ -265,6 +265,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map SetDateRangePicker <| DateRangePicker.subscriptions model.dateRangePicker
+        , Sub.map NewSelectorMsgs <| DateRangeSelector.subscriptions model.dateSelector
         ]
 
 

@@ -1,4 +1,4 @@
-module DateRangeSelector exposing (CalendarType, Model, Msg, PosixRange, Selection(..), initModel, openModel, update, view)
+module DateRangeSelector exposing (CalendarType, Model, Msg, PosixRange, Selection(..), initModel, openModel, subscriptions, update, view)
 
 import Browser.Events
 import Date exposing (Date)
@@ -28,11 +28,12 @@ type Msg
     | OnInputChange String
     | Reset
     | StartSelection Posix
-    | EndSelection Posix
+    | EndSelection (Maybe Posix)
     | KeyDown RawKey
     | KeyUp RawKey
     | TerminateBadState
     | CancelShift
+    | OnHoverOverDay Posix
 
 
 type alias DateRange =
@@ -89,6 +90,8 @@ type alias Model =
     , calendarType : CalendarType
     , isOpen : Bool
     , inputText : String
+    , terminationCounter : Int
+    , currentlyHoveredDate : Maybe Posix
     }
 
 
@@ -108,6 +111,8 @@ initModel =
     , calendarType = FullCalendar
     , isOpen = False
     , inputText = ""
+    , terminationCounter = 0
+    , currentlyHoveredDate = Nothing
     }
 
 
@@ -168,11 +173,94 @@ update msg model =
                 }
 
         EndSelection posix ->
-            R2.withNoCmd
-                { model
-                    | isMouseDown = False
-                    , selection = Selecting { start = posix, end = posix }
-                }
+            case posix of
+                Just p ->
+                    let
+                        selection =
+                            Range { start = p, end = p }
+                    in
+                    R2.withNoCmd
+                        { model
+                            | isMouseDown = False
+                            , selection = selection
+                            , inputText = prettyFormatSelection selection
+                        }
+
+                Nothing ->
+                    R2.withNoCmd model
+
+        KeyDown rawKey ->
+            onShiftKey rawKey
+                model
+                (\m ->
+                    if m.isShiftDown then
+                        R2.withNoCmd
+                            { m
+                                | terminationCounter =
+                                    if m.terminationCounter >= 2 then
+                                        m.terminationCounter
+
+                                    else
+                                        m.terminationCounter + 1
+                            }
+
+                    else
+                        -- add start selection on shift logic
+                        R2.withNoCmd { m | isShiftDown = True }
+                )
+
+        KeyUp rawKey ->
+            onShiftKey rawKey model cancelShift
+
+        TerminateBadState ->
+            -- todo what should dates be set to on terminate
+            if model.terminationCounter < 0 then
+                R2.withNoCmd
+                    { model
+                        | isShiftDown = False
+                        , isMouseDown = False
+
+                        --                    , endDate = Maybe.map .end model.dateRange
+                        --                    , startDate = Maybe.map .start model.dateRange
+                        , terminationCounter = 10
+                    }
+
+            else
+                R2.withNoCmd { model | terminationCounter = model.terminationCounter - 1 }
+
+        CancelShift ->
+            cancelShift model
+
+        OnHoverOverDay posix ->
+            R2.withNoCmd { model | currentlyHoveredDate = Just posix }
+
+
+cancelShift : Model -> ( Model, Cmd Msg )
+cancelShift model =
+    -- todo what should dates be set to on shift cancel
+    R2.withNoCmd
+        { model
+            | isShiftDown = False
+            , terminationCounter = 10
+
+            --, endDate = Maybe.map .end model.dateRange
+            --, startDate = Maybe.map .start model.dateRange
+        }
+
+
+onShiftKey : RawKey -> Model -> (Model -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+onShiftKey rawKey model onShiftFunc =
+    case Keyboard.anyKeyOriginal rawKey of
+        Just key ->
+            case key of
+                Shift ->
+                    onShiftFunc model
+
+                _ ->
+                    R2.withNoCmd model
+
+        Nothing ->
+            R2.withNoCmd model
 
 
 updateCalendarRange : Model -> Int -> PosixRange -> ( Model, Cmd Msg )
@@ -211,25 +299,27 @@ subscriptions model =
         shiftSubs =
             if model.isShiftDown then
                 [ Keyboard.ups KeyUp
-                , Browser.Events.onVisibilityChange CancelShift
-                , Keyboard.downs KeyDown
+                , Browser.Events.onVisibilityChange (always CancelShift)
                 , Time.every 100 (always TerminateBadState)
                 ]
 
             else
-                [ Keyboard.downs KeyDown ]
+                []
+
+        keyDowns =
+            [ Keyboard.downs KeyDown ]
 
         mouseSubs =
             if model.isMouseDown then
-                [ Browser.Events.onMouseUp (EndSelection model.hoveredDate |> Json.succeed)
-                , Browser.Events.onVisibilityChange (EndSelection model.hoveredDate |> always)
+                [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
                 ]
 
             else
                 []
     in
-    if model.open then
-        List.concat [ shiftSubs, mouseSubs ] |> Sub.batch
+    if model.isOpen then
+        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
 
     else
         Sub.none
@@ -405,14 +495,18 @@ monthCalendarView currentMonth today zone model =
 dayCalendarView : Zone -> Posix -> Posix -> Posix -> Model -> Html Msg
 dayCalendarView zone currentMonth currentDay today model =
     let
+        -- todo prevent all interaction with invisible days (from other months)
         monthOfDate =
             Time.toMonth utc
 
         wantedMonth =
             monthOfDate currentMonth
 
+        contentIsInCorrectMonth =
+            monthOfDate currentDay == wantedMonth
+
         content =
-            if monthOfDate currentDay == wantedMonth then
+            if contentIsInCorrectMonth then
                 [ text <| String.fromInt <| Time.toDay utc currentDay ]
 
             else
@@ -424,8 +518,102 @@ dayCalendarView zone currentMonth currentDay today model =
 
             else
                 StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
+
+        isSameDayOfSelection getPosixFromSelection =
+            contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) (getPosixFromSelection model.selection))
+
+        classList =
+            Attrs.classList
+                [ ( "day", True )
+                , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange currentDay model )
+                , ( "border-selection", isSameDayOfSelection selectionStart || isSameDayOfSelection selectionEnd )
+
+                -- todo check if zone is correct
+                , ( "today", isSameDay currentDay today )
+                ]
     in
-    td [ Attrs.class "day" ] content
+    td [ classList, setDate, Html.Events.onMouseOver <| OnHoverOverDay currentDay ] content
+
+
+isInSelectionRange : Posix -> Model -> Bool
+isInSelectionRange comparisonPosix model =
+    let
+        posixInMillis =
+            posixToMillis comparisonPosix
+
+        compareRange range =
+            posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
+    in
+    case model.selection of
+        Single posix ->
+            -- todo is this concept getting removed?
+            False
+
+        Range posixRange ->
+            compareRange posixRange
+
+        Unselected ->
+            False
+
+        Selecting posixRange ->
+            compareRange posixRange
+
+        Preset presetType ->
+            -- todo presets
+            False
+
+
+selectionEnd : Selection -> Maybe Posix
+selectionEnd selection =
+    -- todo try to combine all these things that are casing
+    case selection of
+        Single posix ->
+            Nothing
+
+        Range posixRange ->
+            Just posixRange.end
+
+        Unselected ->
+            Nothing
+
+        Selecting posixRange ->
+            Just posixRange.end
+
+        Preset presetType ->
+            --todo on this
+            Nothing
+
+
+selectionStart : Selection -> Maybe Posix
+selectionStart selection =
+    case selection of
+        Single posix ->
+            Nothing
+
+        Range posixRange ->
+            Just posixRange.start
+
+        Unselected ->
+            Nothing
+
+        Selecting posixRange ->
+            Just posixRange.start
+
+        Preset presetType ->
+            --todo on this
+            Nothing
+
+
+isSameDay : Posix -> Posix -> Bool
+isSameDay posix1 posix2 =
+    let
+        civel1 =
+            posixToCivil posix1
+
+        civel2 =
+            posixToCivil posix2
+    in
+    civel1.day == civel2.day && civel1.month == civel2.month && civel1.year == civel2.year
 
 
 calcRange : Posix -> Zone -> Model -> PosixRange

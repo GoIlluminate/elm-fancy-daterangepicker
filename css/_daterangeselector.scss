@@ -70,6 +70,16 @@
       cursor: pointer;
     }
 
+    .today {
+      text-decoration: underline;
+    }
+    .selected-range {
+      background-color: pink;
+    }
+    .border-selection {
+      background-color: red;
+    }
+
   }
 
 }
