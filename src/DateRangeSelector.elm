@@ -109,7 +109,7 @@ initModel =
     , isShiftDown = False
     , presets = []
     , calendarType = FullCalendar
-    , isOpen = False
+    , isOpen = True --todo change
     , inputText = ""
     , terminationCounter = 0
     , currentlyHoveredDate = Nothing
@@ -177,7 +177,7 @@ update msg model =
                 Just p ->
                     let
                         selection =
-                            Range { start = p, end = p }
+                            Range <| createRange model p
                     in
                     R2.withNoCmd
                         { model
@@ -232,7 +232,43 @@ update msg model =
             cancelShift model
 
         OnHoverOverDay posix ->
-            R2.withNoCmd { model | currentlyHoveredDate = Just posix }
+            let
+                selection =
+                    if model.isMouseDown || model.isShiftDown then
+                        Selecting <| createRange model posix
+
+                    else
+                        model.selection
+            in
+            R2.withNoCmd { model | currentlyHoveredDate = Just posix, selection = selection }
+
+
+createRange : Model -> Posix -> PosixRange
+createRange model end =
+    let
+        a =
+            Debug.log "a" <| Debug.toString <| selectionStart model.selection
+
+        b =
+            Debug.log "b" <| Debug.toString <| selectionEnd model.selection
+
+        c =
+            Debug.log "c" end
+
+        d =
+            Debug.log "d" <| Debug.toString <| posixToMillis start > posixToMillis end
+
+        start =
+            Maybe.withDefault end <| selectionStart model.selection
+
+        previousEnd =
+            Maybe.withDefault end <| selectionEnd model.selection
+    in
+    if posixToMillis start > posixToMillis end then
+        { start = end, end = previousEnd }
+
+    else
+        { start = start, end = end }
 
 
 cancelShift : Model -> ( Model, Cmd Msg )
@@ -242,9 +278,6 @@ cancelShift model =
         { model
             | isShiftDown = False
             , terminationCounter = 10
-
-            --, endDate = Maybe.map .end model.dateRange
-            --, startDate = Maybe.map .start model.dateRange
         }
 
 
