@@ -1,7 +1,7 @@
 module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 
 import Date exposing (Date)
-import Derberos.Date.Core exposing (civilToPosix)
+import Derberos.Date.Core exposing (civilToPosix, posixToCivil)
 import Parser exposing ((|.), (|=), Parser)
 import Time exposing (Posix, Zone, posixToMillis, utc)
 
@@ -483,8 +483,8 @@ yearToPosix year zone =
     let
         dateRecord =
             { year = year
-            , month = 0
-            , day = 0
+            , month = 1
+            , day = 1
             , hour = 0
             , minute = 0
             , second = 0
@@ -501,7 +501,7 @@ yearAndMonthToPosix { year, month } zone =
         dateRecord =
             { year = year
             , month = month
-            , day = 0
+            , day = 1
             , hour = 0
             , minute = 0
             , second = 0

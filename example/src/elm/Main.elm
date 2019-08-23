@@ -5,14 +5,14 @@ import Date
     exposing
         ( Date
         )
-import DateRangePicker exposing (CalendarDisplay(..), DateRange, RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
+import DateRangePicker exposing (CalendarDisplay(..), DateRange, PresetOption(..), RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
 import DateRangePicker.Helper exposing (formatDate)
-import DateRangeSelector exposing (initModel)
-import Html exposing (Html, div, h2, h4, i, span, text)
+import DateRangeSelector exposing (englishLanugageConfig, initModelWithOptions, openDateRangePicker)
+import Html exposing (Html, button, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
 import Task
-import Time exposing (Posix, Zone)
+import Time exposing (Month(..), Posix, Zone)
 
 
 type Msg
@@ -62,7 +62,22 @@ init =
       , monthsInRange = Nothing
       , weeksInRange = Nothing
       , daysInRange = Nothing
-      , dateSelector = initModel
+      , dateSelector =
+            initModelWithOptions
+                { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
+                , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
+                , presets =
+                    [ DateRangeSelector.Today
+
+                    --                    , DateRangeSelector.Yesterday
+                    --                    , DateRangeSelector.PastWeek
+                    --                    , DateRangeSelector.PastMonth
+                    --                    , DateRangeSelector.PastYear
+                    ]
+                , calendarType = DateRangeSelector.FullCalendar
+                , isOpen = False
+                , languageConfig = englishLanugageConfig
+                }
       , today = Nothing
       , zone = Nothing
       }
@@ -83,6 +98,11 @@ getSettings useDefault =
         { defaultSettings
             | formatDateRange = DateRangePicker.formatDateRange
             , restrictedDateRange = ToPresent
+            , presetOptions =
+                { presetOption = NoPresets
+                , presetSettings = []
+                , presets = []
+                }
         }
 
 
@@ -155,15 +175,18 @@ view model =
         selector =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
-                    div [ class "theme-light" ] [ DateRangeSelector.view t z model.dateSelector ]
+                    div [ class "theme-light open-button" ]
+                        [ button [ openDateRangePicker ] [ text "Open Me!" ]
+                        , DateRangeSelector.view t z model.dateSelector
+                        ]
 
                 _ ->
                     text ""
     in
     div [ class "main" ]
         [ calendarDisplayOptions model
-        , dateRangePickers model
         , Html.map NewSelectorMsgs selector
+        , dateRangePickers model
         ]
 
 
@@ -263,9 +286,18 @@ main =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        selectorSubscriptions =
+            case ( model.today, model.zone ) of
+                ( Just t, Just z ) ->
+                    DateRangeSelector.subscriptions model.dateSelector t z
+
+                _ ->
+                    Sub.none
+    in
     Sub.batch
         [ Sub.map SetDateRangePicker <| DateRangePicker.subscriptions model.dateRangePicker
-        , Sub.map NewSelectorMsgs <| DateRangeSelector.subscriptions model.dateSelector
+        , Sub.map NewSelectorMsgs <| selectorSubscriptions
         ]
 
 
