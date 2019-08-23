@@ -68,11 +68,10 @@ init =
                 , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
                 , presets =
                     [ DateRangeSelector.Today
-
-                    --                    , DateRangeSelector.Yesterday
-                    --                    , DateRangeSelector.PastWeek
-                    --                    , DateRangeSelector.PastMonth
-                    --                    , DateRangeSelector.PastYear
+                    , DateRangeSelector.Yesterday
+                    , DateRangeSelector.PastWeek
+                    , DateRangeSelector.PastMonth
+                    , DateRangeSelector.PastYear
                     ]
                 , calendarType = DateRangeSelector.FullCalendar
                 , isOpen = False

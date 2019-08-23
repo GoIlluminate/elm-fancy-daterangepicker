@@ -1,4 +1,4 @@
-module DateRangeSelector exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosix, subscriptions, update, view)
+module DateRangeSelector exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
 
 import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -43,6 +43,8 @@ type Msg
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
     | CheckToMoveToNextVisibleRange Posix Zone
+    | SetPresetMenu Bool
+    | SelectPreset PresetType
 
 
 type MousePosition
@@ -118,6 +120,7 @@ type alias Model =
     , uiElement : Maybe Element
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
+    , isPresetMenuOpen : Bool
     }
 
 
@@ -143,6 +146,7 @@ initModel =
     , uiElement = Nothing
     , isMouseOutside = False
     , languageConfig = englishLanugageConfig
+    , isPresetMenuOpen = False
     }
 
 
@@ -354,6 +358,21 @@ update msg model =
                 _ ->
                     R2.withNoCmd model
 
+        SetPresetMenu bool ->
+            R2.withNoCmd { model | isPresetMenuOpen = bool }
+
+        SelectPreset presetType ->
+            let
+                selection =
+                    Preset presetType
+            in
+            R2.withNoCmd
+                { model
+                    | isPresetMenuOpen = False
+                    , selection = selection
+                    , inputText = prettyFormatSelection selection
+                }
+
 
 calculateMousePosition : Element -> Mouse.Event -> MousePosition
 calculateMousePosition element event =
@@ -541,9 +560,26 @@ presets model =
     if List.isEmpty model.presets then
         div [] []
 
+    else if model.isPresetMenuOpen then
+        presetMenu model
+
     else
-        List.map (\m -> div [] [ text <| presetToDisplayString m ]) model.presets
-            |> div []
+        div [ Html.Events.onClick <| SetPresetMenu True ] [ text "Presets" ]
+
+
+presetMenu : Model -> Html Msg
+presetMenu model =
+    div [ Attrs.class "preset-menu--container" ]
+        [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
+            []
+        , div [ Attrs.class "preset-menu--content" ] <|
+            List.map
+                (\p ->
+                    div [ Html.Events.onClick <| SelectPreset p, Attrs.class "menu-item" ]
+                        [ text <| presetToDisplayString p ]
+                )
+                model.presets
+        ]
 
 
 bottomBar : Model -> Html Msg
@@ -814,8 +850,7 @@ isInSelectionRange comparisonPosix model =
             compareRange <| normalizeSelectingRange posixRange
 
         Preset presetType ->
-            -- todo presets
-            False
+            presetToPosixRange
 
 
 selectionEnd : Selection -> Maybe Posix
@@ -1089,8 +1124,8 @@ convertInterval interval intervalValue today localZone =
             addYears intervalValue today
 
 
-presetToPosix : PresetType -> Posix -> Zone -> PosixRange
-presetToPosix presetType today localZone =
+presetToPosixRange : PresetType -> Posix -> Zone -> PosixRange
+presetToPosixRange presetType today localZone =
     case presetType of
         Today ->
             { start = getStartOfDay today, end = getEndOfDay today }
