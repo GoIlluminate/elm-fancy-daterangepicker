@@ -1,4 +1,4 @@
-module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
+module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Format, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
 
 import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -92,8 +92,8 @@ type alias CustomPreset =
 
 
 type Selection
-    = Single Posix
-    | Range PosixRange
+    = Single Format Posix
+    | Range Format PosixRange
     | Unselected
     | Selecting PosixRange
     | Preset PresetType
@@ -104,6 +104,11 @@ type CalendarType
     | ThreeMonths
     | TwoMonths
     | OneMonth
+
+
+type Format
+    = DateFormat
+    | DateTimeFormat
 
 
 type alias Model =
@@ -271,7 +276,7 @@ update msg model =
                 Just p ->
                     let
                         selection =
-                            Range <| normalizeSelectingRange <| createSelectingRange model p
+                            Range DateFormat <| normalizeSelectingRange <| createSelectingRange model p
                     in
                     R2.withNoCmd
                         { model
@@ -412,10 +417,10 @@ calculateMousePosition element event =
 createSelectingRange : Model -> Posix -> PosixRange
 createSelectingRange model changedValue =
     case model.selection of
-        Single posix ->
+        Single _ _ ->
             { start = changedValue, end = changedValue }
 
-        Range posixRange ->
+        Range _ posixRange ->
             { start = posixRange.start, end = changedValue }
 
         Unselected ->
@@ -424,7 +429,7 @@ createSelectingRange model changedValue =
         Selecting posixRange ->
             { start = posixRange.start, end = changedValue }
 
-        Preset presetType ->
+        Preset _ ->
             { start = changedValue, end = changedValue }
 
 
@@ -436,7 +441,7 @@ cancelShift model =
                 selection =
                     PosixRange posixRange.start posixRange.end
                         |> normalizeSelectingRange
-                        |> Range
+                        |> Range DateFormat
             in
             R2.withNoCmd
                 { model
@@ -623,19 +628,21 @@ rightSelector visibleRange =
 topBar : Model -> Zone -> PosixRange -> Posix -> Html Msg
 topBar model zone visibleRange today =
     let
-        fullCalendarSelector =
+        ( fullCalendarSelector, class ) =
             case model.calendarType of
                 FullCalendar ->
-                    div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
+                    ( div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
                         [ text <| selectionText visibleRange ]
+                    , "top-bar--full"
+                    )
 
                 _ ->
-                    text ""
+                    ( text "", "top-bar--partial" )
 
         selection =
-            Range { start = visibleRange.start, end = visibleRange.end }
+            Range DateFormat { start = visibleRange.start, end = visibleRange.end }
     in
-    div [ Attrs.class "top-bar" ]
+    div [ Attrs.class class ]
         [ fullCalendarSelector
         , presetsDisplay model today zone
         , calendarInput model zone today
@@ -693,17 +700,17 @@ combineInputToRange start end zone =
             convertInputDate end zone
     in
     case ( startSelection, endSelection ) of
-        ( Single startPosix, Single endPosix ) ->
-            Range { start = startPosix, end = endPosix }
+        ( Single _ startPosix, Single _ endPosix ) ->
+            Range DateTimeFormat { start = startPosix, end = endPosix }
 
-        ( Single startPosix, Range endPosixRange ) ->
-            Range { start = startPosix, end = endPosixRange.end }
+        ( Single _ startPosix, Range _ endPosixRange ) ->
+            Range DateTimeFormat { start = startPosix, end = endPosixRange.end }
 
-        ( Range startPosixRange, Single endPosix ) ->
-            Range { start = startPosixRange.start, end = endPosix }
+        ( Range _ startPosixRange, Single _ endPosix ) ->
+            Range DateTimeFormat { start = startPosixRange.start, end = endPosix }
 
-        ( Range startPosixRange, Range endPosixRange ) ->
-            Range { start = startPosixRange.start, end = endPosixRange.end }
+        ( Range _ startPosixRange, Range _ endPosixRange ) ->
+            Range DateFormat { start = startPosixRange.start, end = endPosixRange.end }
 
         _ ->
             Unselected
@@ -713,16 +720,16 @@ convertInputDate : InputDate -> Zone -> Selection
 convertInputDate inputDate zone =
     case inputDate of
         JustYear year ->
-            Range <| yearToPosixRange year zone
+            Range DateFormat <| yearToPosixRange year zone
 
         JustYearAndMonth yearAndMonth ->
-            Range <| yearAndMonthToPosixRange yearAndMonth zone
+            Range DateFormat <| yearAndMonthToPosixRange yearAndMonth zone
 
         FullDate dateParts ->
-            Range <| datePartsToPosixRange dateParts zone
+            Range DateFormat <| datePartsToPosixRange dateParts zone
 
         FullDateTime dateTimeParts ->
-            Single <| dateTimePartsToPosix dateTimeParts utc
+            Single DateTimeFormat <| dateTimePartsToPosix dateTimeParts utc
 
 
 calendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
@@ -747,7 +754,7 @@ yearCalendarView today zone model visibleRange =
         quarter name startMonth endMonth =
             div
                 [ posixRangeForMonths startMonth endMonth (Time.toYear zone visibleRange.start) zone
-                    |> Range
+                    |> Range DateFormat
                     |> SetSelection
                     |> Html.Events.onClick
                 , Attrs.class "selection-hover"
@@ -822,7 +829,7 @@ monthCalendarView : Posix -> Posix -> Zone -> Model -> Html Msg
 monthCalendarView currentMonth today zone model =
     let
         selection =
-            Range { start = getFirstDayOfMonth utc currentMonth, end = getLastDayOfMonth utc currentMonth }
+            Range DateFormat { start = getFirstDayOfMonth utc currentMonth, end = getLastDayOfMonth utc currentMonth }
     in
     td []
         [ table []
@@ -897,11 +904,11 @@ isInSelectionRange comparisonPosix model today localZone =
             posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
     in
     case model.selection of
-        Single posix ->
-            -- todo is this concept getting removed?
+        Single _ posix ->
+            -- todo is this concept getting removed - nope, but needs fixing around?
             False
 
-        Range posixRange ->
+        Range _ posixRange ->
             compareRange posixRange
 
         Unselected ->
@@ -918,10 +925,10 @@ selectionEnd : Selection -> Posix -> Zone -> Maybe Posix
 selectionEnd selection today localZone =
     -- todo try to combine all these things that are casing
     case selection of
-        Single posix ->
+        Single _ posix ->
             Nothing
 
-        Range posixRange ->
+        Range _ posixRange ->
             Just posixRange.end
 
         Unselected ->
@@ -937,10 +944,10 @@ selectionEnd selection today localZone =
 selectionStart : Selection -> Posix -> Zone -> Maybe Posix
 selectionStart selection today localZone =
     case selection of
-        Single posix ->
+        Single _ posix ->
             Just posix
 
-        Range posixRange ->
+        Range _ posixRange ->
             Just posixRange.start
 
         Unselected ->
@@ -990,10 +997,10 @@ calcRange today zone model =
 getVisibleRangeFromSelection : Selection -> Posix -> Zone -> Maybe PosixRange
 getVisibleRangeFromSelection selection today localZone =
     case Debug.log "test sel" selection of
-        Single posix ->
+        Single _ posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
-        Range posixRange ->
+        Range _ posixRange ->
             Just posixRange
 
         Unselected ->
@@ -1003,10 +1010,6 @@ getVisibleRangeFromSelection selection today localZone =
             Nothing
 
         Preset presetType ->
-            let
-                a =
-                    Debug.log "test" presetType
-            in
             Just <| presetToPosixRange presetType today localZone
 
 
@@ -1014,11 +1017,15 @@ prettyFormatSelection : Selection -> LanguageConfig -> String
 prettyFormatSelection selection languageConfig =
     -- todo handling time zones
     case selection of
-        Single posix ->
-            singleFormatter languageConfig utc posix
+        Single format posix ->
+            singleFormatter languageConfig format utc posix
 
-        Range posixRange ->
-            fullFormatter languageConfig utc posixRange.start posixRange.end
+        Range format posixRange ->
+            if isSameDay posixRange.start posixRange.end && format /= DateTimeFormat then
+                singleFormatter languageConfig format utc posixRange.start
+
+            else
+                fullFormatter languageConfig format utc posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -1030,15 +1037,30 @@ prettyFormatSelection selection languageConfig =
             presetToDisplayString presetType languageConfig
 
 
-singleFormatter : LanguageConfig -> Zone -> Posix -> String
-singleFormatter language =
+singleFormatter : LanguageConfig -> Format -> Zone -> Posix -> String
+singleFormatter language format =
+    let
+        timeParts =
+            case format of
+                DateFormat ->
+                    []
+
+                DateTimeFormat ->
+                    [ DateFormat.text " "
+                    , DateFormat.hourMilitaryFixed
+                    , DateFormat.text ":"
+                    , DateFormat.minuteFixed
+                    ]
+    in
     DateFormat.formatWithLanguage language.dateFormatLanguage
-        [ DateFormat.monthNameAbbreviated
-        , DateFormat.text " "
-        , DateFormat.dayOfMonthNumber
-        , DateFormat.text " "
-        , DateFormat.yearNumber
-        ]
+        ([ DateFormat.monthNameAbbreviated
+         , DateFormat.text " "
+         , DateFormat.dayOfMonthNumber
+         , DateFormat.text ", "
+         , DateFormat.yearNumber
+         ]
+            ++ timeParts
+        )
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String
@@ -1048,9 +1070,11 @@ monthFormatter language =
         ]
 
 
-fullFormatter : LanguageConfig -> Zone -> Posix -> Posix -> String
-fullFormatter language zone start end =
-    singleFormatter language zone start ++ " to " ++ singleFormatter language zone end
+fullFormatter : LanguageConfig -> Format -> Zone -> Posix -> Posix -> String
+fullFormatter language format zone start end =
+    singleFormatter language format zone start
+        ++ " to "
+        ++ singleFormatter language format zone end
 
 
 

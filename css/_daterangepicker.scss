@@ -38,9 +38,13 @@
       letter-spacing: 0.1px;
       color: #3c4043;
     }
-    .top-bar {
+    .top-bar--full {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: max-content minmax(0, 1fr) 2fr;
+    }
+    .top-bar--partial {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 2fr;
     }
     .prev-range-selector {
       @extend %range-selector;
