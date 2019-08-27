@@ -18,6 +18,8 @@ import Json.Decode as Json
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Events exposing (Event(..))
 import Return2 as R2
+import Svg exposing (g, svg)
+import Svg.Attributes as Svg
 import Task
 import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
 
@@ -29,7 +31,7 @@ type Msg
     | PrevCalendarRange PosixRange
     | NextCalendarRange PosixRange
     | SetSelection Selection
-    | OnInputFinish Zone
+    | OnInputFinish Posix Zone
     | OnInputChange String
     | Reset
     | StartSelection Posix
@@ -44,7 +46,7 @@ type Msg
     | OnGetElementSuccess (Result Error Element)
     | CheckToMoveToNextVisibleRange Posix Zone
     | SetPresetMenu Bool
-    | SelectPreset PresetType
+    | SelectPreset PresetType Posix Zone
 
 
 type MousePosition
@@ -220,7 +222,7 @@ update msg model =
         SetSelection selection ->
             R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection }
 
-        OnInputFinish zone ->
+        OnInputFinish today zone ->
             let
                 parseOutput =
                     parseDateTime (List.map presetToDisplayString model.presets) model.inputText
@@ -236,7 +238,7 @@ update msg model =
                             { model
                                 | selection = selection
                                 , inputText = prettyFormatSelection selection
-                                , visibleCalendarRange = getVisibleRangeFromSelection selection
+                                , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
                             }
 
                         Err _ ->
@@ -364,7 +366,7 @@ update msg model =
         SetPresetMenu bool ->
             R2.withNoCmd { model | isPresetMenuOpen = bool }
 
-        SelectPreset presetType ->
+        SelectPreset presetType today zone ->
             let
                 selection =
                     Preset presetType
@@ -373,6 +375,7 @@ update msg model =
                 { model
                     | isPresetMenuOpen = False
                     , selection = selection
+                    , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
                     , inputText = prettyFormatSelection selection
                 }
 
@@ -546,7 +549,7 @@ view today zone model =
                 ]
                 []
             , div [ Attrs.class "body" ]
-                [ topBar model zone visibleRange
+                [ topBar model zone visibleRange today
                 , leftSelector visibleRange
                 , rightSelector visibleRange
                 , calendarView today zone model visibleRange
@@ -558,27 +561,30 @@ view today zone model =
         text ""
 
 
-presetsDisplay : Model -> Html Msg
-presetsDisplay model =
+presetsDisplay : Model -> Posix -> Zone -> Html Msg
+presetsDisplay model today zone =
     if List.isEmpty model.presets then
         div [] []
 
     else if model.isPresetMenuOpen then
-        presetMenu model
+        presetMenu model today zone
 
     else
-        div [ Html.Events.onClick <| SetPresetMenu True ] [ text "Presets" ]
+        div [ Attrs.class "preset--open--wrapper" ]
+            [ div [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
+                [ text <| model.languageConfig.presets, downArrow ]
+            ]
 
 
-presetMenu : Model -> Html Msg
-presetMenu model =
+presetMenu : Model -> Posix -> Zone -> Html Msg
+presetMenu model today zone =
     div [ Attrs.class "preset-menu--container" ]
         [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
             []
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p, Attrs.class "menu-item" ]
+                    div [ Html.Events.onClick <| SelectPreset p today zone, Attrs.class "menu-item" ]
                         [ text <| presetToDisplayString p ]
                 )
                 model.presets
@@ -607,14 +613,14 @@ rightSelector visibleRange =
         [ div [] [ text "❯" ] ]
 
 
-topBar : Model -> Zone -> PosixRange -> Html Msg
-topBar model zone visibleRange =
+topBar : Model -> Zone -> PosixRange -> Posix -> Html Msg
+topBar model zone visibleRange today =
     let
         fullCalendarSelector =
             case model.calendarType of
                 FullCalendar ->
                     div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
-                        [ text <| selectionText model visibleRange ]
+                        [ text <| selectionText visibleRange ]
 
                 _ ->
                     text ""
@@ -624,22 +630,26 @@ topBar model zone visibleRange =
     in
     div [ Attrs.class "top-bar" ]
         [ fullCalendarSelector
-        , presetsDisplay model
-        , calendarInput model zone
+        , presetsDisplay model today zone
+        , calendarInput model zone today
         ]
 
 
-selectionText : Model -> PosixRange -> String
-selectionText model visibleRange =
-    model.languageConfig.fullCalendarSelection ++ " " ++ (String.fromInt <| Time.toYear utc visibleRange.start)
+selectionText : PosixRange -> String
+selectionText visibleRange =
+    String.fromInt <| Time.toYear utc visibleRange.start
 
 
-calendarInput : Model -> Zone -> Html Msg
-calendarInput model zone =
+
+-- model.languageConfig.fullCalendarSelection ++ " " ++ (
+
+
+calendarInput : Model -> Zone -> Posix -> Html Msg
+calendarInput model zone today =
     div [ Attrs.class "calendar-input" ]
         [ input
-            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish zone ) ]
-            , Html.Events.onBlur <| OnInputFinish zone
+            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today zone ) ]
+            , Html.Events.onBlur <| OnInputFinish today zone
             , Html.Events.onInput OnInputChange
             , Attrs.placeholder model.languageConfig.inputPlaceholder
             , Attrs.value model.inputText
@@ -941,9 +951,9 @@ calcRange today zone model =
     Maybe.withDefault convertToRange model.visibleCalendarRange
 
 
-getVisibleRangeFromSelection : Selection -> Maybe PosixRange
-getVisibleRangeFromSelection selection =
-    case selection of
+getVisibleRangeFromSelection : Selection -> Posix -> Zone -> Maybe PosixRange
+getVisibleRangeFromSelection selection today localZone =
+    case Debug.log "test sel" selection of
         Single posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
@@ -957,8 +967,11 @@ getVisibleRangeFromSelection selection =
             Nothing
 
         Preset presetType ->
-            -- todo does this need to be changed?
-            Nothing
+            let
+                a =
+                    Debug.log "test" presetType
+            in
+            Just <| presetToPosixRange presetType today localZone
 
 
 prettyFormatSelection : Selection -> String
@@ -978,7 +991,6 @@ prettyFormatSelection selection =
             ""
 
         Preset presetType ->
-            -- todo create date from this or show string?
             presetToDisplayString presetType
 
 
@@ -1161,3 +1173,15 @@ presetToPosixRange presetType today localZone =
                 convertInterval customPreset.intervalEnd customPreset.intervalEndValue today localZone
                     |> getEndOfDay
             }
+
+
+downArrow : Html msg
+downArrow =
+    svg [ Svg.width "20", Svg.height "20", Svg.viewBox "0 0 30 30" ]
+        [ g [ Svg.stroke "none", Svg.strokeWidth "1", Svg.fill "none", Svg.fillRule "evenodd", Svg.strokeLinecap "round", Svg.strokeLinejoin "round" ]
+            [ g [ Svg.transform "translate(15.000000, 15.000000) scale(-1, 1) rotate(90.000000) translate(-15.000000, -15.000000) translate(12.000000, 9.000000)", Svg.stroke "black", Svg.strokeWidth "2" ]
+                [ Svg.polyline [ Svg.points "0 12 6 6 0 0" ]
+                    []
+                ]
+            ]
+        ]

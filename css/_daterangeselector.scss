@@ -27,15 +27,19 @@
     }
     .body {
       font-size: 14px;
-      background: themed('color-bg-light-gray');
+      background: themed('color-secondary');
       display: table;
       box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
       border-radius: 6px;
       z-index: 1001;
       position: absolute;
+      font-family: Roboto, HelveticaNeue, Arial, sans-serif;
+      letter-spacing: 0.1px;
+      color: #3c4043;
     }
     .top-bar {
       display: grid;
+      //color: rgba(0,0,0,.56);
       grid-template-columns: max-content minmax(0, 1fr) 2fr;
     }
     .prev-range-selector {
@@ -55,7 +59,7 @@
       margin-left: 10px;
       padding: 5px;
     }
-    .bottom-bar{
+    .bottom-bar {
       display: flex;
       flex-direction: row-reverse;
     }
@@ -79,7 +83,13 @@
       padding: 5px 0;
 
       > input {
-        width: calc(100% - 10px);
+        width: calc(100% - 15px);
+        border: 1px solid #dadce0;
+        padding: 5px 0 5px 5px;
+        &:focus {
+          background-color: #f4f8ff;
+          border: 1px solid themed('color-primary');
+        }
       }
     }
     .range-selector {
@@ -132,11 +142,12 @@
       text-decoration: underline;
     }
     .selected-range {
-      background-color: lighten(themed('color-primary'), 25);
+      background-color: rgb(218,237,253);
     }
     .border-selection {
       background-color: themed('color-primary');
       color: white;
+      border-radius: 2px;
     }
 
 
@@ -144,8 +155,19 @@
 
       &:hover {
         cursor: pointer;
-        background: darken(themed('color-bg-light-gray'), 5);
+        background: #f8f9fa;
       }
+    }
+    .preset--open--wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .preset--open {
+      @extend .selection-hover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .preset-menu--close {
       position: fixed;
@@ -155,22 +177,26 @@
       bottom: 0;
       z-index: 1002;
     }
-    .preset-menu--content{
+    .preset-menu--content {
       z-index: 1003;
       background-color: white;
       width: max-content;
       position: absolute;
+      transform: translateX(calc(50% - 5px)) translateY(5px);
       border-radius: 8px;
-      box-shadow: 0 1px 2px rgba(60,64,67, 0.3), 0 1px 3px 1px rgba(60,64,67, 0.15);
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+
       :first-child {
         margin-top: 10px;
       }
+
       :last-child {
         margin-bottom: 10px;
       }
     }
     .menu-item {
       @extend .selection-hover;
+      color: rgba(0,0,0,.84);
       padding: 5px 10px;
     }
 
