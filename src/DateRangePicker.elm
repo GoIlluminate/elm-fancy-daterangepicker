@@ -127,10 +127,6 @@ type alias Model =
     }
 
 
-
--- todo add an init with options
-
-
 initModel : Model
 initModel =
     { selection = Unselected
