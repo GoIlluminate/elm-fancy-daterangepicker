@@ -1,4 +1,4 @@
-module DateRangeSelector exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
+module DateRangeSelector exposing (CalendarType(..), setCalendarType, Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
 
 import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -140,7 +140,7 @@ initModel =
     , isMouseDown = False
     , isShiftDown = False
     , presets = []
-    , calendarType = FullCalendar
+    , calendarType = ThreeMonths
     , isOpen = False
     , inputText = ""
     , terminationCounter = 0
@@ -736,26 +736,18 @@ calendarView today zone model visibleRange =
             yearCalendarView today zone model visibleRange
 
         ThreeMonths ->
-            div [] []
+            threeMonthCalendarView today zone model visibleRange
 
         TwoMonths ->
-            div [] []
+            twoMonthCalendarView today zone model visibleRange
 
         OneMonth ->
-            div [] []
+            monthCalendarTableView today zone model visibleRange
 
 
 yearCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 yearCalendarView today zone model visibleRange =
     let
-        posixMonths =
-            List.map
-                (\x ->
-                    addMonths x utc <| getFirstDayOfYear zone visibleRange.start
-                )
-            <|
-                List.range 0 11
-
         quarter name startMonth endMonth =
             div
                 [ posixRangeForMonths startMonth endMonth (Time.toYear zone visibleRange.start) zone
@@ -773,8 +765,49 @@ yearCalendarView today zone model visibleRange =
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar" ]
         [ quarters
-        , table [] [ tbody [ Attrs.class "year" ] <| List.map (\m -> monthCalendarView m today zone model) posixMonths ]
+        , table [] [ tbody [ Attrs.class "year" ] <| List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 11 zone visibleRange getFirstDayOfYear) ]
         ]
+
+
+threeMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+threeMonthCalendarView today zone model visibleRange =
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "three-month-calendar" ]
+        [ table [ Attrs.class "month-table" ]
+            [ tbody [ Attrs.class "three-month" ] <|
+                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 2 zone visibleRange getFirstDayOfMonth)
+            ]
+        ]
+
+
+twoMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+twoMonthCalendarView today zone model visibleRange =
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "two-month-calendar" ]
+        [ table [ Attrs.class "month-table" ]
+            [ tbody [ Attrs.class "two-month" ] <|
+                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 1 zone visibleRange getFirstDayOfMonth)
+            ]
+        ]
+
+
+monthCalendarTableView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+monthCalendarTableView today zone model visibleRange =
+    let
+        posixMonth =
+            getFirstDayOfMonth zone visibleRange.start
+    in
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
+        [ table [ Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [ monthCalendarView posixMonth today zone model ] ]
+        ]
+
+
+getMonthsFromRange : Int -> Int -> Zone -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
+getMonthsFromRange start end zone visibleRange fn =
+    List.map
+        (\x ->
+            addMonths x utc <| fn zone visibleRange.start
+        )
+    <|
+        List.range start end
 
 
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
@@ -1114,6 +1147,11 @@ getStartOfDay posix =
     --todo  maybe call |> adjustMilliseconds zone?
     civilToPosix updatedDateRecord
 
+
+
+setCalendarType : CalendarType -> Model -> Model
+setCalendarType calendarType model =
+    { model | calendarType = calendarType}
 
 
 --------------------------------------------------------------------------------------------
