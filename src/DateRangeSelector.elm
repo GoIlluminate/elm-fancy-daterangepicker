@@ -1,4 +1,4 @@
-module DateRangeSelector exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
+module DateRangeSelector exposing (CalendarType(..), setCalendarType, Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
 
 import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -1111,6 +1111,11 @@ getStartOfDay posix =
     --todo  maybe call |> adjustMilliseconds zone?
     civilToPosix updatedDateRecord
 
+
+
+setCalendarType : CalendarType -> Model -> Model
+setCalendarType calendarType model =
+    { model | calendarType = calendarType}
 
 
 --------------------------------------------------------------------------------------------

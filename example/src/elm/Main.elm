@@ -77,16 +77,14 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ChangeCalendarDisplay calendarDisplay ->
+        ChangeCalendarDisplay calendarType ->
             let
-                selector =
-                    model.dateSelector
-
                 newDateRangeSelector =
-                    { selector | calendarType = calendarDisplay }
+                    model.dateSelector
+                        |> DateRangeSelector.setCalendarType calendarType
             in
             ( { model
-                | calendarDisplay = calendarDisplay
+                | calendarDisplay = calendarType
                 , dateSelector = newDateRangeSelector
               }
             , Cmd.none
