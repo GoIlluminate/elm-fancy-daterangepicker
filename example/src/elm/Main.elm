@@ -41,7 +41,6 @@ init =
     let
         calendarDisplay =
             DateRangeSelector.FullCalendar
-
     in
     ( { dateRange = Nothing
       , date = Nothing
@@ -76,14 +75,15 @@ init =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ( model) =
+update msg model =
     case msg of
         ChangeCalendarDisplay calendarDisplay ->
             let
-                selector = 
+                selector =
                     model.dateSelector
+
                 newDateRangeSelector =
-                    {selector | calendarType = calendarDisplay}
+                    { selector | calendarType = calendarDisplay }
             in
             ( { model
                 | calendarDisplay = calendarDisplay
@@ -221,7 +221,7 @@ subscriptions model =
                     Sub.none
     in
     Sub.batch
-        [  Sub.map NewSelectorMsgs <| selectorSubscriptions
+        [ Sub.map NewSelectorMsgs <| selectorSubscriptions
         ]
 
 

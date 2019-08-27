@@ -736,28 +736,37 @@ yearCalendarView today zone model visibleRange =
         , table [] [ tbody [ Attrs.class "year" ] <| List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 11 zone visibleRange getFirstDayOfYear) ]
         ]
 
+
 threeMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 threeMonthCalendarView today zone model visibleRange =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "three-month-calendar" ]
-        [ table [Attrs.class "month-table" ] [ tbody [ Attrs.class "three-month" ] 
-            <| List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 2 zone visibleRange getFirstDayOfMonth) ]
+        [ table [ Attrs.class "month-table" ]
+            [ tbody [ Attrs.class "three-month" ] <|
+                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 2 zone visibleRange getFirstDayOfMonth)
+            ]
         ]
+
 
 twoMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 twoMonthCalendarView today zone model visibleRange =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "two-month-calendar" ]
-        [ table [Attrs.class "month-table" ] [ tbody [ Attrs.class "two-month" ] 
-            <| List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 1 zone visibleRange getFirstDayOfMonth) ]
+        [ table [ Attrs.class "month-table" ]
+            [ tbody [ Attrs.class "two-month" ] <|
+                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 1 zone visibleRange getFirstDayOfMonth)
+            ]
         ]
+
 
 monthCalendarTableView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 monthCalendarTableView today zone model visibleRange =
     let
-        posixMonth = getFirstDayOfMonth zone visibleRange.start
+        posixMonth =
+            getFirstDayOfMonth zone visibleRange.start
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
-        [ table [Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [monthCalendarView posixMonth today zone model]  ]
+        [ table [ Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [ monthCalendarView posixMonth today zone model ] ]
         ]
+
 
 getMonthsFromRange : Int -> Int -> Zone -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
 getMonthsFromRange start end zone visibleRange fn =
@@ -767,6 +776,7 @@ getMonthsFromRange start end zone visibleRange fn =
         )
     <|
         List.range start end
+
 
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
