@@ -1,6 +1,6 @@
 module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Format, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
 
-import Browser.Dom exposing (Element, Error, getElement)
+import Browser.Dom as Dom exposing (Element, Error, getElement)
 import Browser.Events
 import Date exposing (Date)
 import DateFormat
@@ -19,6 +19,7 @@ import Json.Decode as Json
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Events exposing (Event(..))
 import Return2 as R2
+import SelectList exposing (SelectList)
 import Svg exposing (g, svg)
 import Svg.Attributes as Svg
 import Task
@@ -37,7 +38,7 @@ type Msg
     | Reset
     | StartSelection Posix
     | EndSelection (Maybe Posix)
-    | KeyDown RawKey
+    | KeyDown Posix Zone RawKey
     | KeyUp RawKey
     | TerminateBadState
     | CancelShift
@@ -129,6 +130,7 @@ type alias Model =
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
+    , keyboardSelectedPreset : Maybe (SelectList PresetType)
     }
 
 
@@ -151,6 +153,7 @@ initModel =
     , isMouseOutside = False
     , languageConfig = englishLanugageConfig
     , isPresetMenuOpen = False
+    , keyboardSelectedPreset = Nothing
     }
 
 
@@ -219,6 +222,8 @@ update msg model =
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
                     getElement "elm-fancy--daterangepicker-calendar"
+                , Task.attempt (always DoNothing) <|
+                    Dom.focus "elm-fancy--daterangepicker--input"
                 ]
                 { model | isOpen = True }
 
@@ -288,28 +293,19 @@ update msg model =
                 Nothing ->
                     R2.withNoCmd model
 
-        KeyDown rawKey ->
-            onShiftKey rawKey
-                model
-                (\m ->
-                    if m.isShiftDown then
-                        R2.withNoCmd
-                            { m
-                                | terminationCounter =
-                                    if m.terminationCounter >= 2 then
-                                        m.terminationCounter
-
-                                    else
-                                        m.terminationCounter + 1
-                            }
-
-                    else
-                        -- add start selection on shift logic
-                        R2.withNoCmd { m | isShiftDown = True }
-                )
+        KeyDown today zone rawKey ->
+            onKey rawKey model (onKeyDown model today zone)
 
         KeyUp rawKey ->
-            onShiftKey rawKey model cancelShift
+            onKey rawKey
+                model
+                (\key ->
+                    if key == Shift then
+                        cancelShift model
+
+                    else
+                        R2.withNoCmd model
+                )
 
         TerminateBadState ->
             -- todo what should dates be set to on terminate
@@ -376,20 +372,98 @@ update msg model =
                     R2.withNoCmd model
 
         SetPresetMenu bool ->
-            R2.withNoCmd { model | isPresetMenuOpen = bool }
+            R2.withNoCmd { model | isPresetMenuOpen = bool, keyboardSelectedPreset = Nothing }
 
         SelectPreset presetType today zone ->
-            let
-                selection =
-                    Preset presetType
-            in
-            R2.withNoCmd
-                { model
-                    | isPresetMenuOpen = False
-                    , selection = selection
-                    , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
-                    , inputText = prettyFormatSelection selection model.languageConfig
-                }
+            selectPreset presetType today zone model
+
+
+selectPreset : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
+selectPreset presetType today zone model =
+    let
+        selection =
+            Preset presetType
+    in
+    R2.withCmd
+        (Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--done")
+        { model
+            | isPresetMenuOpen = False
+            , selection = selection
+            , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
+            , inputText = prettyFormatSelection selection model.languageConfig
+            , keyboardSelectedPreset = Nothing
+        }
+
+
+onKeyDown : Model -> Posix -> Zone -> Key -> ( Model, Cmd Msg )
+onKeyDown model today zone key =
+    case key of
+        Shift ->
+            if model.isShiftDown then
+                R2.withNoCmd
+                    { model
+                        | terminationCounter =
+                            if model.terminationCounter >= 2 then
+                                model.terminationCounter
+
+                            else
+                                model.terminationCounter + 1
+                    }
+
+            else
+                -- add start selection on shift logic
+                R2.withNoCmd { model | isShiftDown = True }
+
+        Escape ->
+            if model.isPresetMenuOpen then
+                R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
+
+            else
+                R2.withNoCmd { model | isOpen = False }
+
+        ArrowDown ->
+            arrowMovement model 1 SelectList.fromList
+
+        ArrowUp ->
+            arrowMovement model -1 createSelectListWithLast
+
+        Enter ->
+            if model.isPresetMenuOpen then
+                case model.keyboardSelectedPreset of
+                    Just a ->
+                        selectPreset (SelectList.selected a) today zone model
+
+                    Nothing ->
+                        R2.withNoCmd model
+
+            else
+                R2.withNoCmd model
+
+        _ ->
+            R2.withNoCmd model
+
+
+createSelectListWithLast : List PresetType -> Maybe (SelectList PresetType)
+createSelectListWithLast presets =
+    Maybe.map SelectList.selectLast (SelectList.fromList presets)
+
+
+arrowMovement : Model -> Int -> (List PresetType -> Maybe (SelectList PresetType)) -> ( Model, Cmd Msg )
+arrowMovement model moveDropdownBy createNewSelectList =
+    if model.isPresetMenuOpen then
+        let
+            updatedModel =
+                case model.keyboardSelectedPreset of
+                    Just selectList ->
+                        { model | keyboardSelectedPreset = SelectList.selectBy moveDropdownBy selectList }
+
+                    Nothing ->
+                        { model | keyboardSelectedPreset = createNewSelectList model.presets }
+        in
+        R2.withNoCmd updatedModel
+
+    else
+        R2.withNoCmd model
 
 
 calculateMousePosition : Element -> Mouse.Event -> MousePosition
@@ -459,16 +533,11 @@ cancelShift model =
                 }
 
 
-onShiftKey : RawKey -> Model -> (Model -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
-onShiftKey rawKey model onShiftFunc =
+onKey : RawKey -> Model -> (Key -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+onKey rawKey model onValidKey =
     case Keyboard.anyKeyOriginal rawKey of
         Just key ->
-            case key of
-                Shift ->
-                    onShiftFunc model
-
-                _ ->
-                    R2.withNoCmd model
+            onValidKey key
 
         Nothing ->
             R2.withNoCmd model
@@ -518,7 +587,7 @@ subscriptions model today zone =
                 []
 
         keyDowns =
-            [ Keyboard.downs KeyDown ]
+            [ Keyboard.downs (KeyDown today zone) ]
 
         mouseSubs =
             if model.isMouseDown then
@@ -583,20 +652,32 @@ presetsDisplay model today zone =
 
     else
         div [ Attrs.class "preset--open--wrapper" ]
-            [ div [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
+            [ button [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
                 [ text <| model.languageConfig.presets, downArrow ]
             ]
 
 
 presetMenu : Model -> Posix -> Zone -> Html Msg
 presetMenu model today zone =
+    let
+        isElementSelected item =
+            case model.keyboardSelectedPreset of
+                Just a ->
+                    SelectList.selected a == item
+
+                Nothing ->
+                    False
+
+        classList item =
+            Attrs.classList [ ( "menu-item", True ), ( "menu-item--keyboard", isElementSelected item ) ]
+    in
     div [ Attrs.class "preset-menu--container" ]
         [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
             []
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p today zone, Attrs.class "menu-item" ]
+                    div [ Html.Events.onClick <| SelectPreset p today zone, classList p ]
                         [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
@@ -606,8 +687,13 @@ presetMenu model today zone =
 bottomBar : Model -> Html Msg
 bottomBar model =
     div [ Attrs.class "bottom-bar" ]
-        [ button [ Attrs.class "done", Html.Events.onClick Close ] [ text model.languageConfig.done ]
-        , div [ Attrs.class "reset", Html.Events.onClick Reset ]
+        [ button
+            [ Attrs.id "elm-fancy--daterangepicker--done"
+            , Attrs.class "done"
+            , Html.Events.onClick Close
+            ]
+            [ text model.languageConfig.done ]
+        , button [ Attrs.class "reset", Html.Events.onClick Reset ]
             [ text model.languageConfig.reset ]
         ]
 
@@ -661,6 +747,7 @@ calendarInput model zone today =
             [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today zone ) ]
             , Html.Events.onBlur <| OnInputFinish today zone
             , Html.Events.onInput OnInputChange
+            , Attrs.id "elm-fancy--daterangepicker--input"
             , Attrs.placeholder model.languageConfig.inputPlaceholder
             , Attrs.value model.inputText
             ]
