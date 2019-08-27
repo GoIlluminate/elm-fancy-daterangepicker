@@ -8,7 +8,7 @@ import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
-import Derberos.Date.Core exposing (DateRecord, civilToPosix, posixToCivil)
+import Derberos.Date.Core exposing (DateRecord, civilToPosix, posixToCivil, addTimezoneMilliseconds)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Derberos.Date.Utils exposing (monthToNumber1)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
@@ -32,7 +32,7 @@ type Msg
     | PrevCalendarRange PosixRange
     | NextCalendarRange PosixRange
     | SetSelection Selection
-    | OnInputFinish Posix Zone
+    | OnInputFinish Posix
     | OnInputChange String
     | Reset
     | StartSelection Posix
@@ -225,15 +225,15 @@ update msg model =
             R2.withNoCmd { model | isOpen = False }
 
         PrevCalendarRange currentVisibleRange ->
-            updateCalendarRange model -1 currentVisibleRange
+            updateCalendarRange model -1 currentVisibleRange utc
 
         NextCalendarRange currentVisibleRange ->
-            updateCalendarRange model 1 currentVisibleRange
+            updateCalendarRange model 1 currentVisibleRange utc
 
         SetSelection selection ->
-            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig }
+            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig utc}
 
-        OnInputFinish today zone ->
+        OnInputFinish today ->
             let
                 parseOutput =
                     parseDateTime (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets) model.inputText
@@ -244,16 +244,16 @@ update msg model =
                             -- todo how to do pretty format with time
                             let
                                 selection =
-                                    convertInput value zone model
+                                    convertInput value utc model
                             in
                             { model
                                 | selection = selection
-                                , inputText = prettyFormatSelection selection model.languageConfig
-                                , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
+                                , inputText = prettyFormatSelection selection model.languageConfig utc
+                                , visibleCalendarRange = getVisibleRangeFromSelection selection today utc
                             }
 
                         Err _ ->
-                            { model | inputText = prettyFormatSelection model.selection model.languageConfig }
+                            { model | inputText = prettyFormatSelection model.selection model.languageConfig utc }
             in
             R2.withNoCmd updatedModel
 
@@ -281,7 +281,7 @@ update msg model =
                         { model
                             | isMouseDown = False
                             , selection = selection
-                            , inputText = prettyFormatSelection selection model.languageConfig
+                            , inputText = prettyFormatSelection selection model.languageConfig utc
                         }
 
                 Nothing ->
@@ -308,7 +308,7 @@ update msg model =
                 )
 
         KeyUp rawKey ->
-            onShiftKey rawKey model cancelShift
+            onShiftKey rawKey model (cancelShift utc)
 
         TerminateBadState ->
             -- todo what should dates be set to on terminate
@@ -327,7 +327,7 @@ update msg model =
                 R2.withNoCmd { model | terminationCounter = model.terminationCounter - 1 }
 
         CancelShift ->
-            cancelShift model
+            cancelShift utc model 
 
         OnHoverOverDay posix ->
             let
@@ -357,16 +357,17 @@ update msg model =
         CheckToMoveToNextVisibleRange today zone ->
             let
                 visibleRange =
-                    calcRange today zone model
+                    calcRange today utc model
+                
             in
             case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
                     case calculateMousePosition element position of
                         OutsideRight ->
-                            updateCalendarRange model 1 visibleRange
+                            updateCalendarRange model 1 visibleRange utc
 
                         OutsideLeft ->
-                            updateCalendarRange model -1 visibleRange
+                            updateCalendarRange model -1 visibleRange utc
 
                         _ ->
                             R2.withNoCmd model
@@ -387,7 +388,7 @@ update msg model =
                     | isPresetMenuOpen = False
                     , selection = selection
                     , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
-                    , inputText = prettyFormatSelection selection model.languageConfig
+                    , inputText = prettyFormatSelection selection model.languageConfig zone
                 }
 
 
@@ -432,8 +433,8 @@ createSelectingRange model changedValue =
             { start = changedValue, end = changedValue }
 
 
-cancelShift : Model -> ( Model, Cmd Msg )
-cancelShift model =
+cancelShift : Zone -> Model -> ( Model, Cmd Msg )
+cancelShift zone model  =
     case model.selection of
         Selecting posixRange ->
             let
@@ -447,7 +448,7 @@ cancelShift model =
                     | isShiftDown = False
                     , terminationCounter = 10
                     , selection = selection
-                    , inputText = prettyFormatSelection selection model.languageConfig
+                    , inputText = prettyFormatSelection selection model.languageConfig zone
                 }
 
         _ ->
@@ -473,16 +474,16 @@ onShiftKey rawKey model onShiftFunc =
             R2.withNoCmd model
 
 
-updateCalendarRange : Model -> Int -> PosixRange -> ( Model, Cmd Msg )
-updateCalendarRange model intervalChange currentVisibleRange =
+updateCalendarRange : Model -> Int -> PosixRange -> Zone -> ( Model, Cmd Msg )
+updateCalendarRange model intervalChange currentVisibleRange zone =
     let
         updateWithIntervalFunc intervalFunc range =
             R2.withNoCmd
                 { model
                     | visibleCalendarRange =
                         Just <|
-                            { start = intervalFunc intervalChange utc range.start
-                            , end = intervalFunc intervalChange utc range.end
+                            { start = addTimezoneMilliseconds zone <| intervalFunc intervalChange zone range.start
+                            , end = addTimezoneMilliseconds zone <| intervalFunc intervalChange zone range.end
                             }
                 }
 
@@ -539,8 +540,11 @@ subscriptions model today zone =
 view : Posix -> Zone -> Model -> Html Msg
 view today zone model =
     let
+        -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
+        adjustedToday = addTimezoneMilliseconds zone today
+
         visibleRange =
-            calcRange today zone model
+            calcRange adjustedToday zone model
 
         mouseEvent =
             if model.isMouseDown && model.isMouseOutside then
@@ -560,10 +564,10 @@ view today zone model =
                 ]
                 []
             , div [ Attrs.class "body" ]
-                [ topBar model zone visibleRange today
+                [ topBar model visibleRange adjustedToday
                 , leftSelector visibleRange
                 , rightSelector visibleRange
-                , calendarView today zone model visibleRange
+                , calendarView adjustedToday model visibleRange
                 , bottomBar model
                 ]
             ]
@@ -572,13 +576,13 @@ view today zone model =
         text ""
 
 
-presetsDisplay : Model -> Posix -> Zone -> Html Msg
-presetsDisplay model today zone =
+presetsDisplay : Model -> Posix -> Html Msg
+presetsDisplay model today =
     if List.isEmpty model.presets then
         div [] []
 
     else if model.isPresetMenuOpen then
-        presetMenu model today zone
+        presetMenu model today
 
     else
         div [ Attrs.class "preset--open--wrapper" ]
@@ -587,15 +591,15 @@ presetsDisplay model today zone =
             ]
 
 
-presetMenu : Model -> Posix -> Zone -> Html Msg
-presetMenu model today zone =
+presetMenu : Model -> Posix -> Html Msg
+presetMenu model today =
     div [ Attrs.class "preset-menu--container" ]
         [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
             []
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p today zone, Attrs.class "menu-item" ]
+                    div [ Html.Events.onClick <| SelectPreset p today utc, Attrs.class "menu-item" ]
                         [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
@@ -624,8 +628,8 @@ rightSelector visibleRange =
         [ div [] [ text "❯" ] ]
 
 
-topBar : Model -> Zone -> PosixRange -> Posix -> Html Msg
-topBar model zone visibleRange today =
+topBar : Model -> PosixRange -> Posix -> Html Msg
+topBar model visibleRange today =
     let
         fullCalendarSelector =
             case model.calendarType of
@@ -635,14 +639,14 @@ topBar model zone visibleRange today =
 
                 _ ->
                     text ""
-
+        
         selection =
-            Range { start = visibleRange.start, end = visibleRange.end }
+            Range { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.end }
     in
     div [ Attrs.class "top-bar" ]
         [ fullCalendarSelector
-        , presetsDisplay model today zone
-        , calendarInput model zone today
+        , presetsDisplay model today
+        , calendarInput model today
         ]
 
 
@@ -651,12 +655,12 @@ selectionText visibleRange =
     String.fromInt <| Time.toYear utc visibleRange.start
 
 
-calendarInput : Model -> Zone -> Posix -> Html Msg
-calendarInput model zone today =
+calendarInput : Model -> Posix -> Html Msg
+calendarInput model today =
     div [ Attrs.class "calendar-input" ]
         [ input
-            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today zone ) ]
-            , Html.Events.onBlur <| OnInputFinish today zone
+            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today ) ]
+            , Html.Events.onBlur <| OnInputFinish today
             , Html.Events.onInput OnInputChange
             , Attrs.placeholder model.languageConfig.inputPlaceholder
             , Attrs.value model.inputText
@@ -726,31 +730,31 @@ convertInputDate inputDate zone =
             Range <| datePartsToPosixRange dateParts zone
 
         FullDateTime dateTimeParts ->
-            Single <| dateTimePartsToPosix dateTimeParts utc
+            Single <| dateTimePartsToPosix dateTimeParts zone
 
 
-calendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-calendarView today zone model visibleRange =
+calendarView : Posix -> Model -> PosixRange -> Html Msg
+calendarView today model visibleRange =
     case model.calendarType of
         FullCalendar ->
-            yearCalendarView today zone model visibleRange
+            yearCalendarView today model visibleRange
 
         ThreeMonths ->
-            threeMonthCalendarView today zone model visibleRange
+            threeMonthCalendarView today model visibleRange
 
         TwoMonths ->
-            twoMonthCalendarView today zone model visibleRange
+            twoMonthCalendarView today model visibleRange
 
         OneMonth ->
-            monthCalendarTableView today zone model visibleRange
+            monthCalendarTableView today model visibleRange
 
 
-yearCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-yearCalendarView today zone model visibleRange =
+yearCalendarView : Posix -> Model -> PosixRange -> Html Msg
+yearCalendarView today model visibleRange =
     let
         quarter name startMonth endMonth =
             div
-                [ posixRangeForMonths startMonth endMonth (Time.toYear zone visibleRange.start) zone
+                [ posixRangeForMonths startMonth endMonth (Time.toYear utc visibleRange.start) utc
                     |> Range
                     |> SetSelection
                     |> Html.Events.onClick
@@ -762,49 +766,51 @@ yearCalendarView today zone model visibleRange =
             div
                 [ Attrs.class "quarters" ]
                 [ quarter "Q1" Jan Mar, quarter "Q2" Apr Jun, quarter "Q3" Jul Sep, quarter "Q4" Oct Dec ]
+        
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar" ]
         [ quarters
-        , table [] [ tbody [ Attrs.class "year" ] <| List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 11 zone visibleRange getFirstDayOfYear) ]
+        , table [] [ tbody [ Attrs.class "year" ] 
+            <| List.map (\m -> monthCalendarView m today model) (getMonthsFromRange 0 11 visibleRange getFirstDayOfYear) ]
         ]
 
 
-threeMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-threeMonthCalendarView today zone model visibleRange =
+threeMonthCalendarView : Posix -> Model -> PosixRange -> Html Msg
+threeMonthCalendarView today model visibleRange =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "three-month-calendar" ]
         [ table [ Attrs.class "month-table" ]
             [ tbody [ Attrs.class "three-month" ] <|
-                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 2 zone visibleRange getFirstDayOfMonth)
+                List.map (\m -> monthCalendarView m today model) (getMonthsFromRange 0 2 visibleRange getFirstDayOfMonth)
             ]
         ]
 
 
-twoMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-twoMonthCalendarView today zone model visibleRange =
+twoMonthCalendarView : Posix -> Model -> PosixRange -> Html Msg
+twoMonthCalendarView today model visibleRange =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "two-month-calendar" ]
         [ table [ Attrs.class "month-table" ]
             [ tbody [ Attrs.class "two-month" ] <|
-                List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 1 zone visibleRange getFirstDayOfMonth)
+                List.map (\m -> monthCalendarView m today model) (getMonthsFromRange 0 1 visibleRange getFirstDayOfMonth)
             ]
         ]
 
 
-monthCalendarTableView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-monthCalendarTableView today zone model visibleRange =
+monthCalendarTableView : Posix -> Model -> PosixRange -> Html Msg
+monthCalendarTableView today model visibleRange =
     let
         posixMonth =
-            getFirstDayOfMonth zone visibleRange.start
+            getFirstDayOfMonth utc visibleRange.start
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
-        [ table [ Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [ monthCalendarView posixMonth today zone model ] ]
+        [ table [ Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [ monthCalendarView posixMonth today model ] ]
         ]
 
 
-getMonthsFromRange : Int -> Int -> Zone -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
-getMonthsFromRange start end zone visibleRange fn =
+getMonthsFromRange : Int -> Int -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
+getMonthsFromRange start end visibleRange fn =
     List.map
         (\x ->
-            addMonths x utc <| fn zone visibleRange.start
+            addMonths x utc <| fn utc visibleRange.start
         )
     <|
         List.range start end
@@ -822,8 +828,8 @@ posixRangeForMonths startMonth endMonth currentYear zone =
     { start = start.start, end = end.end }
 
 
-monthCalendarView : Posix -> Posix -> Zone -> Model -> Html Msg
-monthCalendarView currentMonth today zone model =
+monthCalendarView : Posix -> Posix -> Model -> Html Msg
+monthCalendarView currentMonth today model =
     let
         selection =
             Range { start = getFirstDayOfMonth utc currentMonth, end = getLastDayOfMonth utc currentMonth }
@@ -833,7 +839,7 @@ monthCalendarView currentMonth today zone model =
             [ thead [ Attrs.class "month--header", onClick <| SetSelection selection ]
                 [ text <| monthFormatter model.languageConfig utc currentMonth ]
             , tbody [ Attrs.class "month" ] <|
-                List.map (\x -> dayCalendarView zone currentMonth x today model) <|
+                List.map (\x -> dayCalendarView utc currentMonth x today model) <|
                     getCurrentMonthDatesFullWeeks utc currentMonth
             ]
         ]
@@ -844,7 +850,7 @@ dayCalendarView zone currentMonth currentDay today model =
     let
         -- todo prevent all interaction with invisible days (from other months)
         monthOfDate =
-            Time.toMonth utc
+            Time.toMonth zone
 
         wantedMonth =
             monthOfDate currentMonth
@@ -854,7 +860,7 @@ dayCalendarView zone currentMonth currentDay today model =
 
         content =
             if contentIsInCorrectMonth then
-                [ text <| String.fromInt <| Time.toDay utc currentDay ]
+                [ text <| String.fromInt <| Time.toDay zone currentDay ]
 
             else
                 []
@@ -975,15 +981,15 @@ calcRange today zone model =
         convertToRange =
             case model.calendarType of
                 FullCalendar ->
-                    { start = getFirstDayOfYear zone today, end = getLastDayOfYear zone today }
+                    { start = getFirstDayOfYear zone today, end = getLastDayOfYear utc today }
 
                 ThreeMonths ->
-                    { start = getFirstDayOfMonth zone <| addMonths -1 utc today
-                    , end = getLastDayOfMonth zone <| addMonths 1 utc today
+                    { start = getFirstDayOfMonth zone <| addMonths -1 zone today
+                    , end = getLastDayOfMonth zone <| addMonths 1 zone today
                     }
 
                 TwoMonths ->
-                    { start = getFirstDayOfMonth zone <| addMonths -1 utc today, end = getLastDayOfMonth zone today }
+                    { start = getFirstDayOfMonth zone <| addMonths -1 zone today, end = getLastDayOfMonth zone today }
 
                 OneMonth ->
                     { start = getFirstDayOfMonth zone today, end = getLastDayOfMonth zone today }
@@ -993,7 +999,7 @@ calcRange today zone model =
 
 getVisibleRangeFromSelection : Selection -> Posix -> Zone -> Maybe PosixRange
 getVisibleRangeFromSelection selection today localZone =
-    case Debug.log "test sel" selection of
+    case selection of
         Single posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
@@ -1007,22 +1013,18 @@ getVisibleRangeFromSelection selection today localZone =
             Nothing
 
         Preset presetType ->
-            let
-                a =
-                    Debug.log "test" presetType
-            in
             Just <| presetToPosixRange presetType today localZone
 
 
-prettyFormatSelection : Selection -> LanguageConfig -> String
-prettyFormatSelection selection languageConfig =
+prettyFormatSelection : Selection -> LanguageConfig -> Zone -> String
+prettyFormatSelection selection languageConfig zone =
     -- todo handling time zones
     case selection of
         Single posix ->
-            singleFormatter languageConfig utc posix
+            singleFormatter languageConfig zone posix
 
         Range posixRange ->
-            fullFormatter languageConfig utc posixRange.start posixRange.end
+            fullFormatter languageConfig zone posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -1087,8 +1089,8 @@ yearToPosixRange year zone =
         posix =
             yearToPosix year zone
     in
-    { start = getStartOfDay <| getFirstDayOfYear utc posix --todo maybe change to zone?
-    , end = getEndOfDay <| getLastDayOfYear utc posix
+    { start = getStartOfDay <| getFirstDayOfYear zone posix --todo maybe change to zone?
+    , end = getEndOfDay <| getLastDayOfYear zone posix
     }
 
 
@@ -1098,8 +1100,8 @@ yearAndMonthToPosixRange yearMonth zone =
         posix =
             yearAndMonthToPosix yearMonth zone
     in
-    { start = getStartOfDay <| getFirstDayOfMonth utc posix
-    , end = getEndOfDay <| getLastDayOfMonth utc posix
+    { start = getStartOfDay <| getFirstDayOfMonth zone posix
+    , end = getEndOfDay <| getLastDayOfMonth zone posix
     }
 
 
