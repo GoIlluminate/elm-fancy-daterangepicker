@@ -1,4 +1,4 @@
-module DateRangeSelector exposing (CalendarType(..), setCalendarType, Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, subscriptions, update, view)
+module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
 
 import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -1148,10 +1148,10 @@ getStartOfDay posix =
     civilToPosix updatedDateRecord
 
 
-
 setCalendarType : CalendarType -> Model -> Model
 setCalendarType calendarType model =
-    { model | calendarType = calendarType}
+    { model | calendarType = calendarType }
+
 
 
 --------------------------------------------------------------------------------------------
