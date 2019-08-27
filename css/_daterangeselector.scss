@@ -27,16 +27,17 @@
     }
     .body {
       font-size: 14px;
-      background: themed('color-bg-light-gray');
+      background: themed("color-bg-light-gray");
       display: table;
-      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3),
+        0 4px 8px 3px rgba(60, 64, 67, 0.15);
       border-radius: 6px;
       z-index: 1001;
       position: absolute;
     }
     .top-bar {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) 2fr;
+      grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1fr);
     }
     .prev-range-selector {
       @extend %range-selector;
@@ -55,7 +56,7 @@
       margin-left: 10px;
       padding: 5px;
     }
-    .bottom-bar{
+    .bottom-bar {
       display: flex;
       flex-direction: row-reverse;
     }
@@ -69,7 +70,7 @@
     .done {
       margin: 4px 16px;
       padding: 4px 10px;
-      background-color: themed('color-primary');
+      background-color: themed("color-primary");
       color: white;
       border: none;
       border-radius: 4px;
@@ -92,14 +93,17 @@
       grid-template-columns: max-content max-content max-content;
       padding: 0 10px;
     }
+    .three-month-calendar {
+      padding: 0 10px;
+    }
     .quarters {
       display: grid;
       grid-template-rows: repeat(4, 1fr);
     }
 
     .month {
-      border: solid 1px themed('color-border');
-      background: themed('color-secondary');
+      border: solid 1px themed("color-border");
+      background: themed("color-secondary");
       display: grid;
       grid-template-rows: repeat(6, 1fr);
       grid-template-columns: repeat(7, 1fr);
@@ -115,16 +119,29 @@
       grid-template-rows: repeat(4, 1fr);
       grid-template-columns: repeat(3, 1fr);
     }
-
+    .three-month {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      width: 100%;
+    }
+    .three-month-table {
+      width: 100%;
+    }
+    .two-month-table {
+      width: 100%;
+    }
+    .month-table {
+      width: 100%;
+    }
     .day {
       text-align: center;
       font-size: 12px;
       padding: 1px 4px;
-      color: themed('color-primary');
+      color: themed("color-primary");
       cursor: pointer;
 
       &:hover:not(.border-selection) {
-        background: darken(themed('color-bg-light-gray'), 5);
+        background: darken(themed("color-bg-light-gray"), 5);
       }
     }
 
@@ -132,19 +149,17 @@
       text-decoration: underline;
     }
     .selected-range {
-      background-color: lighten(themed('color-primary'), 25);
+      background-color: lighten(themed("color-primary"), 25);
     }
     .border-selection {
-      background-color: themed('color-primary');
+      background-color: themed("color-primary");
       color: white;
     }
 
-
     .selection-hover {
-
       &:hover {
         cursor: pointer;
-        background: darken(themed('color-bg-light-gray'), 5);
+        background: darken(themed("color-bg-light-gray"), 5);
       }
     }
     .preset-menu--close {
@@ -155,13 +170,14 @@
       bottom: 0;
       z-index: 1002;
     }
-    .preset-menu--content{
+    .preset-menu--content {
       z-index: 1003;
       background-color: white;
       width: max-content;
       position: absolute;
       border-radius: 8px;
-      box-shadow: 0 1px 2px rgba(60,64,67, 0.3), 0 1px 3px 1px rgba(60,64,67, 0.15);
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
       :first-child {
         margin-top: 10px;
       }
@@ -173,6 +189,5 @@
       @extend .selection-hover;
       padding: 5px 10px;
     }
-
   }
 }

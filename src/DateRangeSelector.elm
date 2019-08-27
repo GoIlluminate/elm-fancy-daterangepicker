@@ -137,7 +137,7 @@ initModel =
     , isMouseDown = False
     , isShiftDown = False
     , presets = []
-    , calendarType = FullCalendar
+    , calendarType = ThreeMonths
     , isOpen = False
     , inputText = ""
     , terminationCounter = 0
@@ -699,18 +699,18 @@ convertInputDate inputDate zone =
 
 calendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 calendarView today zone model visibleRange =
-    case model.calendarType of
+    case Debug.log "type" model.calendarType of
         FullCalendar ->
             yearCalendarView today zone model visibleRange
 
         ThreeMonths ->
-            div [] []
+            threeMonthCalanderView today zone model visibleRange
 
         TwoMonths ->
-            div [] []
+            twoMonthCalanderView today zone model visibleRange
 
         OneMonth ->
-            div [] []
+            monthCalanderView today zone model visibleRange
 
 
 yearCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
@@ -744,6 +744,44 @@ yearCalendarView today zone model visibleRange =
         , table [] [ tbody [ Attrs.class "year" ] <| List.map (\m -> monthCalendarView m today zone model) posixMonths ]
         ]
 
+threeMonthCalanderView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+threeMonthCalanderView today zone model visibleRange =
+    let
+        posixMonths =
+            List.map
+                (\x ->
+                    addMonths x utc <| getFirstDayOfMonth zone visibleRange.start
+                )
+            <|
+                List.range 0 2
+    in
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "three-month-calendar" ]
+        [ table [Attrs.class "three-month-table" ] [ tbody [ Attrs.class "three-month" ] <| List.map (\m -> monthCalendarView m today zone model) posixMonths ]
+        ]
+
+twoMonthCalanderView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+twoMonthCalanderView today zone model visibleRange =
+    let
+        posixMonths =
+            List.map
+                (\x ->
+                    addMonths x utc <| getFirstDayOfMonth zone visibleRange.start
+                )
+            <|
+                List.range 0 1
+    in
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "two-month-calendar" ]
+        [ table [Attrs.class "two-month-table" ] [ tbody [ Attrs.class "two-month" ] <| List.map (\m -> monthCalendarView m today zone model) posixMonths ]
+        ]
+
+monthCalanderView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+monthCalanderView today zone model visibleRange =
+    let
+        posixMonth = getFirstDayOfMonth zone visibleRange.start
+    in
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
+        [ table [Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [monthCalendarView posixMonth today zone model]  ]
+        ]
 
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
