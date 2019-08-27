@@ -4,6 +4,7 @@ import Browser.Dom exposing (Element, Error, getElement)
 import Browser.Events
 import Date exposing (Date)
 import DateFormat
+import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 import DateRangePicker.Helper exposing (formatMonth, onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
@@ -163,21 +164,31 @@ type alias Config =
 
 
 type alias LanguageConfig =
-    { fullCalendarSelection : String
-    , done : String
+    { done : String
     , reset : String
     , inputPlaceholder : String
     , presets : String
+    , today : String
+    , yesterday : String
+    , pastWeek : String
+    , pastMonth : String
+    , pastYear : String
+    , dateFormatLanguage : DateFormat.Language
     }
 
 
 englishLanugageConfig : LanguageConfig
 englishLanugageConfig =
-    { fullCalendarSelection = "Select all of"
-    , done = "Done"
+    { done = "Done"
     , reset = "Reset"
     , inputPlaceholder = "Start date - End date"
     , presets = "Presets"
+    , today = "Today"
+    , yesterday = "Yesterday"
+    , pastWeek = "Past Week"
+    , pastMonth = "Past Month"
+    , pastYear = "Past Year"
+    , dateFormatLanguage = DateFormat.english
     }
 
 
@@ -220,12 +231,12 @@ update msg model =
             updateCalendarRange model 1 currentVisibleRange
 
         SetSelection selection ->
-            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection }
+            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig }
 
         OnInputFinish today zone ->
             let
                 parseOutput =
-                    parseDateTime (List.map presetToDisplayString model.presets) model.inputText
+                    parseDateTime (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets) model.inputText
 
                 updatedModel =
                     case parseOutput of
@@ -233,16 +244,16 @@ update msg model =
                             -- todo how to do pretty format with time
                             let
                                 selection =
-                                    convertInput value zone model.presets
+                                    convertInput value zone model
                             in
                             { model
                                 | selection = selection
-                                , inputText = prettyFormatSelection selection
+                                , inputText = prettyFormatSelection selection model.languageConfig
                                 , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
                             }
 
                         Err _ ->
-                            { model | inputText = prettyFormatSelection model.selection }
+                            { model | inputText = prettyFormatSelection model.selection model.languageConfig }
             in
             R2.withNoCmd updatedModel
 
@@ -270,7 +281,7 @@ update msg model =
                         { model
                             | isMouseDown = False
                             , selection = selection
-                            , inputText = prettyFormatSelection selection
+                            , inputText = prettyFormatSelection selection model.languageConfig
                         }
 
                 Nothing ->
@@ -376,7 +387,7 @@ update msg model =
                     | isPresetMenuOpen = False
                     , selection = selection
                     , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
-                    , inputText = prettyFormatSelection selection
+                    , inputText = prettyFormatSelection selection model.languageConfig
                 }
 
 
@@ -436,7 +447,7 @@ cancelShift model =
                     | isShiftDown = False
                     , terminationCounter = 10
                     , selection = selection
-                    , inputText = prettyFormatSelection selection
+                    , inputText = prettyFormatSelection selection model.languageConfig
                 }
 
         _ ->
@@ -585,7 +596,7 @@ presetMenu model today zone =
             List.map
                 (\p ->
                     div [ Html.Events.onClick <| SelectPreset p today zone, Attrs.class "menu-item" ]
-                        [ text <| presetToDisplayString p ]
+                        [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
         ]
@@ -640,10 +651,6 @@ selectionText visibleRange =
     String.fromInt <| Time.toYear utc visibleRange.start
 
 
-
--- model.languageConfig.fullCalendarSelection ++ " " ++ (
-
-
 calendarInput : Model -> Zone -> Posix -> Html Msg
 calendarInput model zone today =
     div [ Attrs.class "calendar-input" ]
@@ -658,8 +665,8 @@ calendarInput model zone today =
         ]
 
 
-convertInput : Input -> Zone -> List PresetType -> Selection
-convertInput input zone presets =
+convertInput : Input -> Zone -> Model -> Selection
+convertInput input zone model =
     case input of
         SingleInput inputDate ->
             convertInputDate inputDate zone
@@ -670,7 +677,7 @@ convertInput input zone presets =
         CustomDate selectedCustomDate ->
             let
                 selectedPreset =
-                    List.filter (\p -> presetToDisplayString p == selectedCustomDate) presets
+                    List.filter (\p -> presetToDisplayString p model.languageConfig == selectedCustomDate) model.presets
             in
             case List.head selectedPreset of
                 Just preset ->
@@ -974,15 +981,15 @@ getVisibleRangeFromSelection selection today localZone =
             Just <| presetToPosixRange presetType today localZone
 
 
-prettyFormatSelection : Selection -> String
-prettyFormatSelection selection =
+prettyFormatSelection : Selection -> LanguageConfig -> String
+prettyFormatSelection selection languageConfig =
     -- todo handling time zones
     case selection of
         Single posix ->
-            singleFormatter utc posix
+            singleFormatter languageConfig utc posix
 
         Range posixRange ->
-            fullFormatter utc posixRange.start posixRange.end
+            fullFormatter languageConfig utc posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -991,12 +998,12 @@ prettyFormatSelection selection =
             ""
 
         Preset presetType ->
-            presetToDisplayString presetType
+            presetToDisplayString presetType languageConfig
 
 
-singleFormatter : Zone -> Posix -> String
-singleFormatter =
-    DateFormat.format
+singleFormatter : LanguageConfig -> Zone -> Posix -> String
+singleFormatter language =
+    DateFormat.formatWithLanguage language.dateFormatLanguage
         [ DateFormat.monthNameAbbreviated
         , DateFormat.text " "
         , DateFormat.dayOfMonthNumber
@@ -1005,9 +1012,9 @@ singleFormatter =
         ]
 
 
-fullFormatter : Zone -> Posix -> Posix -> String
-fullFormatter zone start end =
-    singleFormatter zone start ++ " to " ++ singleFormatter zone end
+fullFormatter : LanguageConfig -> Zone -> Posix -> Posix -> String
+fullFormatter language zone start end =
+    singleFormatter language zone start ++ " to " ++ singleFormatter language zone end
 
 
 
@@ -1105,26 +1112,25 @@ getStartOfDay posix =
 --------------------------------------------------------------------------------------------
 --            PRESETS
 --------------------------------------------------------------------------------------------
---todo add support for other languages throughout app
 
 
-presetToDisplayString : PresetType -> String
-presetToDisplayString presetType =
+presetToDisplayString : PresetType -> LanguageConfig -> String
+presetToDisplayString presetType language =
     case presetType of
         Today ->
-            "Today"
+            language.today
 
         Yesterday ->
-            "Yesterday"
+            language.yesterday
 
         PastWeek ->
-            "Past Week"
+            language.pastWeek
 
         PastMonth ->
-            "Past Month"
+            language.pastMonth
 
         PastYear ->
-            "Past Year"
+            language.pastYear
 
         Custom customPreset ->
             customPreset.display
