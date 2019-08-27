@@ -807,7 +807,7 @@ dayCalendarView zone currentMonth currentDay today model =
         classList =
             Attrs.classList
                 [ ( "day", True )
-                , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange currentDay model )
+                , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange currentDay model today zone )
                 , ( "border-selection", isSameDayOfSelection selectionStart || isSameDayOfSelection selectionEnd )
 
                 -- todo check if zone is correct
@@ -826,8 +826,8 @@ normalizeSelectingRange posixRange =
         posixRange
 
 
-isInSelectionRange : Posix -> Model -> Bool
-isInSelectionRange comparisonPosix model =
+isInSelectionRange : Posix -> Model -> Posix -> Zone -> Bool
+isInSelectionRange comparisonPosix model today localZone =
     let
         posixInMillis =
             posixToMillis comparisonPosix
@@ -850,7 +850,7 @@ isInSelectionRange comparisonPosix model =
             compareRange <| normalizeSelectingRange posixRange
 
         Preset presetType ->
-            presetToPosixRange
+            compareRange <| presetToPosixRange presetType today localZone
 
 
 selectionEnd : Selection -> Maybe Posix
@@ -969,7 +969,7 @@ prettyFormatSelection selection =
 
         Preset presetType ->
             -- todo create date from this or show string?
-            ""
+            presetToDisplayString presetType
 
 
 singleFormatter : Zone -> Posix -> String
