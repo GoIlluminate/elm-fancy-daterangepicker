@@ -1,9 +1,10 @@
 module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 
 import Date exposing (Date)
-import Derberos.Date.Core exposing (civilToPosix, posixToCivil)
+import DateFormat.Language exposing (Language)
+import Derberos.Date.Core exposing (civilToPosix)
 import Parser exposing ((|.), (|=), Parser)
-import Time exposing (Posix, Zone, posixToMillis, utc)
+import Time exposing (Month(..), Posix, Zone, posixToMillis, utc)
 
 
 type alias YearAndMonth =
@@ -160,6 +161,10 @@ specificMonthParser fullName abbreviation monthNumericalValue =
         [ Parser.succeed monthNumericalValue
             |. Parser.keyword fullName
         , Parser.succeed monthNumericalValue
+            |. Parser.keyword (String.toLower fullName)
+        , Parser.succeed monthNumericalValue
+            |. Parser.keyword (String.toLower abbreviation)
+        , Parser.succeed monthNumericalValue
             |. Parser.keyword abbreviation
         , Parser.succeed monthNumericalValue
             |. Parser.keyword (paddedInt monthNumericalValue)
@@ -168,21 +173,21 @@ specificMonthParser fullName abbreviation monthNumericalValue =
         ]
 
 
-monthParser : Parser Int
-monthParser =
+monthParser : Language -> Parser Int
+monthParser language =
     Parser.oneOf
-        [ specificMonthParser "January" "Jan" 1
-        , specificMonthParser "February" "Feb" 2
-        , specificMonthParser "March" "Mar" 3
-        , specificMonthParser "April" "Apr" 4
-        , specificMonthParser "May" "May" 5
-        , specificMonthParser "June" "Jun" 6
-        , specificMonthParser "July" "Jul" 7
-        , specificMonthParser "August" "Aug" 8
-        , specificMonthParser "September" "Sep" 9
-        , specificMonthParser "October" "Oct" 10
-        , specificMonthParser "November" "Nov" 11
-        , specificMonthParser "December" "Dec" 12
+        [ specificMonthParser (language.toMonthName Jan) (language.toMonthAbbreviation Jan) 1
+        , specificMonthParser (language.toMonthName Feb) (language.toMonthAbbreviation Feb) 2
+        , specificMonthParser (language.toMonthName Mar) (language.toMonthAbbreviation Mar) 3
+        , specificMonthParser (language.toMonthName Apr) (language.toMonthAbbreviation Apr) 4
+        , specificMonthParser (language.toMonthName May) (language.toMonthAbbreviation May) 5
+        , specificMonthParser (language.toMonthName Jun) (language.toMonthAbbreviation Jun) 6
+        , specificMonthParser (language.toMonthName Jul) (language.toMonthAbbreviation Jul) 7
+        , specificMonthParser (language.toMonthName Aug) (language.toMonthAbbreviation Aug) 8
+        , specificMonthParser (language.toMonthName Sep) (language.toMonthAbbreviation Sep) 9
+        , specificMonthParser (language.toMonthName Oct) (language.toMonthAbbreviation Oct) 10
+        , specificMonthParser (language.toMonthName Nov) (language.toMonthAbbreviation Nov) 11
+        , specificMonthParser (language.toMonthName Dec) (language.toMonthAbbreviation Dec) 12
         ]
 
 
@@ -285,15 +290,15 @@ timeParser =
         ]
 
 
-fullInputDateParser : List String -> Parser Input
-fullInputDateParser customDates =
+fullInputDateParser : List String -> Language -> Parser Input
+fullInputDateParser customDates language =
     Parser.oneOf
         [ Parser.backtrackable
-            rangeInputDateParser
+            (rangeInputDateParser language)
             |> Parser.andThen Parser.commit
         , Parser.succeed
             (\x -> SingleInput x)
-            |= singleInputDateParser
+            |= singleInputDateParser language
             |. Parser.spaces
             |. Parser.end
         , Parser.succeed
@@ -303,14 +308,14 @@ fullInputDateParser customDates =
         ]
 
 
-rangeInputDateParser : Parser Input
-rangeInputDateParser =
+rangeInputDateParser : Language -> Parser Input
+rangeInputDateParser language =
     Parser.succeed (\start end -> RangeInput start end)
-        |= singleInputDateParser
+        |= singleInputDateParser language
         |. Parser.spaces
         |. rangeSeparator
         |. Parser.spaces
-        |= singleInputDateParser
+        |= singleInputDateParser language
         |. Parser.spaces
         |. Parser.end
 
@@ -344,13 +349,13 @@ createYearMonthInput month year =
         }
 
 
-singleInputDateParser : Parser InputDate
-singleInputDateParser =
+singleInputDateParser : Language -> Parser InputDate
+singleInputDateParser language =
     let
         fullDateParser =
             Parser.succeed
                 createFullInput
-                |= monthParser
+                |= monthParser language
                 |. daySeparatorParser
                 |= dayOfMonthParser
                 |. yearSeparatorParser
@@ -366,7 +371,7 @@ singleInputDateParser =
         justYearAndMonth =
             Parser.succeed
                 createYearMonthInput
-                |= monthParser
+                |= monthParser language
                 |. yearSeparatorParser
                 |= fourDigitYear
     in
@@ -563,9 +568,9 @@ dateTimePartsToPosix { year, month, day, hour, minute } zone =
     civilToPosix dateRecord
 
 
-parseDateTime : List String -> String -> Result String Input
-parseDateTime customDateInputs =
-    Parser.run (fullInputDateParser customDateInputs)
+parseDateTime : List String -> Language -> String -> Result String Input
+parseDateTime customDateInputs language =
+    Parser.run (fullInputDateParser customDateInputs language)
         >> Result.mapError (always "")
         >> Result.andThen (validate validateDateViaLibrary)
         >> Result.mapError (always "Not a valid US Date!")

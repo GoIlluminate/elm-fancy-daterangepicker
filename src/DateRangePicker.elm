@@ -1,4 +1,26 @@
-module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Format, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
+module DateRangePicker exposing
+    ( CalendarType(..)
+    , Config
+    , CustomPreset
+    , Format(..)
+    , Interval(..)
+    , LanguageConfig
+    , Model
+    , Msg
+    , PosixRange
+    , PresetType(..)
+    , Selection(..)
+    , englishLanugageConfig
+    , initModel
+    , initModelWithOptions
+    , openDateRangePicker
+    , presetToDisplayString
+    , presetToPosixRange
+    , setCalendarType
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Dom as Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -212,6 +234,75 @@ openDateRangePicker =
     Html.Events.onClick Open
 
 
+subscriptions : Model -> Posix -> Zone -> Sub Msg
+subscriptions model today zone =
+    let
+        shiftSubs =
+            if model.isShiftDown then
+                [ Keyboard.ups KeyUp
+                , Browser.Events.onVisibilityChange (always CancelShift)
+                , Time.every 100 (always TerminateBadState)
+                ]
+
+            else
+                []
+
+        keyDowns =
+            [ Keyboard.downs (KeyDown today zone) ]
+
+        mouseSubs =
+            if model.isMouseDown then
+                [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
+                , Time.every 1250 (always <| CheckToMoveToNextVisibleRange today zone)
+                ]
+
+            else
+                []
+    in
+    if model.isOpen then
+        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
+
+    else
+        Sub.none
+
+
+view : Posix -> Zone -> Model -> Html Msg
+view today zone model =
+    let
+        visibleRange =
+            calcRange today zone model
+
+        mouseEvent =
+            if model.isMouseDown && model.isMouseOutside then
+                Mouse.onMove OnMouseMove
+
+            else
+                Attrs.class ""
+    in
+    if model.isOpen then
+        div [ Attrs.class "elm-fancy--daterangepicker" ]
+            [ div
+                [ Attrs.class "close"
+                , Html.Events.onClick Close
+                , mouseEvent
+                , Html.Events.onMouseLeave <| SetMouseOutside False
+                , Html.Events.onMouseEnter <| SetMouseOutside True
+                ]
+                []
+            , div [ Attrs.class "body" ]
+                [ topBar model zone visibleRange today
+                , leftSelector visibleRange
+                , rightSelector visibleRange
+                , calendarView today zone model visibleRange
+                , bottomBar model
+                ]
+            ]
+
+    else
+        text ""
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -242,7 +333,10 @@ update msg model =
         OnInputFinish today zone ->
             let
                 parseOutput =
-                    parseDateTime (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets) model.inputText
+                    parseDateTime
+                        (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
+                        model.languageConfig.dateFormatLanguage
+                        model.inputText
 
                 updatedModel =
                     case parseOutput of
@@ -571,75 +665,6 @@ updateCalendarRange model intervalChange currentVisibleRange =
 
         OneMonth ->
             updateWithIntervalFunc addMonths visibleRange
-
-
-subscriptions : Model -> Posix -> Zone -> Sub Msg
-subscriptions model today zone =
-    let
-        shiftSubs =
-            if model.isShiftDown then
-                [ Keyboard.ups KeyUp
-                , Browser.Events.onVisibilityChange (always CancelShift)
-                , Time.every 100 (always TerminateBadState)
-                ]
-
-            else
-                []
-
-        keyDowns =
-            [ Keyboard.downs (KeyDown today zone) ]
-
-        mouseSubs =
-            if model.isMouseDown then
-                [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
-                , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
-                , Time.every 1250 (always <| CheckToMoveToNextVisibleRange today zone)
-                ]
-
-            else
-                []
-    in
-    if model.isOpen then
-        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
-
-    else
-        Sub.none
-
-
-view : Posix -> Zone -> Model -> Html Msg
-view today zone model =
-    let
-        visibleRange =
-            calcRange today zone model
-
-        mouseEvent =
-            if model.isMouseDown && model.isMouseOutside then
-                Mouse.onMove OnMouseMove
-
-            else
-                Attrs.class ""
-    in
-    if model.isOpen then
-        div [ Attrs.class "elm-fancy--daterangepicker" ]
-            [ div
-                [ Attrs.class "close"
-                , Html.Events.onClick Close
-                , mouseEvent
-                , Html.Events.onMouseLeave <| SetMouseOutside False
-                , Html.Events.onMouseEnter <| SetMouseOutside True
-                ]
-                []
-            , div [ Attrs.class "body" ]
-                [ topBar model zone visibleRange today
-                , leftSelector visibleRange
-                , rightSelector visibleRange
-                , calendarView today zone model visibleRange
-                , bottomBar model
-                ]
-            ]
-
-    else
-        text ""
 
 
 presetsDisplay : Model -> Posix -> Zone -> Html Msg

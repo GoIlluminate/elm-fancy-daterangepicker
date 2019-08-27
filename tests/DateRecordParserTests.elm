@@ -1,5 +1,6 @@
 module DateRecordParserTests exposing (dateTestSuite)
 
+import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateTimeParts, Input(..), InputDate(..), parseDateTime)
 import Expect exposing (equal)
 import Test exposing (Test, describe, test)
@@ -12,167 +13,167 @@ dateTestSuite =
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "Jan 01 2000")
+                    (defaultParse "Jan 01 2000")
         , test "can parse full month" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "January 01 2000")
+                    (defaultParse "January 01 2000")
         , test "can parse numerical month" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "1 01 2000")
+                    (defaultParse "1 01 2000")
         , test "can parse numerical padded month" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01 01 2000")
+                    (defaultParse "01 01 2000")
         , test "cannot parse invalid numerical month" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "13 01 2000")
+                    (defaultParse "13 01 2000")
         , test "cannot parse invalid numerical day" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "12 32 2000")
+                    (defaultParse "12 32 2000")
         , test "handle's leap year days" <|
             \_ ->
                 equal
                     (date 2000 2 29)
-                    (parseDateTime [] "2 29 2000")
+                    (defaultParse "2 29 2000")
         , test "handle's invalid leap year days" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "2 29 2001")
+                    (defaultParse "2 29 2001")
         , test "can allow slash separator" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01/01/2000")
+                    (defaultParse "01/01/2000")
         , test "can allow dash separator" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01-01-2000")
+                    (defaultParse "01-01-2000")
         , test "can allow comma separator" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01 01, 2000")
+                    (defaultParse "01 01, 2000")
         , test "does not allow double comma separator" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "01, 01, 2000")
+                    (defaultParse "01, 01, 2000")
         , test "can parse days with padded zero" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01 01, 2000")
+                    (defaultParse "01 01, 2000")
         , test "can parse days without zero" <|
             \_ ->
                 equal
                     (date 2000 1 1)
-                    (parseDateTime [] "01 1, 2000")
+                    (defaultParse "01 1, 2000")
         , test "can parse days with double digits without a leading zero" <|
             \_ ->
                 equal
                     (date 2000 1 11)
-                    (parseDateTime [] "01 11, 2000")
+                    (defaultParse "01 11, 2000")
         , test "can parse years as two digits after 2000" <|
             \_ ->
                 equal
                     (date 2020 1 1)
-                    (parseDateTime [] "01 01, 20")
+                    (defaultParse "01 01, 20")
         , test "can parse years as two digits before 2000" <|
             \_ ->
                 equal
                     (date 1990 1 1)
-                    (parseDateTime [] "01 01, 90")
+                    (defaultParse "01 01, 90")
         , test "enforces minimum year requirement" <|
             \_ ->
                 equal
                     (Err "Dates must occur after 1900")
-                    (parseDateTime [] "01 01, 1800")
+                    (defaultParse "01 01, 1800")
         , test "enforces maximum year requirement" <|
             \_ ->
                 equal
                     (Err "Dates must occur before 2100")
-                    (parseDateTime [] "01 01, 2500")
+                    (defaultParse "01 01, 2500")
         , test "allows year to be by itself" <|
             \_ ->
                 equal
                     (justYear 2000)
-                    (parseDateTime [] "2000")
+                    (defaultParse "2000")
         , test "does not allows year to be by itself when it is abbreviated" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "20")
+                    (defaultParse "20")
         , test "allows year and month to be by themselves" <|
             \_ ->
                 equal
                     (justYearAndMonth 2000 1)
-                    (parseDateTime [] "January 2000")
+                    (defaultParse "January 2000")
         , test "allows a time to be specified in 12 hour format" <|
             \_ ->
                 equal
                     (dateTime 2000 1 1 1 0)
-                    (parseDateTime [] "01 01 2000 1:00 AM")
+                    (defaultParse "01 01 2000 1:00 AM")
         , test "allows a time to be specified in 12 hour padded format" <|
             \_ ->
                 equal
                     (dateTime 2000 1 1 1 0)
-                    (parseDateTime [] "01 01 2000 01:00 AM")
+                    (defaultParse "01 01 2000 01:00 AM")
         , test "converts 12 AM to 24hour format" <|
             \_ ->
                 equal
                     (dateTime 2000 1 1 0 0)
-                    (parseDateTime [] "01 01 2000 12:00 AM")
+                    (defaultParse "01 01 2000 12:00 AM")
         , test "converts 1 PM to 24hour format" <|
             \_ ->
                 equal
                     (dateTime 2000 1 1 13 0)
-                    (parseDateTime [] "01 01 2000 1:00 PM")
+                    (defaultParse "01 01 2000 1:00 PM")
         , test "allows a time to be specified in 24 hour format" <|
             \_ ->
                 equal
                     (dateTime 2000 1 1 0 0)
-                    (parseDateTime [] "01 01 2000 00:00")
+                    (defaultParse "01 01 2000 00:00")
         , test "does not allow minutes to exceed 59" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "01 01 2000 00:60")
+                    (defaultParse "01 01 2000 00:60")
         , test "does not allow hours to exceed 23 in 24hr format" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "01 01 2000 24:00")
+                    (defaultParse "01 01 2000 24:00")
         , test "does not allow hours to exceed 12 in 12hr format" <|
             \_ ->
                 equal
                     (Err "Not a valid US Date!")
-                    (parseDateTime [] "01 01 2000 13:00 PM")
+                    (defaultParse "01 01 2000 13:00 PM")
         , test "allows a date to be specified as a range" <|
             \_ ->
                 equal
                     (rangeDate 2000 1 1 2000 1 1)
-                    (parseDateTime [] "01 01 2000 to 01 01 2000")
+                    (defaultParse "01 01 2000 to 01 01 2000")
         , test "allows a date to be specified as a range with dash as separator" <|
             \_ ->
                 equal
                     (rangeDate 2000 1 1 2000 1 1)
-                    (parseDateTime [] "01 01 2000 - 01 01 2000")
+                    (defaultParse "01 01 2000 - 01 01 2000")
         , test "allows years to be specified as a range" <|
             \_ ->
                 equal
                     (rangeYear 2000 2001)
-                    (parseDateTime [] "2000 - 2001")
+                    (defaultParse "2000 - 2001")
         , test "allows datetime to be specified as a range" <|
             \_ ->
                 equal
@@ -180,7 +181,7 @@ dateTestSuite =
                         { year = 2000, month = 1, day = 1, hour = 0, minute = 0 }
                         { year = 2000, month = 1, day = 1, hour = 23, minute = 59 }
                     )
-                    (parseDateTime [] "01 01 2000 00:00 - 01 01 2000 23:59")
+                    (defaultParse "01 01 2000 00:00 - 01 01 2000 23:59")
         , test "allows range to have different formats on each end" <|
             \_ ->
                 equal
@@ -189,28 +190,33 @@ dateTestSuite =
                             (JustYear 2000)
                             (FullDateTime { year = 2001, month = 1, day = 1, hour = 23, minute = 59 })
                     )
-                    (parseDateTime [] "2000 - 01 01 2001 23:59")
+                    (defaultParse "2000 - 01 01 2001 23:59")
         , test "does not allow the end date to be before the start date" <|
             \_ ->
                 equal
                     (Err "The starting date must be before the end date!")
-                    (parseDateTime [] "2001-2000")
+                    (defaultParse "2001-2000")
         , test "allows a custom date string to be included" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] "Past Month")
+                    (parseDateTime [ "Past Month" ] DateFormat.english "Past Month")
         , test "allows a custom date string to be written without spaces" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] "PastMonth")
+                    (parseDateTime [ "Past Month" ] DateFormat.english "PastMonth")
         , test "allows a custom date string to be written as lowercase" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] "pastmonth")
+                    (parseDateTime [ "Past Month" ] DateFormat.english "pastmonth")
         ]
+
+
+defaultParse : String -> Result String Input
+defaultParse =
+    parseDateTime [] DateFormat.english
 
 
 justYear : Int -> Result String Input
