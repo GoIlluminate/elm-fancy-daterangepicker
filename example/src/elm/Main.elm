@@ -1,12 +1,10 @@
-module Main exposing (..)
+module Main exposing (Model, Msg(..), calendarDisplayOptions, calendarDisplayToDisplayStr, init, main, subscriptions, update, view)
 
 import Browser
 import Date
     exposing
         ( Date
         )
-import DateRangePicker.Helper exposing (formatDate)
-import DateRangePicker.Types exposing (DateRange)
 import DateRangeSelector exposing (englishLanugageConfig, initModelWithOptions, openDateRangePicker)
 import Html exposing (Html, button, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
@@ -23,13 +21,7 @@ type Msg
 
 
 type alias Model =
-    { dateRange : Maybe DateRange
-    , date : Maybe Date
-    , calendarDisplay : DateRangeSelector.CalendarType
-    , yearsInRange : Maybe Int
-    , monthsInRange : Maybe Int
-    , weeksInRange : Maybe Int
-    , daysInRange : Maybe Int
+    { calendarDisplay : DateRangeSelector.CalendarType
     , dateSelector : DateRangeSelector.Model
     , today : Maybe Posix
     , zone : Maybe Zone
@@ -42,13 +34,7 @@ init =
         calendarDisplay =
             DateRangeSelector.FullCalendar
     in
-    ( { dateRange = Nothing
-      , date = Nothing
-      , calendarDisplay = calendarDisplay
-      , yearsInRange = Nothing
-      , monthsInRange = Nothing
-      , weeksInRange = Nothing
-      , daysInRange = Nothing
+    ( { calendarDisplay = calendarDisplay
       , dateSelector =
             initModelWithOptions
                 { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
@@ -121,7 +107,6 @@ view model =
     div [ class "main" ]
         [ calendarDisplayOptions model
         , Html.map NewSelectorMsgs selector
-        , dateRangePickers model
         ]
 
 
@@ -154,47 +139,6 @@ calendarDisplayOptions model =
     div [ class "calendar-display-options--container" ]
         [ div [ class "calendar-display-options--wrapper" ] <| List.map go options
         ]
-
-
-dateRangePickers : Model -> Html Msg
-dateRangePickers model =
-    let
-        numInRangeView str maybeN =
-            case maybeN of
-                Nothing ->
-                    text ""
-
-                Just n ->
-                    div [] [ text <| str ++ " " ++ String.fromInt n ]
-
-        drpView theme =
-            div
-                [ class "theme--wrapper"
-                , class theme
-                ]
-                [ h2 [] [ text "Date Range Picker" ]
-                , div [ class "in-range--container" ]
-                    [ numInRangeView "Years in DateRange:" model.yearsInRange
-                    , numInRangeView "Months in DateRange:" model.monthsInRange
-                    , numInRangeView "Weeks in DateRange:" model.weeksInRange
-                    , numInRangeView "Days in DateRange:" model.daysInRange
-                    ]
-                ]
-    in
-    div [ class "date-range-picker-wrapper date-picker--wrapper" ]
-        [ drpView "theme-light"
-        , drpView "theme-dark"
-        ]
-
-
-printDate : Maybe Date -> String
-printDate date =
-    case date of
-        Just a ->
-            formatDate a
-
-        Nothing ->
-            ""
 
 
 main : Program () Model Msg
