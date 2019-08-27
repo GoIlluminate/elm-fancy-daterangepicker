@@ -932,7 +932,6 @@ monthCalendarView currentMonth today zone model =
 dayCalendarView : Zone -> Posix -> Posix -> Posix -> Model -> Html Msg
 dayCalendarView zone currentMonth currentDay today model =
     let
-        -- todo prevent all interaction with invisible days (from other months)
         monthOfDate =
             Time.toMonth utc
 
@@ -942,12 +941,14 @@ dayCalendarView zone currentMonth currentDay today model =
         contentIsInCorrectMonth =
             monthOfDate currentDay == wantedMonth
 
-        content =
+        ( hoverAttr, content ) =
             if contentIsInCorrectMonth then
-                [ text <| String.fromInt <| Time.toDay utc currentDay ]
+                ( Html.Events.onMouseOver <| OnHoverOverDay currentDay
+                , [ text <| String.fromInt <| Time.toDay utc currentDay ]
+                )
 
             else
-                []
+                ( Attrs.class "", [] )
 
         setDate =
             if model.isShiftDown || model.isMouseDown then
@@ -969,7 +970,7 @@ dayCalendarView zone currentMonth currentDay today model =
                 , ( "today", isSameDay currentDay today )
                 ]
     in
-    td [ classList, setDate, Html.Events.onMouseOver <| OnHoverOverDay currentDay ] content
+    td [ classList, setDate, hoverAttr ] content
 
 
 normalizeSelectingRange : PosixRange -> PosixRange
