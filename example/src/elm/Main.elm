@@ -1,12 +1,12 @@
-module Main exposing (Model, Msg(..), getSettings, init, main, printDate, printDateRange, update, view)
+module Main exposing (..)
 
 import Browser
 import Date
     exposing
         ( Date
         )
-import DateRangePicker exposing (CalendarDisplay(..), DateRange, PresetOption(..), RestrictedDateRange(..), defaultSettings, getDateRange, setCalendarDisplay, setInputIcon, setSettings)
 import DateRangePicker.Helper exposing (formatDate)
+import DateRangePicker.Types exposing (DateRange)
 import DateRangeSelector exposing (englishLanugageConfig, initModelWithOptions, openDateRangePicker)
 import Html exposing (Html, button, div, h2, h4, i, span, text)
 import Html.Attributes exposing (class)
@@ -16,8 +16,7 @@ import Time exposing (Month(..), Posix, Zone)
 
 
 type Msg
-    = SetDateRangePicker DateRangePicker.Msg
-    | ChangeCalendarDisplay CalendarDisplay
+    = ChangeCalendarDisplay DateRangeSelector.CalendarType
     | NewTime Posix
     | NewZone Zone
     | NewSelectorMsgs DateRangeSelector.Msg
@@ -25,9 +24,8 @@ type Msg
 
 type alias Model =
     { dateRange : Maybe DateRange
-    , dateRangePicker : DateRangePicker.DateRangePicker
     , date : Maybe Date
-    , calendarDisplay : CalendarDisplay
+    , calendarDisplay : DateRangeSelector.CalendarType
     , yearsInRange : Maybe Int
     , monthsInRange : Maybe Int
     , weeksInRange : Maybe Int
@@ -42,20 +40,10 @@ init : ( Model, Cmd Msg )
 init =
     let
         calendarDisplay =
-            FullCalendar
+            DateRangeSelector.FullCalendar
 
-        ( dateRangePicker_, dateRangePickerCmd ) =
-            DateRangePicker.init
-
-        dateRangePicker =
-            dateRangePicker_
-                |> setSettings (getSettings True)
-                |> DateRangePicker.setInputId "myDateRangePicker"
-                |> setInputIcon (i [] [ text "📆" ])
-                |> setCalendarDisplay calendarDisplay
     in
     ( { dateRange = Nothing
-      , dateRangePicker = dateRangePicker
       , date = Nothing
       , calendarDisplay = calendarDisplay
       , yearsInRange = Nothing
@@ -73,7 +61,7 @@ init =
                     , DateRangeSelector.PastMonth
                     , DateRangeSelector.PastYear
                     ]
-                , calendarType = DateRangeSelector.FullCalendar
+                , calendarType = calendarDisplay
                 , isOpen = False
                 , languageConfig = englishLanugageConfig
                 }
@@ -81,75 +69,25 @@ init =
       , zone = Nothing
       }
     , Cmd.batch
-        [ Cmd.map SetDateRangePicker dateRangePickerCmd
-        , Task.perform NewTime Time.now
+        [ Task.perform NewTime Time.now
         , Task.perform NewZone Time.here
         ]
     )
 
 
-getSettings : Bool -> DateRangePicker.Settings
-getSettings useDefault =
-    if useDefault then
-        DateRangePicker.defaultSettings
-
-    else
-        { defaultSettings
-            | formatDateRange = DateRangePicker.formatDateRange
-            , restrictedDateRange = ToPresent
-            , presetOptions =
-                { presetOption = NoPresets
-                , presetSettings = []
-                , presets = []
-                }
-        }
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ dateRangePicker } as model) =
+update msg ( model) =
     case msg of
-        SetDateRangePicker msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ dateRangePicker
-
-                newDateRange =
-                    getDateRange newDateRangePicker
-
-                updatedModel =
-                    case newDateRange of
-                        Nothing ->
-                            { model
-                                | dateRangePicker = newDateRangePicker
-                                , dateRange = newDateRange
-                                , yearsInRange = Nothing
-                                , monthsInRange = Nothing
-                                , weeksInRange = Nothing
-                                , daysInRange = Nothing
-                            }
-
-                        Just dr ->
-                            { model
-                                | dateRangePicker = newDateRangePicker
-                                , dateRange = newDateRange
-                                , yearsInRange = Just <| DateRangePicker.yearsInRange dr
-                                , monthsInRange = Just <| DateRangePicker.monthsInRange dr
-                                , weeksInRange = Just <| DateRangePicker.weeksInRange dr
-                                , daysInRange = Just <| DateRangePicker.daysInRange dr
-                            }
-            in
-            ( updatedModel
-            , Cmd.map SetDateRangePicker dateRangePickerCmd
-            )
-
         ChangeCalendarDisplay calendarDisplay ->
             let
-                newDateRangePicker =
-                    DateRangePicker.setCalendarDisplay calendarDisplay dateRangePicker
+                selector = 
+                    model.dateSelector
+                newDateRangeSelector =
+                    {selector | calendarType = calendarDisplay}
             in
             ( { model
-                | dateRangePicker = newDateRangePicker
-                , calendarDisplay = calendarDisplay
+                | calendarDisplay = calendarDisplay
+                , dateSelector = newDateRangeSelector
               }
             , Cmd.none
             )
@@ -193,10 +131,10 @@ calendarDisplayOptions : Model -> Html Msg
 calendarDisplayOptions model =
     let
         options =
-            [ FullCalendar
-            , ThreeMonths
-            , TwoMonths
-            , OneMonth
+            [ DateRangeSelector.FullCalendar
+            , DateRangeSelector.ThreeMonths
+            , DateRangeSelector.TwoMonths
+            , DateRangeSelector.OneMonth
             ]
 
         selectedClass calendarDisplay =
@@ -237,8 +175,6 @@ dateRangePickers model =
                 , class theme
                 ]
                 [ h2 [] [ text "Date Range Picker" ]
-                , h4 [] [ text <| "Selected DateRange: " ++ printDateRange model.dateRange ]
-                , DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
                 , div [ class "in-range--container" ]
                     [ numInRangeView "Years in DateRange:" model.yearsInRange
                     , numInRangeView "Months in DateRange:" model.monthsInRange
@@ -251,16 +187,6 @@ dateRangePickers model =
         [ drpView "theme-light"
         , drpView "theme-dark"
         ]
-
-
-printDateRange : Maybe DateRange -> String
-printDateRange dateRange =
-    case dateRange of
-        Just a ->
-            DateRangePicker.formatDateRange a
-
-        Nothing ->
-            ""
 
 
 printDate : Maybe Date -> String
@@ -295,22 +221,21 @@ subscriptions model =
                     Sub.none
     in
     Sub.batch
-        [ Sub.map SetDateRangePicker <| DateRangePicker.subscriptions model.dateRangePicker
-        , Sub.map NewSelectorMsgs <| selectorSubscriptions
+        [  Sub.map NewSelectorMsgs <| selectorSubscriptions
         ]
 
 
-calendarDisplayToDisplayStr : CalendarDisplay -> String
+calendarDisplayToDisplayStr : DateRangeSelector.CalendarType -> String
 calendarDisplayToDisplayStr calendarDisplay =
     case calendarDisplay of
-        FullCalendar ->
+        DateRangeSelector.FullCalendar ->
             "FullCalendar"
 
-        ThreeMonths ->
+        DateRangeSelector.ThreeMonths ->
             "ThreeMonths"
 
-        TwoMonths ->
+        DateRangeSelector.TwoMonths ->
             "TwoMonths"
 
-        OneMonth ->
+        DateRangeSelector.OneMonth ->
             "OneMonth"
