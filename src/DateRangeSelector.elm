@@ -222,13 +222,16 @@ update msg model =
 
         OnInputFinish zone ->
             let
+                parseOutput =
+                    parseDateTime (List.map presetToDisplayString model.presets) model.inputText
+
                 updatedModel =
-                    case parseDateTime model.inputText of
+                    case parseOutput of
                         Ok value ->
                             -- todo how to do pretty format with time
                             let
                                 selection =
-                                    convertInput value zone
+                                    convertInput value zone model.presets
                             in
                             { model
                                 | selection = selection
@@ -555,8 +558,8 @@ view today zone model =
         text ""
 
 
-presets : Model -> Html Msg
-presets model =
+presetsDisplay : Model -> Html Msg
+presetsDisplay model =
     if List.isEmpty model.presets then
         div [] []
 
@@ -621,7 +624,7 @@ topBar model zone visibleRange =
     in
     div [ Attrs.class "top-bar" ]
         [ fullCalendarSelector
-        , presets model
+        , presetsDisplay model
         , calendarInput model zone
         ]
 
@@ -645,14 +648,26 @@ calendarInput model zone =
         ]
 
 
-convertInput : Input -> Zone -> Selection
-convertInput input zone =
+convertInput : Input -> Zone -> List PresetType -> Selection
+convertInput input zone presets =
     case input of
         SingleInput inputDate ->
             convertInputDate inputDate zone
 
         RangeInput start end ->
             combineInputToRange start end zone
+
+        CustomDate selectedCustomDate ->
+            let
+                selectedPreset =
+                    List.filter (\p -> presetToDisplayString p == selectedCustomDate) presets
+            in
+            case List.head selectedPreset of
+                Just preset ->
+                    Preset preset
+
+                Nothing ->
+                    Unselected
 
 
 combineInputToRange : InputDate -> InputDate -> Zone -> Selection
@@ -802,7 +817,7 @@ dayCalendarView zone currentMonth currentDay today model =
                 StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
 
         isSameDayOfSelection getPosixFromSelection =
-            contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) (getPosixFromSelection model.selection))
+            contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) (getPosixFromSelection model.selection today zone))
 
         classList =
             Attrs.classList
@@ -853,8 +868,8 @@ isInSelectionRange comparisonPosix model today localZone =
             compareRange <| presetToPosixRange presetType today localZone
 
 
-selectionEnd : Selection -> Maybe Posix
-selectionEnd selection =
+selectionEnd : Selection -> Posix -> Zone -> Maybe Posix
+selectionEnd selection today localZone =
     -- todo try to combine all these things that are casing
     case selection of
         Single posix ->
@@ -870,15 +885,14 @@ selectionEnd selection =
             Just <| .end <| normalizeSelectingRange posixRange
 
         Preset presetType ->
-            --todo on this
-            Nothing
+            Just <| .end <| presetToPosixRange presetType today localZone
 
 
-selectionStart : Selection -> Maybe Posix
-selectionStart selection =
+selectionStart : Selection -> Posix -> Zone -> Maybe Posix
+selectionStart selection today localZone =
     case selection of
         Single posix ->
-            Nothing
+            Just posix
 
         Range posixRange ->
             Just posixRange.start
@@ -890,8 +904,7 @@ selectionStart selection =
             Just <| .start <| normalizeSelectingRange posixRange
 
         Preset presetType ->
-            --todo on this
-            Nothing
+            Just <| .start <| presetToPosixRange presetType today localZone
 
 
 isSameDay : Posix -> Posix -> Bool
@@ -944,11 +957,8 @@ getVisibleRangeFromSelection selection =
             Nothing
 
         Preset presetType ->
+            -- todo does this need to be changed?
             Nothing
-
-
-
--- todo update when preset done
 
 
 prettyFormatSelection : Selection -> String

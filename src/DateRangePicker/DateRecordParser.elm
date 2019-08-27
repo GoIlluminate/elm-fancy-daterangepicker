@@ -63,6 +63,7 @@ type InputDate
 type Input
     = SingleInput InputDate
     | RangeInput InputDate InputDate
+    | CustomDate String
 
 
 match : String -> Parser String
@@ -71,7 +72,13 @@ match toMatch =
         [ Parser.succeed toMatch
             |. Parser.keyword toMatch
         , Parser.succeed toMatch
+            |. Parser.keyword (String.toLower toMatch)
+        , Parser.succeed toMatch
             |. Parser.keyword (String.toUpper toMatch)
+        , Parser.succeed toMatch
+            |. Parser.keyword (String.replace " " "" toMatch)
+        , Parser.succeed toMatch
+            |. Parser.keyword (String.replace " " "" (String.toLower toMatch))
         ]
 
 
@@ -278,8 +285,8 @@ timeParser =
         ]
 
 
-fullInputDateParser : Parser Input
-fullInputDateParser =
+fullInputDateParser : List String -> Parser Input
+fullInputDateParser customDates =
     Parser.oneOf
         [ Parser.backtrackable
             rangeInputDateParser
@@ -289,6 +296,10 @@ fullInputDateParser =
             |= singleInputDateParser
             |. Parser.spaces
             |. Parser.end
+        , Parser.succeed
+            (\cd -> CustomDate cd)
+            |= Parser.oneOf
+                (List.map match customDates)
         ]
 
 
@@ -449,6 +460,9 @@ requireEndToBeAfterStart input =
             else
                 Err "The starting date must be before the end date!"
 
+        CustomDate _ ->
+            Ok input
+
 
 convertInputDateToPosix : InputDate -> Posix
 convertInputDateToPosix inputDate =
@@ -476,6 +490,9 @@ validate validateInputDateFunc input =
             Result.andThen
                 (\_ -> validateInputDateFunc end input)
                 (validateInputDateFunc start input)
+
+        CustomDate _ ->
+            Ok input
 
 
 yearToPosix : Int -> Zone -> Posix
@@ -546,9 +563,9 @@ dateTimePartsToPosix { year, month, day, hour, minute } zone =
     civilToPosix dateRecord
 
 
-parseDateTime : String -> Result String Input
-parseDateTime =
-    Parser.run fullInputDateParser
+parseDateTime : List String -> String -> Result String Input
+parseDateTime customDateInputs =
+    Parser.run (fullInputDateParser customDateInputs)
         >> Result.mapError (always "")
         >> Result.andThen (validate validateDateViaLibrary)
         >> Result.mapError (always "Not a valid US Date!")
