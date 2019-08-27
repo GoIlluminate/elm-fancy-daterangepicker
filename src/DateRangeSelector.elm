@@ -6,7 +6,7 @@ import Date exposing (Date)
 import DateFormat
 import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
-import DateRangePicker.Helper exposing (formatMonth, onClickNoDefault)
+import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
 import Derberos.Date.Core exposing (DateRecord, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
@@ -798,7 +798,7 @@ monthCalendarView currentMonth today zone model =
     td []
         [ table []
             [ thead [ Attrs.class "month--header", onClick <| SetSelection selection ]
-                [ text <| formatMonth <| Time.toMonth utc currentMonth ]
+                [ text <| monthFormatter model.languageConfig utc currentMonth ]
             , tbody [ Attrs.class "month" ] <|
                 List.map (\x -> dayCalendarView zone currentMonth x today model) <|
                     getCurrentMonthDatesFullWeeks utc currentMonth
@@ -1009,6 +1009,13 @@ singleFormatter language =
         , DateFormat.dayOfMonthNumber
         , DateFormat.text " "
         , DateFormat.yearNumber
+        ]
+
+
+monthFormatter : LanguageConfig -> Zone -> Posix -> String
+monthFormatter language =
+    DateFormat.formatWithLanguage language.dateFormatLanguage
+        [ DateFormat.monthNameFull
         ]
 
 
