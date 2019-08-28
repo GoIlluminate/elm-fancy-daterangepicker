@@ -1,31 +1,9 @@
 module DateRangePicker exposing
-    ( CalendarType(..)
-    , Config
-    , CustomPreset
-    , Format(..)
-    , Interval(..)
-    , LanguageConfig
-    , Model
-    , Msg
-    , PosixRange
-    , PresetType(..)
-    , Selection(..)
-    , englishLanguageConfig
-    , fullFormatter
-    , getLocalSelection
-    , getLocalSelectionRange
-    , getUtcSelection
-    , getUtcSelectionRange
-    , initModel
-    , initModelWithOptions
-    , openDateRangePicker
-    , presetToDisplayString
-    , presetToPosixRange
-    , setCalendarType
-    , singleFormatter
-    , subscriptions
-    , update
-    , view
+    ( Msg, Model, subscriptions, view, update
+    , initModel, openDateRangePicker
+    , Selection(..), Format(..), PosixRange
+    , setCalendarType, presetToDisplayString, presetToPosixRange
+    , CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, PresetType(..), englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, initModelWithOptions, singleFormatter
     )
 
 {-| A customizable date picker component.
@@ -178,7 +156,7 @@ If you select a preset you can use @presetToPosixRange to get the appropriate po
 type Selection
     = Single Format Posix
     | Range Format PosixRange
-    | Preset PresetType
+    | Preset PresetType PosixRange
 
 
 {-| The type which specifies what size calendar you want to display
@@ -717,6 +695,7 @@ updateCalendarRange model intervalChange currentVisibleRange =
 
         OneMonth ->
             updateWithIntervalFunc addMonths visibleRange
+
 
 {-| The view for the datepicker. You will have to pass in the current time as well as the local zone and the datepicker model.
 
@@ -1399,8 +1378,8 @@ setCalendarType calendarType model =
     { model | calendarType = calendarType }
 
 
-getLocalSelection : Model -> Maybe Selection
-getLocalSelection model =
+getLocalSelection : Posix -> Model -> Maybe Selection
+getLocalSelection today model =
     case model.selection of
         SingleSelection format pos ->
             Single format pos
@@ -1417,15 +1396,18 @@ getLocalSelection model =
             Nothing
 
         PresetSelection presetType ->
-            Preset presetType
+            Preset presetType (presetToPosixRange presetType today utc)
                 |> Just
 
 
-getUtcSelection : Zone -> Model -> Maybe Selection
-getUtcSelection zone model =
+getUtcSelection : Zone -> Posix -> Model -> Maybe Selection
+getUtcSelection zone today model =
     let
         correctDate =
             adjustMilliseconds zone
+
+        fixRange { start, end } =
+            { start = correctDate start, end = correctDate end }
     in
     case model.selection of
         SingleSelection format pos ->
@@ -1443,7 +1425,7 @@ getUtcSelection zone model =
             Nothing
 
         PresetSelection presetType ->
-            Preset presetType
+            Preset presetType (presetToPosixRange presetType today zone |> fixRange)
                 |> Just
 
 
@@ -1452,6 +1434,9 @@ getUtcSelectionRange zone today model =
     let
         correctDate =
             adjustMilliseconds zone
+
+        fixRange { start, end } =
+            { start = correctDate start, end = correctDate end }
     in
     case model.selection of
         SingleSelection _ pos ->
@@ -1470,6 +1455,7 @@ getUtcSelectionRange zone today model =
 
         PresetSelection presetType ->
             presetToPosixRange presetType today zone
+                |> fixRange
                 |> Just
 
 
