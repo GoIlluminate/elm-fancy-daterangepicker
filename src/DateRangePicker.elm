@@ -249,7 +249,7 @@ update msg model =
                             { model
                                 | selection = selection
                                 , inputText = prettyFormatSelection selection model.languageConfig utc
-                                , visibleCalendarRange = getVisibleRangeFromSelection selection today utc
+                                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today utc
                             }
 
                         Err _ ->
@@ -387,7 +387,7 @@ update msg model =
                 { model
                     | isPresetMenuOpen = False
                     , selection = selection
-                    , visibleCalendarRange = getVisibleRangeFromSelection selection today zone
+                    , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today zone
                     , inputText = prettyFormatSelection selection model.languageConfig zone
                 }
 
@@ -482,8 +482,8 @@ updateCalendarRange model intervalChange currentVisibleRange zone =
                 { model
                     | visibleCalendarRange =
                         Just <|
-                            { start = addTimezoneMilliseconds zone <| intervalFunc intervalChange zone range.start
-                            , end = addTimezoneMilliseconds zone <| intervalFunc intervalChange zone range.end
+                            { start =  intervalFunc intervalChange utc range.start
+                            , end =  intervalFunc intervalChange utc range.end
                             }
                 }
 
@@ -639,9 +639,11 @@ topBar model visibleRange today =
 
                 _ ->
                     text ""
+
+        _ = Debug.log "end" <| (posixToCivil visibleRange.start,posixToCivil visibleRange.end)
         
         selection =
-            Range { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.end }
+            Range { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
     in
     div [ Attrs.class "top-bar" ]
         [ fullCalendarSelector
@@ -977,34 +979,34 @@ isSameDay posix1 posix2 =
 
 calcRange : Posix -> Zone -> Model -> PosixRange
 calcRange today zone model =
-    let
-        convertToRange =
-            case model.calendarType of
-                FullCalendar ->
-                    { start = getFirstDayOfYear zone today, end = getLastDayOfYear utc today }
+    Maybe.withDefault (convertToRange today model.calendarType) model.visibleCalendarRange
 
-                ThreeMonths ->
-                    { start = getFirstDayOfMonth zone <| addMonths -1 zone today
-                    , end = getLastDayOfMonth zone <| addMonths 1 zone today
-                    }
+convertToRange : Posix -> CalendarType -> PosixRange
+convertToRange day calendarType =
+    case calendarType of
+        FullCalendar ->
+            { start = getFirstDayOfYear utc day, end = getLastDayOfYear utc day }
 
-                TwoMonths ->
-                    { start = getFirstDayOfMonth zone <| addMonths -1 zone today, end = getLastDayOfMonth zone today }
+        ThreeMonths ->
+            { start = getFirstDayOfMonth utc <| addMonths -1 utc day
+            , end = getLastDayOfMonth utc <| addMonths 1 utc day
+            }
 
-                OneMonth ->
-                    { start = getFirstDayOfMonth zone today, end = getLastDayOfMonth zone today }
-    in
-    Maybe.withDefault convertToRange model.visibleCalendarRange
+        TwoMonths ->
+            { start = getFirstDayOfMonth utc <| addMonths -1 utc day, end = getLastDayOfMonth utc day }
 
+        OneMonth ->
+            { start = getFirstDayOfMonth utc day, end = getLastDayOfMonth utc day }
 
-getVisibleRangeFromSelection : Selection -> Posix -> Zone -> Maybe PosixRange
-getVisibleRangeFromSelection selection today localZone =
+getVisibleRangeFromSelection : Selection -> CalendarType -> Posix -> Zone -> Maybe PosixRange
+getVisibleRangeFromSelection selection calendarType today localZone =
     case selection of
         Single posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
         Range posixRange ->
-            Just posixRange
+            convertToRange posixRange.start calendarType 
+                |> Just
 
         Unselected ->
             Nothing
