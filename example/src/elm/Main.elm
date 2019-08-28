@@ -6,6 +6,7 @@ import Date
         ( Date
         )
 import DateRangePicker exposing (englishLanugageConfig, initModelWithOptions, openDateRangePicker)
+import Derberos.Date.Core as DateCore
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
@@ -103,10 +104,43 @@ view model =
 
                 _ ->
                     text ""
+
+        ( localSelection, localtimeZoneText ) =
+            case model.today of
+                Just t ->
+                    case ( DateRangePicker.getLocalSelectionRange t model.dateSelector, model.zone ) of
+                        ( Just pos, Just tz ) ->
+                            ( DateRangePicker.fullFormatter model.dateSelector.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
+                            , DateCore.getTzOffset tz pos.start
+                            )
+
+                        _ ->
+                            ( "", 0 )
+
+                Nothing ->
+                    ( "", 0 )
+
+        utcSelection =
+            case model.today of
+                Just t ->
+                    case DateRangePicker.getUtcSelectionRange (Maybe.withDefault Time.utc model.zone) t model.dateSelector of
+                        Just range ->
+                            DateRangePicker.fullFormatter model.dateSelector.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
+
+                        _ ->
+                            ""
+
+                Nothing ->
+                    ""
     in
     div [ class "main" ]
         [ calendarDisplayOptions model
         , Html.map NewSelectorMsgs selector
+        , div []
+            [ div [] [ text <| "LocalTime: " ++ localSelection ]
+            , div [] [ text <| "TimeZone: " ++ String.fromInt localtimeZoneText ]
+            , div [] [ text <| "UtcTime: " ++ utcSelection ]
+            ]
         ]
 
 
