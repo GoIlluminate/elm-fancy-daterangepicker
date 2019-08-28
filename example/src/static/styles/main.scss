@@ -1,4 +1,4 @@
-$blue: rgb(67,130,255);
+$blue: rgb(67, 130, 255);
 body, html {
   margin: 0;
   padding: 0;
@@ -8,46 +8,60 @@ body, html {
   height: 100vh;
   width: 100vw;
   display: grid;
-  grid-template-rows: 75px 1fr 1fr;
+  grid-template-rows: 75px min-content 1fr;
   grid-template-columns: 1fr;
-  .open-button{
+
+  .open-button {
     margin-left: 50px;
   }
+
+  .toggle-theme {
+    width: fit-content;
+    margin: 10px;
+  }
+
   .calendar-display-options--container {
     display: grid;
     grid-template-rows: 1fr;
     grid-template-columns: 1fr;
+
     .calendar-display-options--wrapper {
       display: grid;
       grid-template-rows: 1fr;
       grid-template-columns: repeat(4, min-content);
       grid-gap: 10px;
       margin: auto;
-      >div.calendar-display-option {
+
+      > div.calendar-display-option {
         align-self: center;
+
         span {
           height: 100%;
           width: 100%;
           border-radius: 15px;
           padding: 5px;
           border: solid 1px $blue;
+
           &:hover {
             cursor: pointer;
             color: pink;
           }
         }
+
         &.selected {
           span {
             background: $blue;
             color: white;
           }
         }
+
         &:not(.selected) {
           span {
             color: $blue;
             background: white;
           }
         }
+
         span:hover {
           background: darken($blue, 20);
           color: white;
@@ -55,12 +69,15 @@ body, html {
       }
     }
   }
-  >.date-picker--wrapper {
+
+  > .date-picker--wrapper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+
     .theme--wrapper {
       padding: 20px;
     }
+
     .theme-dark {
       background: black;
       color: white;
