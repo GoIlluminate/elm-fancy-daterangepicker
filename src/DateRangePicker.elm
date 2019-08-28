@@ -307,12 +307,12 @@ update msg model =
                             -- todo how to do pretty format with time
                             let
                                 selection =
-                                    convertInput value utc model
+                                    convertInput value model
                             in
                             { model
                                 | selection = selection
                                 , inputText = prettyFormatSelection selection model.languageConfig
-                                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today utc
+                                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
                             }
 
                         Err _ ->
@@ -358,7 +358,7 @@ update msg model =
                 model
                 (\key ->
                     if key == Shift then
-                        cancelShift utc model
+                        cancelShift model
 
                     else
                         R2.withNoCmd model
@@ -381,7 +381,7 @@ update msg model =
                 R2.withNoCmd { model | terminationCounter = model.terminationCounter - 1 }
 
         CancelShift ->
-            cancelShift utc model 
+            cancelShift model 
 
         OnHoverOverDay posix ->
             let
@@ -446,7 +446,7 @@ selectPreset presetType today model =
         { model
             | isPresetMenuOpen = False
             , selection = selection
-            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today utc
+            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
             , inputText = prettyFormatSelection selection model.languageConfig
             , keyboardSelectedPreset = Nothing
         }
@@ -564,8 +564,8 @@ createSelectingRange model changedValue =
             { start = changedValue, end = changedValue }
 
 
-cancelShift : Zone -> Model -> ( Model, Cmd Msg )
-cancelShift zone model  =
+cancelShift : Model -> ( Model, Cmd Msg )
+cancelShift model  =
     case model.selection of
         Selecting posixRange ->
             let
@@ -781,14 +781,14 @@ calendarInput model today =
         ]
 
 
-convertInput : Input -> Zone -> Model -> Selection
-convertInput input zone model =
+convertInput : Input -> Model -> Selection
+convertInput input model =
     case input of
         SingleInput inputDate ->
-            convertInputDate inputDate zone
+            convertInputDate inputDate
 
         RangeInput start end ->
-            combineInputToRange start end zone
+            combineInputToRange start end
 
         CustomDate selectedCustomDate ->
             let
@@ -803,14 +803,14 @@ convertInput input zone model =
                     Unselected
 
 
-combineInputToRange : InputDate -> InputDate -> Zone -> Selection
-combineInputToRange start end zone =
+combineInputToRange : InputDate -> InputDate -> Selection
+combineInputToRange start end =
     let
         startSelection =
-            convertInputDate start zone
+            convertInputDate start
 
         endSelection =
-            convertInputDate end zone
+            convertInputDate end
     in
     case ( startSelection, endSelection ) of
         ( Single _ startPosix, Single _ endPosix ) ->
@@ -829,20 +829,20 @@ combineInputToRange start end zone =
             Unselected
 
 
-convertInputDate : InputDate -> Zone -> Selection
-convertInputDate inputDate zone =
+convertInputDate : InputDate -> Selection
+convertInputDate inputDate =
     case inputDate of
         JustYear year ->
-            Range DateFormat <| yearToPosixRange year zone
+            Range DateFormat <| yearToPosixRange year utc
 
         JustYearAndMonth yearAndMonth ->
-            Range DateFormat <| yearAndMonthToPosixRange yearAndMonth zone
+            Range DateFormat <| yearAndMonthToPosixRange yearAndMonth utc
 
         FullDate dateParts ->
-            Range DateFormat <| datePartsToPosixRange dateParts zone
-
+            Range DateFormat <| datePartsToPosixRange dateParts utc
+   
         FullDateTime dateTimeParts ->
-            Single DateTimeFormat <| dateTimePartsToPosix dateTimeParts zone
+            Single DateTimeFormat <| dateTimePartsToPosix dateTimeParts utc
 
 
 calendarView : Posix -> Model -> PosixRange -> Html Msg
@@ -1109,8 +1109,8 @@ convertToRange day calendarType =
         OneMonth ->
             { start = getFirstDayOfMonth utc day, end = getLastDayOfMonth utc day }
 
-getVisibleRangeFromSelection : Selection -> CalendarType -> Posix -> Zone -> Maybe PosixRange
-getVisibleRangeFromSelection selection calendarType today localZone =
+getVisibleRangeFromSelection : Selection -> CalendarType -> Posix -> Maybe PosixRange
+getVisibleRangeFromSelection selection calendarType today =
     case selection of
         Single _ posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
@@ -1126,7 +1126,7 @@ getVisibleRangeFromSelection selection calendarType today localZone =
             Nothing
 
         Preset presetType ->
-            Just <| presetToPosixRange presetType today localZone
+            Just <| presetToPosixRange presetType today utc
 
 
 prettyFormatSelection : Selection -> LanguageConfig -> String
