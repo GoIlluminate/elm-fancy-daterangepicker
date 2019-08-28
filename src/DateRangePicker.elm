@@ -70,7 +70,7 @@ type Msg
     | OnGetElementSuccess (Result Error Element)
     | CheckToMoveToNextVisibleRange Posix Zone
     | SetPresetMenu Bool
-    | SelectPreset PresetType Posix Zone
+    | SelectPreset PresetType Posix
 
 
 type MousePosition
@@ -285,13 +285,13 @@ update msg model =
             R2.withNoCmd { model | isOpen = False }
 
         PrevCalendarRange currentVisibleRange ->
-            updateCalendarRange model -1 currentVisibleRange utc
+            updateCalendarRange model -1 currentVisibleRange
 
         NextCalendarRange currentVisibleRange ->
-            updateCalendarRange model 1 currentVisibleRange utc
+            updateCalendarRange model 1 currentVisibleRange
 
         SetSelection selection ->
-            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig utc}
+            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig}
 
         OnInputFinish today ->
             let
@@ -311,12 +311,12 @@ update msg model =
                             in
                             { model
                                 | selection = selection
-                                , inputText = prettyFormatSelection selection model.languageConfig utc
+                                , inputText = prettyFormatSelection selection model.languageConfig
                                 , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today utc
                             }
 
                         Err _ ->
-                            { model | inputText = prettyFormatSelection model.selection model.languageConfig utc }
+                            { model | inputText = prettyFormatSelection model.selection model.languageConfig }
             in
             R2.withNoCmd updatedModel
 
@@ -342,9 +342,9 @@ update msg model =
                     in
                     R2.withNoCmd
                         { model
-                            | isMouseDown = False
+                            | isMouseDown = False 
                             , selection = selection
-                            , inputText = prettyFormatSelection selection model.languageConfig utc
+                            , inputText = prettyFormatSelection selection model.languageConfig
                         }
 
                 Nothing ->
@@ -417,10 +417,10 @@ update msg model =
                 ( Just element, Just position, True ) ->
                     case calculateMousePosition element position of
                         OutsideRight ->
-                            updateCalendarRange model 1 visibleRange utc
+                            updateCalendarRange model 1 visibleRange
 
                         OutsideLeft ->
-                            updateCalendarRange model -1 visibleRange utc
+                            updateCalendarRange model -1 visibleRange
 
                         _ ->
                             R2.withNoCmd model
@@ -431,12 +431,12 @@ update msg model =
         SetPresetMenu bool ->
             R2.withNoCmd { model | isPresetMenuOpen = bool, keyboardSelectedPreset = Nothing }
 
-        SelectPreset presetType today zone ->
-            selectPreset presetType today zone model
+        SelectPreset presetType today ->
+            selectPreset presetType today model
 
 
-selectPreset : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
-selectPreset presetType today zone model =
+selectPreset : PresetType -> Posix -> Model -> ( Model, Cmd Msg )
+selectPreset presetType today model =
     let
         selection =
             Preset presetType
@@ -446,8 +446,8 @@ selectPreset presetType today zone model =
         { model
             | isPresetMenuOpen = False
             , selection = selection
-            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today zone
-            , inputText = prettyFormatSelection selection model.languageConfig utc
+            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today utc
+            , inputText = prettyFormatSelection selection model.languageConfig
             , keyboardSelectedPreset = Nothing
         }
 
@@ -488,7 +488,7 @@ onKeyDown model today zone key =
             if model.isPresetMenuOpen then
                 case model.keyboardSelectedPreset of
                     Just a ->
-                        selectPreset (SelectList.selected a) today zone model
+                        selectPreset (SelectList.selected a) today model
 
                     Nothing ->
                         R2.withNoCmd model
@@ -579,7 +579,7 @@ cancelShift zone model  =
                     | isShiftDown = False
                     , terminationCounter = 10
                     , selection = selection
-                    , inputText = prettyFormatSelection selection model.languageConfig zone
+                    , inputText = prettyFormatSelection selection model.languageConfig
                 }
 
         _ ->
@@ -600,8 +600,8 @@ onKey rawKey model onValidKey =
             R2.withNoCmd model
 
 
-updateCalendarRange : Model -> Int -> PosixRange -> Zone -> ( Model, Cmd Msg )
-updateCalendarRange model intervalChange currentVisibleRange zone =
+updateCalendarRange : Model -> Int -> PosixRange -> ( Model, Cmd Msg )
+updateCalendarRange model intervalChange currentVisibleRange =
     let
         updateWithIntervalFunc intervalFunc range =
             R2.withNoCmd
@@ -703,7 +703,7 @@ presetMenu model today =
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p today utc, classList p ]
+                    div [ Html.Events.onClick <| SelectPreset p today, classList p ]
                         [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
@@ -750,7 +750,7 @@ topBar model visibleRange today =
 
                 _ ->
                     ( text "", "top-bar--partial" )
-
+        
         selection =
             Range DateFormat { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
     in
@@ -1129,8 +1129,8 @@ getVisibleRangeFromSelection selection calendarType today localZone =
             Just <| presetToPosixRange presetType today localZone
 
 
-prettyFormatSelection : Selection -> LanguageConfig -> Zone -> String
-prettyFormatSelection selection languageConfig zone =
+prettyFormatSelection : Selection -> LanguageConfig -> String
+prettyFormatSelection selection languageConfig =
     -- todo handling time zones
     case selection of
         Single format posix ->
