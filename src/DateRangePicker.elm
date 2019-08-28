@@ -266,9 +266,6 @@ subscriptions model today zone =
     else
         Sub.none
 
-
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -415,7 +412,6 @@ update msg model =
             let
                 visibleRange =
                     calcRange today utc model
-                
             in
             case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
@@ -755,10 +751,8 @@ topBar model visibleRange today =
                 _ ->
                     ( text "", "top-bar--partial" )
 
-        _ = Debug.log "end" <| (posixToCivil visibleRange.start,posixToCivil visibleRange.end)
-        
         selection =
-            Range DateFormat { start = visibleRange.start, end = visibleRange.end }
+            Range DateFormat { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
     in
     div [ Attrs.class class ]
         [ fullCalendarSelector
