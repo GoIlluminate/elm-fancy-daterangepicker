@@ -857,7 +857,7 @@ calendarView today zone model visibleRange =
             twoMonthCalendarView today zone model visibleRange
 
         OneMonth ->
-            monthCalendarTableView today zone model visibleRange
+            oneMonthCalendarView today zone model visibleRange
 
 
 yearCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
@@ -886,8 +886,8 @@ yearCalendarView today zone model visibleRange =
 
 threeMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 threeMonthCalendarView today zone model visibleRange =
-    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "three-month-calendar" ]
-        [ table [ Attrs.class "month-table" ]
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
+        [ table []
             [ tbody [ Attrs.class "three-month" ] <|
                 List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 2 zone visibleRange getFirstDayOfMonth)
             ]
@@ -896,22 +896,22 @@ threeMonthCalendarView today zone model visibleRange =
 
 twoMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
 twoMonthCalendarView today zone model visibleRange =
-    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "two-month-calendar" ]
-        [ table [ Attrs.class "month-table" ]
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
+        [ table []
             [ tbody [ Attrs.class "two-month" ] <|
                 List.map (\m -> monthCalendarView m today zone model) (getMonthsFromRange 0 1 zone visibleRange getFirstDayOfMonth)
             ]
         ]
 
 
-monthCalendarTableView : Posix -> Zone -> Model -> PosixRange -> Html Msg
-monthCalendarTableView today zone model visibleRange =
+oneMonthCalendarView : Posix -> Zone -> Model -> PosixRange -> Html Msg
+oneMonthCalendarView today zone model visibleRange =
     let
         posixMonth =
             getFirstDayOfMonth zone visibleRange.start
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
-        [ table [ Attrs.class "month-table" ] [ tbody [ Attrs.class "month-body" ] [ monthCalendarView posixMonth today zone model ] ]
+        [ table [] [ tbody [ Attrs.class "one-month" ] [ monthCalendarView posixMonth today zone model ] ]
         ]
 
 
