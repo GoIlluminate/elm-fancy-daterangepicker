@@ -1,26 +1,36 @@
 module DateRangePicker exposing
-    ( CalendarType(..)
-    , Config
-    , CustomPreset
-    , Format(..)
-    , Interval(..)
-    , LanguageConfig
-    , Model
-    , Msg
-    , PosixRange
-    , PresetType(..)
-    , Selection(..)
-    , englishLanugageConfig
-    , initModel
-    , initModelWithOptions
-    , openDateRangePicker
-    , presetToDisplayString
-    , presetToPosixRange
-    , setCalendarType
-    , subscriptions
-    , update
-    , view
+    ( Msg, Model, subscriptions, view, update
+    , initModel, openDateRangePicker
+    , Selection(..), Format(..), PosixRange
+    , setCalendarType, presetToDisplayString, presetToPosixRange
+    , CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, PresetType(..), englishLanguageConfig, initModelWithOptions
     )
+
+{-| A customizable date picker component.
+
+
+# Basics
+
+@docs Msg, Model, subscriptions, view, update
+
+@docs initModel, openDateRangePicker
+
+
+# Selection
+
+@docs Selection, Format, PosixRange
+
+
+# Settings
+
+@ docs Config, LanguageConfig, englishLanguageConfig, initModelWithOptions, PresetType, Interval, CustomPreset, CalendarType
+
+
+# Helpers
+
+@docs setCalendarType, presetToDisplayString, presetToPosixRange
+
+-}
 
 import Browser.Dom as Dom exposing (Element, Error, getElement)
 import Browser.Events
@@ -48,6 +58,8 @@ import Task
 import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
 
 
+{-| An opaque type representing messages that are passed inside the DatePicker.
+-}
 type Msg
     = DoNothing
     | Open
@@ -85,10 +97,17 @@ type alias DateRange =
     { start : Date, end : Date }
 
 
+{-| The type of that represents a range of two posix times.
+-}
 type alias PosixRange =
     { start : Posix, end : Posix }
 
 
+{-| The type of that represents available presets that can be put in a preset menu.
+
+There are a couple premade presets, but you can create a CustomPreset of your own as well.
+
+-}
 type PresetType
     = Today
     | Yesterday
@@ -98,6 +117,8 @@ type PresetType
     | Custom CustomPreset
 
 
+{-| The type of interval for a custom preset
+-}
 type Interval
     = Days
     | Months
@@ -105,6 +126,11 @@ type Interval
     | Years
 
 
+{-| A record that represents a user created custom preset
+
+A custom preset represents how to select a range of posix given today's date.
+
+-}
 type alias CustomPreset =
     { intervalStart : Interval
     , intervalStartValue : Int
@@ -114,6 +140,11 @@ type alias CustomPreset =
     }
 
 
+{-| The type which represents what the current selection is in the datepicker.
+
+If you select a preset you can use @presetToPosixRange to get the appropriate posix range for the selection.
+
+-}
 type Selection
     = Single Format Posix
     | Range Format PosixRange
@@ -122,6 +153,8 @@ type Selection
     | Preset PresetType
 
 
+{-| The type which specifies what size calendar you want to display
+-}
 type CalendarType
     = FullCalendar
     | ThreeMonths
@@ -129,11 +162,15 @@ type CalendarType
     | OneMonth
 
 
+{-| The type which specifies if a user had specified a time in the input box as well as the selected date.
+-}
 type Format
     = DateFormat
     | DateTimeFormat
 
 
+{-| A record which represents the main datepicker model
+-}
 type alias Model =
     { selection : Selection
     , availableForSelectionStart : Date
@@ -156,6 +193,8 @@ type alias Model =
     }
 
 
+{-| Initialize the datepicker with the default settings
+-}
 initModel : Model
 initModel =
     { selection = Unselected
@@ -165,7 +204,7 @@ initModel =
     , isMouseDown = False
     , isShiftDown = False
     , presets = []
-    , calendarType = ThreeMonths
+    , calendarType = FullCalendar
     , isOpen = False
     , inputText = ""
     , terminationCounter = 0
@@ -173,12 +212,14 @@ initModel =
     , mousePosition = Nothing
     , uiElement = Nothing
     , isMouseOutside = False
-    , languageConfig = englishLanugageConfig
+    , languageConfig = englishLanguageConfig
     , isPresetMenuOpen = False
     , keyboardSelectedPreset = Nothing
     }
 
 
+{-| A record which specifies config options which can be set when initializes the datepicker
+-}
 type alias Config =
     { availableForSelectionStart : Date
     , availableForSelectionEnd : Date
@@ -189,6 +230,8 @@ type alias Config =
     }
 
 
+{-| A record that can be used if a language other than english is wanted.
+-}
 type alias LanguageConfig =
     { done : String
     , reset : String
@@ -203,8 +246,10 @@ type alias LanguageConfig =
     }
 
 
-englishLanugageConfig : LanguageConfig
-englishLanugageConfig =
+{-| The default english language
+-}
+englishLanguageConfig : LanguageConfig
+englishLanguageConfig =
     { done = "Done"
     , reset = "Reset"
     , inputPlaceholder = "Start date - End date"
@@ -218,6 +263,8 @@ englishLanugageConfig =
     }
 
 
+{-| Initialize the datepicker with the custom settings
+-}
 initModelWithOptions : Config -> Model
 initModelWithOptions config =
     { initModel
@@ -229,11 +276,24 @@ initModelWithOptions config =
     }
 
 
+{-| A helper attribute which allows you to open the datepicker using any html element.
+
+    button [ openDateRangePicker ] [ text "Open Me!" ]
+
+You will need to call convert the message to the appropriate type via Html.map
+
+-}
 openDateRangePicker : Attribute Msg
 openDateRangePicker =
     Html.Events.onClick Open
 
 
+{-| The subscriptions for the datepicker
+
+    Sub.map DatePickerMsgs <|
+        DateRangePicker.subscriptions model.datePicker currentTime localZone
+
+-}
 subscriptions : Model -> Posix -> Zone -> Sub Msg
 subscriptions model today zone =
     let
@@ -267,6 +327,11 @@ subscriptions model today zone =
         Sub.none
 
 
+{-| The view for the datepicker. You will have to pass in the current time as well as the local zone and the datepicker model.
+
+    DateRangePicker.view currentTime localZone datePicker
+
+-}
 view : Posix -> Zone -> Model -> Html Msg
 view today zone model =
     let
@@ -303,6 +368,16 @@ view today zone model =
         text ""
 
 
+{-| The update for the datepicker.
+
+    DatePickerMsgs msg_ ->
+        let
+            ( newDateRangePicker, dateRangePickerCmd ) =
+                DateRangePicker.update msg_ model.datePicker
+        in
+        ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
+
+-}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -1281,6 +1356,8 @@ getStartOfDay posix =
     civilToPosix updatedDateRecord
 
 
+{-| A helper function to change the calendar type on an existing model
+-}
 setCalendarType : CalendarType -> Model -> Model
 setCalendarType calendarType model =
     { model | calendarType = calendarType }
@@ -1292,6 +1369,8 @@ setCalendarType calendarType model =
 --------------------------------------------------------------------------------------------
 
 
+{-| A helper function to get the display value for a given preset
+-}
 presetToDisplayString : PresetType -> LanguageConfig -> String
 presetToDisplayString presetType language =
     case presetType of
@@ -1330,6 +1409,8 @@ convertInterval interval intervalValue today localZone =
             addYears intervalValue today
 
 
+{-| A helper function to get the posix range for a given preset
+-}
 presetToPosixRange : PresetType -> Posix -> Zone -> PosixRange
 presetToPosixRange presetType today localZone =
     case presetType of

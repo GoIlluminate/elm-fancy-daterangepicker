@@ -5,7 +5,7 @@ import Date
     exposing
         ( Date
         )
-import DateRangePicker exposing (englishLanugageConfig, initModelWithOptions, openDateRangePicker)
+import DateRangePicker exposing (englishLanguageConfig, initModelWithOptions, openDateRangePicker)
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
@@ -17,12 +17,12 @@ type Msg
     = ChangeCalendarDisplay DateRangePicker.CalendarType
     | NewTime Posix
     | NewZone Zone
-    | NewSelectorMsgs DateRangePicker.Msg
+    | DatePickerMsgs DateRangePicker.Msg
 
 
 type alias Model =
     { calendarDisplay : DateRangePicker.CalendarType
-    , dateSelector : DateRangePicker.Model
+    , datePicker : DateRangePicker.Model
     , today : Maybe Posix
     , zone : Maybe Zone
     }
@@ -35,7 +35,7 @@ init =
             DateRangePicker.FullCalendar
     in
     ( { calendarDisplay = calendarDisplay
-      , dateSelector =
+      , datePicker =
             initModelWithOptions
                 { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
                 , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
@@ -48,7 +48,7 @@ init =
                     ]
                 , calendarType = calendarDisplay
                 , isOpen = False
-                , languageConfig = englishLanugageConfig
+                , languageConfig = englishLanguageConfig
                 }
       , today = Nothing
       , zone = Nothing
@@ -66,12 +66,12 @@ update msg model =
         ChangeCalendarDisplay calendarType ->
             let
                 newDateRangeSelector =
-                    model.dateSelector
+                    model.datePicker
                         |> DateRangePicker.setCalendarType calendarType
             in
             ( { model
                 | calendarDisplay = calendarType
-                , dateSelector = newDateRangeSelector
+                , datePicker = newDateRangeSelector
               }
             , Cmd.none
             )
@@ -79,12 +79,12 @@ update msg model =
         NewTime posix ->
             ( { model | today = Just posix }, Cmd.none )
 
-        NewSelectorMsgs msg_ ->
+        DatePickerMsgs msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.dateSelector
+                    DateRangePicker.update msg_ model.datePicker
             in
-            ( { model | dateSelector = newDateRangePicker }, Cmd.map NewSelectorMsgs dateRangePickerCmd )
+            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
 
         NewZone zone ->
             ( { model | zone = Just zone }, Cmd.none )
@@ -98,7 +98,7 @@ view model =
                 ( Just t, Just z ) ->
                     div [ class "theme-light open-button" ]
                         [ button [ openDateRangePicker ] [ text "Open Me!" ]
-                        , DateRangePicker.view t z model.dateSelector
+                        , DateRangePicker.view t z model.datePicker
                         ]
 
                 _ ->
@@ -106,7 +106,7 @@ view model =
     in
     div [ class "main" ]
         [ calendarDisplayOptions model
-        , Html.map NewSelectorMsgs selector
+        , Html.map DatePickerMsgs selector
         ]
 
 
@@ -157,13 +157,13 @@ subscriptions model =
         selectorSubscriptions =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
-                    DateRangePicker.subscriptions model.dateSelector t z
+                    DateRangePicker.subscriptions model.datePicker t z
 
                 _ ->
                     Sub.none
     in
     Sub.batch
-        [ Sub.map NewSelectorMsgs <| selectorSubscriptions
+        [ Sub.map DatePickerMsgs selectorSubscriptions
         ]
 
 
