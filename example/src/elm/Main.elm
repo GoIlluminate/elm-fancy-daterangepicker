@@ -6,6 +6,7 @@ import Date
         ( Date
         )
 import DateRangePicker exposing (englishLanguageConfig, initModelWithOptions, openDateRangePicker)
+import Derberos.Date.Core as DateCore
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class)
 import Html.Events
@@ -131,11 +132,44 @@ view model =
 
                 _ ->
                     text ""
+
+        ( localSelection, localtimeZoneText ) =
+            case model.today of
+                Just t ->
+                    case ( DateRangePicker.getLocalSelectionRange t model.datePicker, model.zone ) of
+                        ( Just pos, Just tz ) ->
+                            ( DateRangePicker.fullFormatter model.datePicker.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
+                            , DateCore.getTzOffset tz pos.start
+                            )
+
+                        _ ->
+                            ( "", 0 )
+
+                Nothing ->
+                    ( "", 0 )
+
+        utcSelection =
+            case model.today of
+                Just t ->
+                    case DateRangePicker.getUtcSelectionRange (Maybe.withDefault Time.utc model.zone) t model.datePicker of
+                        Just range ->
+                            DateRangePicker.fullFormatter model.datePicker.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
+
+                        _ ->
+                            ""
+
+                Nothing ->
+                    ""
     in
     div [ class "main" ]
         [ calendarDisplayOptions model
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
         , Html.map DatePickerMsgs selector
+        , div []
+            [ div [] [ text <| "LocalTime: " ++ localSelection ]
+            , div [] [ text <| "TimeZone: " ++ String.fromInt localtimeZoneText ]
+            , div [] [ text <| "UtcTime: " ++ utcSelection ]
+            ]
         ]
 
 
