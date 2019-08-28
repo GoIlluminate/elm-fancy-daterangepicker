@@ -18,6 +18,12 @@ type Msg
     | NewTime Posix
     | NewZone Zone
     | DatePickerMsgs DateRangePicker.Msg
+    | ToggleColorTheme
+
+
+type ColorTheme
+    = Light
+    | Dark
 
 
 type alias Model =
@@ -25,6 +31,7 @@ type alias Model =
     , datePicker : DateRangePicker.Model
     , today : Maybe Posix
     , zone : Maybe Zone
+    , colorTheme : ColorTheme
     }
 
 
@@ -52,6 +59,7 @@ init =
                 }
       , today = Nothing
       , zone = Nothing
+      , colorTheme = Light
       }
     , Cmd.batch
         [ Task.perform NewTime Time.now
@@ -89,14 +97,34 @@ update msg model =
         NewZone zone ->
             ( { model | zone = Just zone }, Cmd.none )
 
+        ToggleColorTheme ->
+            ( { model
+                | colorTheme =
+                    if model.colorTheme == Light then
+                        Dark
+
+                    else
+                        Light
+              }
+            , Cmd.none
+            )
+
 
 view : Model -> Html Msg
 view model =
     let
+        styleClass =
+            case model.colorTheme of
+                Light ->
+                    "theme-light open-button"
+
+                Dark ->
+                    "theme-dark open-button"
+
         selector =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
-                    div [ class "theme-light open-button" ]
+                    div [ class styleClass ]
                         [ button [ openDateRangePicker ] [ text "Open Me!" ]
                         , DateRangePicker.view t z model.datePicker
                         ]
@@ -106,6 +134,7 @@ view model =
     in
     div [ class "main" ]
         [ calendarDisplayOptions model
+        , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
         , Html.map DatePickerMsgs selector
         ]
 

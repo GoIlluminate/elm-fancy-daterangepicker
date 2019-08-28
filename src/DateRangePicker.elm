@@ -1444,7 +1444,7 @@ downArrow : Html msg
 downArrow =
     svg [ Svg.width "20", Svg.height "20", Svg.viewBox "0 0 30 30" ]
         [ g [ Svg.stroke "none", Svg.strokeWidth "1", Svg.fill "none", Svg.fillRule "evenodd", Svg.strokeLinecap "round", Svg.strokeLinejoin "round" ]
-            [ g [ Svg.transform "translate(15.000000, 15.000000) scale(-1, 1) rotate(90.000000) translate(-15.000000, -15.000000) translate(12.000000, 9.000000)", Svg.stroke "black", Svg.strokeWidth "2" ]
+            [ g [ Svg.transform "translate(15.000000, 15.000000) scale(-1, 1) rotate(90.000000) translate(-15.000000, -15.000000) translate(12.000000, 9.000000)", Svg.stroke "currentColor", Svg.strokeWidth "2" ]
                 [ Svg.polyline [ Svg.points "0 12 6 6 0 0" ]
                     []
                 ]

@@ -1,3 +1,4 @@
+
 .elm-fancy--daterangepicker {
   table {
     border-spacing: 2px 0;
@@ -9,13 +10,13 @@
       height: 30px;
       border-radius: 100%;
       position: absolute;
-      background: white;
+      background: themed('color-secondary');
       top: 45%;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.12), 0 4px 4px rgba(0, 0, 0, 0.24);
+      box-shadow: themed('box-shadow-selection1'), themed('box-shadow-selection2');
     }
     .close {
       position: fixed;
@@ -29,14 +30,14 @@
       font-size: 14px;
       background: themed('color-secondary');
       display: table;
-      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3),
-      0 4px 8px 3px rgba(60, 64, 67, 0.15);
+      box-shadow: 0 1px 3px themed('color-box-shadow-body1'),
+      0 4px 8px 3px themed('color-box-shadow-body2');
       border-radius: 6px;
       z-index: 1001;
       position: absolute;
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
-      color: #3c4043;
+      color: themed('color-text-default');
     }
     .top-bar--full {
       display: grid;
@@ -75,11 +76,12 @@
       justify-self: right;
       align-self: center;
       padding: 0 10px;
+      color: themed('color-text-default');
     }
     .done {
       margin: 4px 16px;
       padding: 4px 10px;
-      background-color: themed("color-primary");
+      background-color: $illum-color-blue;
       color: white;
       border: none;
       border-radius: 4px;
@@ -90,11 +92,13 @@
 
       > input {
         width: calc(100% - 15px);
-        border: 1px solid #dadce0;
+        border: 1px solid themed('color-input-border');;
         padding: 5px 0 5px 5px;
+        background-color: themed('color-secondary');
+        color: themed('color-text-default');
 
         &:focus {
-          background-color: #f4f8ff;
+          background-color: themed('color-input-focus');
           border: 1px solid themed('color-primary');
         }
       }
@@ -156,7 +160,7 @@
       text-align: center;
       font-size: 12px;
       padding: 1px 4px;
-      color: themed("color-primary");
+      color: $illum-color-blue;
       cursor: pointer;
 
       &:hover:not(.border-selection) {
@@ -168,10 +172,10 @@
       text-decoration: underline;
     }
     .selected-range {
-      background-color: rgb(218, 237, 253);
+      background-color: themed("color-selected-range");
     }
     .border-selection {
-      background-color: themed("color-primary");
+      background-color: $illum-color-blue;
       color: white;
       border-radius: 2px;
     }
@@ -179,11 +183,11 @@
     .selection-hover {
       &:hover {
         cursor: pointer;
-        background: #f8f9fa;
+        background: themed("color-button-hover");
       }
 
       &:focus {
-        background: #f8f9fa;
+        background: themed("color-button-hover");
         outline: none;
       }
     }
@@ -199,6 +203,7 @@
       align-items: center;
       border: none;
       background-color: inherit;
+      color: themed('color-text-default');
     }
     .preset-menu--close {
       position: fixed;
@@ -210,7 +215,7 @@
     }
     .preset-menu--content {
       z-index: 1003;
-      background-color: white;
+      background: themed("color-secondary");
       width: max-content;
       position: absolute;
       transform: translateX(calc(50% - 5px)) translateY(5px);
@@ -227,7 +232,7 @@
     }
     .menu-item {
       @extend .selection-hover;
-      color: rgba(0, 0, 0, .84);
+      color: themed('color-text-default');
       padding: 5px 10px;
     }
     .menu-item--keyboard {
