@@ -1,6 +1,28 @@
-module DateRangePicker exposing (CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, Model, Msg, PosixRange, PresetType(..), Selection(..), englishLanugageConfig, initModel, initModelWithOptions, openDateRangePicker, presetToDisplayString, presetToPosixRange, setCalendarType, subscriptions, update, view)
+module DateRangePicker exposing
+    ( CalendarType(..)
+    , Config
+    , CustomPreset
+    , Format(..)
+    , Interval(..)
+    , LanguageConfig
+    , Model
+    , Msg
+    , PosixRange
+    , PresetType(..)
+    , Selection(..)
+    , englishLanugageConfig
+    , initModel
+    , initModelWithOptions
+    , openDateRangePicker
+    , presetToDisplayString
+    , presetToPosixRange
+    , setCalendarType
+    , subscriptions
+    , update
+    , view
+    )
 
-import Browser.Dom exposing (Element, Error, getElement)
+import Browser.Dom as Dom exposing (Element, Error, getElement)
 import Browser.Events
 import Date exposing (Date)
 import DateFormat
@@ -19,6 +41,7 @@ import Json.Decode as Json
 import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Events exposing (Event(..))
 import Return2 as R2
+import SelectList exposing (SelectList)
 import Svg exposing (g, svg)
 import Svg.Attributes as Svg
 import Task
@@ -37,7 +60,7 @@ type Msg
     | Reset
     | StartSelection Posix
     | EndSelection (Maybe Posix)
-    | KeyDown RawKey
+    | KeyDown Posix Zone RawKey
     | KeyUp RawKey
     | TerminateBadState
     | CancelShift
@@ -92,8 +115,8 @@ type alias CustomPreset =
 
 
 type Selection
-    = Single Posix
-    | Range PosixRange
+    = Single Format Posix
+    | Range Format PosixRange
     | Unselected
     | Selecting PosixRange
     | Preset PresetType
@@ -104,6 +127,11 @@ type CalendarType
     | ThreeMonths
     | TwoMonths
     | OneMonth
+
+
+type Format
+    = DateFormat
+    | DateTimeFormat
 
 
 type alias Model =
@@ -124,11 +152,8 @@ type alias Model =
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
+    , keyboardSelectedPreset : Maybe (SelectList PresetType)
     }
-
-
-
--- todo add an init with options
 
 
 initModel : Model
@@ -150,6 +175,7 @@ initModel =
     , isMouseOutside = False
     , languageConfig = englishLanugageConfig
     , isPresetMenuOpen = False
+    , keyboardSelectedPreset = Nothing
     }
 
 
@@ -208,6 +234,41 @@ openDateRangePicker =
     Html.Events.onClick Open
 
 
+subscriptions : Model -> Posix -> Zone -> Sub Msg
+subscriptions model today zone =
+    let
+        shiftSubs =
+            if model.isShiftDown then
+                [ Keyboard.ups KeyUp
+                , Browser.Events.onVisibilityChange (always CancelShift)
+                , Time.every 100 (always TerminateBadState)
+                ]
+
+            else
+                []
+
+        keyDowns =
+            [ Keyboard.downs (KeyDown today zone) ]
+
+        mouseSubs =
+            if model.isMouseDown then
+                [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
+                , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
+                , Time.every 1250 (always <| CheckToMoveToNextVisibleRange today zone)
+                ]
+
+            else
+                []
+    in
+    if model.isOpen then
+        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
+
+    else
+        Sub.none
+
+
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -218,6 +279,8 @@ update msg model =
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
                     getElement "elm-fancy--daterangepicker-calendar"
+                , Task.attempt (always DoNothing) <|
+                    Dom.focus "elm-fancy--daterangepicker--input"
                 ]
                 { model | isOpen = True }
 
@@ -236,7 +299,10 @@ update msg model =
         OnInputFinish today ->
             let
                 parseOutput =
-                    parseDateTime (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets) model.inputText
+                    parseDateTime
+                        (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
+                        model.languageConfig.dateFormatLanguage
+                        model.inputText
 
                 updatedModel =
                     case parseOutput of
@@ -275,7 +341,7 @@ update msg model =
                 Just p ->
                     let
                         selection =
-                            Range <| normalizeSelectingRange <| createSelectingRange model p
+                            Range DateFormat <| normalizeSelectingRange <| createSelectingRange model p
                     in
                     R2.withNoCmd
                         { model
@@ -287,28 +353,19 @@ update msg model =
                 Nothing ->
                     R2.withNoCmd model
 
-        KeyDown rawKey ->
-            onShiftKey rawKey
-                model
-                (\m ->
-                    if m.isShiftDown then
-                        R2.withNoCmd
-                            { m
-                                | terminationCounter =
-                                    if m.terminationCounter >= 2 then
-                                        m.terminationCounter
-
-                                    else
-                                        m.terminationCounter + 1
-                            }
-
-                    else
-                        -- add start selection on shift logic
-                        R2.withNoCmd { m | isShiftDown = True }
-                )
+        KeyDown today zone rawKey ->
+            onKey rawKey model (onKeyDown model today zone)
 
         KeyUp rawKey ->
-            onShiftKey rawKey model (cancelShift utc)
+            onKey rawKey
+                model
+                (\key ->
+                    if key == Shift then
+                        cancelShift utc model
+
+                    else
+                        R2.withNoCmd model
+                )
 
         TerminateBadState ->
             -- todo what should dates be set to on terminate
@@ -376,20 +433,98 @@ update msg model =
                     R2.withNoCmd model
 
         SetPresetMenu bool ->
-            R2.withNoCmd { model | isPresetMenuOpen = bool }
+            R2.withNoCmd { model | isPresetMenuOpen = bool, keyboardSelectedPreset = Nothing }
 
         SelectPreset presetType today zone ->
-            let
-                selection =
-                    Preset presetType
-            in
-            R2.withNoCmd
-                { model
-                    | isPresetMenuOpen = False
-                    , selection = selection
-                    , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today zone
-                    , inputText = prettyFormatSelection selection model.languageConfig zone
-                }
+            selectPreset presetType today zone model
+
+
+selectPreset : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
+selectPreset presetType today zone model =
+    let
+        selection =
+            Preset presetType
+    in
+    R2.withCmd
+        (Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--done")
+        { model
+            | isPresetMenuOpen = False
+            , selection = selection
+            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today zone
+            , inputText = prettyFormatSelection selection model.languageConfig utc
+            , keyboardSelectedPreset = Nothing
+        }
+
+
+onKeyDown : Model -> Posix -> Zone -> Key -> ( Model, Cmd Msg )
+onKeyDown model today zone key =
+    case key of
+        Shift ->
+            if model.isShiftDown then
+                R2.withNoCmd
+                    { model
+                        | terminationCounter =
+                            if model.terminationCounter >= 2 then
+                                model.terminationCounter
+
+                            else
+                                model.terminationCounter + 1
+                    }
+
+            else
+                -- add start selection on shift logic
+                R2.withNoCmd { model | isShiftDown = True }
+
+        Escape ->
+            if model.isPresetMenuOpen then
+                R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
+
+            else
+                R2.withNoCmd { model | isOpen = False }
+
+        ArrowDown ->
+            arrowMovement model 1 SelectList.fromList
+
+        ArrowUp ->
+            arrowMovement model -1 createSelectListWithLast
+
+        Enter ->
+            if model.isPresetMenuOpen then
+                case model.keyboardSelectedPreset of
+                    Just a ->
+                        selectPreset (SelectList.selected a) today zone model
+
+                    Nothing ->
+                        R2.withNoCmd model
+
+            else
+                R2.withNoCmd model
+
+        _ ->
+            R2.withNoCmd model
+
+
+createSelectListWithLast : List PresetType -> Maybe (SelectList PresetType)
+createSelectListWithLast presets =
+    Maybe.map SelectList.selectLast (SelectList.fromList presets)
+
+
+arrowMovement : Model -> Int -> (List PresetType -> Maybe (SelectList PresetType)) -> ( Model, Cmd Msg )
+arrowMovement model moveDropdownBy createNewSelectList =
+    if model.isPresetMenuOpen then
+        let
+            updatedModel =
+                case model.keyboardSelectedPreset of
+                    Just selectList ->
+                        { model | keyboardSelectedPreset = SelectList.selectBy moveDropdownBy selectList }
+
+                    Nothing ->
+                        { model | keyboardSelectedPreset = createNewSelectList model.presets }
+        in
+        R2.withNoCmd updatedModel
+
+    else
+        R2.withNoCmd model
 
 
 calculateMousePosition : Element -> Mouse.Event -> MousePosition
@@ -417,10 +552,10 @@ calculateMousePosition element event =
 createSelectingRange : Model -> Posix -> PosixRange
 createSelectingRange model changedValue =
     case model.selection of
-        Single posix ->
+        Single _ _ ->
             { start = changedValue, end = changedValue }
 
-        Range posixRange ->
+        Range _ posixRange ->
             { start = posixRange.start, end = changedValue }
 
         Unselected ->
@@ -429,7 +564,7 @@ createSelectingRange model changedValue =
         Selecting posixRange ->
             { start = posixRange.start, end = changedValue }
 
-        Preset presetType ->
+        Preset _ ->
             { start = changedValue, end = changedValue }
 
 
@@ -441,7 +576,7 @@ cancelShift zone model  =
                 selection =
                     PosixRange posixRange.start posixRange.end
                         |> normalizeSelectingRange
-                        |> Range
+                        |> Range DateFormat
             in
             R2.withNoCmd
                 { model
@@ -459,16 +594,11 @@ cancelShift zone model  =
                 }
 
 
-onShiftKey : RawKey -> Model -> (Model -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
-onShiftKey rawKey model onShiftFunc =
+onKey : RawKey -> Model -> (Key -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+onKey rawKey model onValidKey =
     case Keyboard.anyKeyOriginal rawKey of
         Just key ->
-            case key of
-                Shift ->
-                    onShiftFunc model
-
-                _ ->
-                    R2.withNoCmd model
+            onValidKey key
 
         Nothing ->
             R2.withNoCmd model
@@ -502,40 +632,6 @@ updateCalendarRange model intervalChange currentVisibleRange zone =
 
         OneMonth ->
             updateWithIntervalFunc addMonths visibleRange
-
-
-subscriptions : Model -> Posix -> Zone -> Sub Msg
-subscriptions model today zone =
-    let
-        shiftSubs =
-            if model.isShiftDown then
-                [ Keyboard.ups KeyUp
-                , Browser.Events.onVisibilityChange (always CancelShift)
-                , Time.every 100 (always TerminateBadState)
-                ]
-
-            else
-                []
-
-        keyDowns =
-            [ Keyboard.downs KeyDown ]
-
-        mouseSubs =
-            if model.isMouseDown then
-                [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
-                , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
-                , Time.every 1250 (always <| CheckToMoveToNextVisibleRange today zone)
-                ]
-
-            else
-                []
-    in
-    if model.isOpen then
-        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
-
-    else
-        Sub.none
-
 
 view : Posix -> Zone -> Model -> Html Msg
 view today zone model =
@@ -586,20 +682,32 @@ presetsDisplay model today =
 
     else
         div [ Attrs.class "preset--open--wrapper" ]
-            [ div [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
+            [ button [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
                 [ text <| model.languageConfig.presets, downArrow ]
             ]
 
 
 presetMenu : Model -> Posix -> Html Msg
 presetMenu model today =
+    let
+        isElementSelected item =
+            case model.keyboardSelectedPreset of
+                Just a ->
+                    SelectList.selected a == item
+
+                Nothing ->
+                    False
+
+        classList item =
+            Attrs.classList [ ( "menu-item", True ), ( "menu-item--keyboard", isElementSelected item ) ]
+    in
     div [ Attrs.class "preset-menu--container" ]
         [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
             []
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p today utc, Attrs.class "menu-item" ]
+                    div [ Html.Events.onClick <| SelectPreset p today utc, classList p ]
                         [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
@@ -609,8 +717,13 @@ presetMenu model today =
 bottomBar : Model -> Html Msg
 bottomBar model =
     div [ Attrs.class "bottom-bar" ]
-        [ button [ Attrs.class "done", Html.Events.onClick Close ] [ text model.languageConfig.done ]
-        , div [ Attrs.class "reset", Html.Events.onClick Reset ]
+        [ button
+            [ Attrs.id "elm-fancy--daterangepicker--done"
+            , Attrs.class "done"
+            , Html.Events.onClick Close
+            ]
+            [ text model.languageConfig.done ]
+        , button [ Attrs.class "reset", Html.Events.onClick Reset ]
             [ text model.languageConfig.reset ]
         ]
 
@@ -631,21 +744,23 @@ rightSelector visibleRange =
 topBar : Model -> PosixRange -> Posix -> Html Msg
 topBar model visibleRange today =
     let
-        fullCalendarSelector =
+        ( fullCalendarSelector, class ) =
             case model.calendarType of
                 FullCalendar ->
-                    div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
+                    ( div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
                         [ text <| selectionText visibleRange ]
+                    , "top-bar--full"
+                    )
 
                 _ ->
-                    text ""
+                    ( text "", "top-bar--partial" )
 
         _ = Debug.log "end" <| (posixToCivil visibleRange.start,posixToCivil visibleRange.end)
         
         selection =
-            Range { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
+            Range DateFormat { start = visibleRange.start, end = visibleRange.end }
     in
-    div [ Attrs.class "top-bar" ]
+    div [ Attrs.class class ]
         [ fullCalendarSelector
         , presetsDisplay model today
         , calendarInput model today
@@ -664,6 +779,7 @@ calendarInput model today =
             [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today ) ]
             , Html.Events.onBlur <| OnInputFinish today
             , Html.Events.onInput OnInputChange
+            , Attrs.id "elm-fancy--daterangepicker--input"
             , Attrs.placeholder model.languageConfig.inputPlaceholder
             , Attrs.value model.inputText
             ]
@@ -703,17 +819,17 @@ combineInputToRange start end zone =
             convertInputDate end zone
     in
     case ( startSelection, endSelection ) of
-        ( Single startPosix, Single endPosix ) ->
-            Range { start = startPosix, end = endPosix }
+        ( Single _ startPosix, Single _ endPosix ) ->
+            Range DateTimeFormat { start = startPosix, end = endPosix }
 
-        ( Single startPosix, Range endPosixRange ) ->
-            Range { start = startPosix, end = endPosixRange.end }
+        ( Single _ startPosix, Range _ endPosixRange ) ->
+            Range DateTimeFormat { start = startPosix, end = endPosixRange.end }
 
-        ( Range startPosixRange, Single endPosix ) ->
-            Range { start = startPosixRange.start, end = endPosix }
+        ( Range _ startPosixRange, Single _ endPosix ) ->
+            Range DateTimeFormat { start = startPosixRange.start, end = endPosix }
 
-        ( Range startPosixRange, Range endPosixRange ) ->
-            Range { start = startPosixRange.start, end = endPosixRange.end }
+        ( Range _ startPosixRange, Range _ endPosixRange ) ->
+            Range DateFormat { start = startPosixRange.start, end = endPosixRange.end }
 
         _ ->
             Unselected
@@ -723,16 +839,16 @@ convertInputDate : InputDate -> Zone -> Selection
 convertInputDate inputDate zone =
     case inputDate of
         JustYear year ->
-            Range <| yearToPosixRange year zone
+            Range DateFormat <| yearToPosixRange year zone
 
         JustYearAndMonth yearAndMonth ->
-            Range <| yearAndMonthToPosixRange yearAndMonth zone
+            Range DateFormat <| yearAndMonthToPosixRange yearAndMonth zone
 
         FullDate dateParts ->
-            Range <| datePartsToPosixRange dateParts zone
+            Range DateFormat <| datePartsToPosixRange dateParts zone
 
         FullDateTime dateTimeParts ->
-            Single <| dateTimePartsToPosix dateTimeParts zone
+            Single DateTimeFormat <| dateTimePartsToPosix dateTimeParts zone
 
 
 calendarView : Posix -> Model -> PosixRange -> Html Msg
@@ -757,7 +873,7 @@ yearCalendarView today model visibleRange =
         quarter name startMonth endMonth =
             div
                 [ posixRangeForMonths startMonth endMonth (Time.toYear utc visibleRange.start) utc
-                    |> Range
+                    |> Range DateFormat
                     |> SetSelection
                     |> Html.Events.onClick
                 , Attrs.class "selection-hover"
@@ -834,7 +950,7 @@ monthCalendarView : Posix -> Posix -> Model -> Html Msg
 monthCalendarView currentMonth today model =
     let
         selection =
-            Range { start = getFirstDayOfMonth utc currentMonth, end = getLastDayOfMonth utc currentMonth }
+            Range DateFormat { start = getFirstDayOfMonth utc currentMonth, end = getLastDayOfMonth utc currentMonth }
     in
     td []
         [ table []
@@ -850,7 +966,6 @@ monthCalendarView currentMonth today model =
 dayCalendarView : Zone -> Posix -> Posix -> Posix -> Model -> Html Msg
 dayCalendarView zone currentMonth currentDay today model =
     let
-        -- todo prevent all interaction with invisible days (from other months)
         monthOfDate =
             Time.toMonth zone
 
@@ -860,12 +975,14 @@ dayCalendarView zone currentMonth currentDay today model =
         contentIsInCorrectMonth =
             monthOfDate currentDay == wantedMonth
 
-        content =
+        ( hoverAttr, content ) =
             if contentIsInCorrectMonth then
-                [ text <| String.fromInt <| Time.toDay zone currentDay ]
+                ( Html.Events.onMouseOver <| OnHoverOverDay currentDay
+                , [ text <| String.fromInt <| Time.toDay utc currentDay ]
+                )
 
             else
-                []
+                ( Attrs.class "", [] )
 
         setDate =
             if model.isShiftDown || model.isMouseDown then
@@ -887,7 +1004,7 @@ dayCalendarView zone currentMonth currentDay today model =
                 , ( "today", isSameDay currentDay today )
                 ]
     in
-    td [ classList, setDate, Html.Events.onMouseOver <| OnHoverOverDay currentDay ] content
+    td [ classList, setDate, hoverAttr ] content
 
 
 normalizeSelectingRange : PosixRange -> PosixRange
@@ -909,11 +1026,11 @@ isInSelectionRange comparisonPosix model today localZone =
             posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
     in
     case model.selection of
-        Single posix ->
-            -- todo is this concept getting removed?
+        Single _ posix ->
+            -- todo is this concept getting removed - nope, but needs fixing around?
             False
 
-        Range posixRange ->
+        Range _ posixRange ->
             compareRange posixRange
 
         Unselected ->
@@ -930,10 +1047,10 @@ selectionEnd : Selection -> Posix -> Zone -> Maybe Posix
 selectionEnd selection today localZone =
     -- todo try to combine all these things that are casing
     case selection of
-        Single posix ->
+        Single _ posix ->
             Nothing
 
-        Range posixRange ->
+        Range _ posixRange ->
             Just posixRange.end
 
         Unselected ->
@@ -949,10 +1066,10 @@ selectionEnd selection today localZone =
 selectionStart : Selection -> Posix -> Zone -> Maybe Posix
 selectionStart selection today localZone =
     case selection of
-        Single posix ->
+        Single _ posix ->
             Just posix
 
-        Range posixRange ->
+        Range _ posixRange ->
             Just posixRange.start
 
         Unselected ->
@@ -1001,10 +1118,10 @@ convertToRange day calendarType =
 getVisibleRangeFromSelection : Selection -> CalendarType -> Posix -> Zone -> Maybe PosixRange
 getVisibleRangeFromSelection selection calendarType today localZone =
     case selection of
-        Single posix ->
+        Single _ posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
-        Range posixRange ->
+        Range _ posixRange ->
             convertToRange posixRange.start calendarType 
                 |> Just
 
@@ -1022,11 +1139,15 @@ prettyFormatSelection : Selection -> LanguageConfig -> Zone -> String
 prettyFormatSelection selection languageConfig zone =
     -- todo handling time zones
     case selection of
-        Single posix ->
-            singleFormatter languageConfig zone posix
+        Single format posix ->
+            singleFormatter languageConfig format utc posix
 
-        Range posixRange ->
-            fullFormatter languageConfig zone posixRange.start posixRange.end
+        Range format posixRange ->
+            if isSameDay posixRange.start posixRange.end && format /= DateTimeFormat then
+                singleFormatter languageConfig format utc posixRange.start
+
+            else
+                fullFormatter languageConfig format utc posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -1038,15 +1159,30 @@ prettyFormatSelection selection languageConfig zone =
             presetToDisplayString presetType languageConfig
 
 
-singleFormatter : LanguageConfig -> Zone -> Posix -> String
-singleFormatter language =
+singleFormatter : LanguageConfig -> Format -> Zone -> Posix -> String
+singleFormatter language format =
+    let
+        timeParts =
+            case format of
+                DateFormat ->
+                    []
+
+                DateTimeFormat ->
+                    [ DateFormat.text " "
+                    , DateFormat.hourMilitaryFixed
+                    , DateFormat.text ":"
+                    , DateFormat.minuteFixed
+                    ]
+    in
     DateFormat.formatWithLanguage language.dateFormatLanguage
-        [ DateFormat.monthNameAbbreviated
-        , DateFormat.text " "
-        , DateFormat.dayOfMonthNumber
-        , DateFormat.text " "
-        , DateFormat.yearNumber
-        ]
+        ([ DateFormat.monthNameAbbreviated
+         , DateFormat.text " "
+         , DateFormat.dayOfMonthNumber
+         , DateFormat.text ", "
+         , DateFormat.yearNumber
+         ]
+            ++ timeParts
+        )
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String
@@ -1056,9 +1192,11 @@ monthFormatter language =
         ]
 
 
-fullFormatter : LanguageConfig -> Zone -> Posix -> Posix -> String
-fullFormatter language zone start end =
-    singleFormatter language zone start ++ " to " ++ singleFormatter language zone end
+fullFormatter : LanguageConfig -> Format -> Zone -> Posix -> Posix -> String
+fullFormatter language format zone start end =
+    singleFormatter language format zone start
+        ++ " to "
+        ++ singleFormatter language format zone end
 
 
 

@@ -38,9 +38,13 @@
       letter-spacing: 0.1px;
       color: #3c4043;
     }
-    .top-bar {
+    .top-bar--full {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: max-content minmax(0, 1fr) 2fr;
+    }
+    .top-bar--partial {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 2fr;
     }
     .prev-range-selector {
       @extend %range-selector;
@@ -64,11 +68,13 @@
       flex-direction: row-reverse;
     }
     .reset {
+      @extend .selection-hover;
+      border: none;
+      background-color: inherit;
       display: flex;
       justify-self: right;
       align-self: center;
       padding: 0 10px;
-      cursor: pointer;
     }
     .done {
       margin: 4px 16px;
@@ -165,6 +171,10 @@
         cursor: pointer;
         background: #f8f9fa;
       }
+      &:focus {
+        background: #f8f9fa;
+        outline: none;
+      }
     }
     .preset--open--wrapper {
       display: flex;
@@ -176,6 +186,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      border: none;
+      background-color: inherit;
     }
     .preset-menu--close {
       position: fixed;
@@ -206,6 +218,9 @@
       @extend .selection-hover;
       color: rgba(0,0,0,.84);
       padding: 5px 10px;
+    }
+    .menu-item--keyboard{
+      background-color: #cbcbcb;
     }
   }
 }
