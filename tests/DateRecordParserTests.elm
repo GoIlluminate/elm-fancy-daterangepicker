@@ -200,23 +200,23 @@ dateTestSuite =
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english "Past Month")
+                    (parseDateTime [ "Past Month" ] DateFormat.english True "Past Month")
         , test "allows a custom date string to be written without spaces" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english "PastMonth")
+                    (parseDateTime [ "Past Month" ] DateFormat.english True "PastMonth")
         , test "allows a custom date string to be written as lowercase" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english "pastmonth")
+                    (parseDateTime [ "Past Month" ] DateFormat.english True "pastmonth")
         ]
 
 
 defaultParse : String -> Result String Input
 defaultParse =
-    parseDateTime [] DateFormat.english
+    parseDateTime [] DateFormat.english True
 
 
 justYear : Int -> Result String Input
