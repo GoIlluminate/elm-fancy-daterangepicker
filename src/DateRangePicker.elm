@@ -1129,10 +1129,25 @@ calendarPositioning buttonElement calendarElement =
 
                 ( xNum, xName ) =
                     if button.element.x > (button.viewport.width / 2) then
-                        ( (button.viewport.width - button.element.x) - button.element.width, "right" )
+                        ( additionalCalcForRight ((button.viewport.width - button.element.x) - button.element.width), "right" )
 
                     else
-                        ( button.element.x, "left" )
+                        ( additionalCalcForLeft button.element.x, "left" )
+                
+                additionalCalcForLeft num =
+                    if button.element.x > calendar.element.width then
+                        num + (button.element.x - calendar.element.width - button.element.width)
+
+                    else
+                        num
+
+                
+                additionalCalcForRight num =
+                    if (button.viewport.width - button.element.x) > calendar.element.width then
+                        num
+
+                    else
+                        0
             in
             [ Attrs.style xName
                 (xNum
