@@ -63,7 +63,7 @@ import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
 type Msg
     = DoNothing
     | Open
-    | Close
+    | Close Posix
     | PrevCalendarRange PosixRange
     | NextCalendarRange PosixRange
     | SetSelection InternalSelection
@@ -83,6 +83,7 @@ type Msg
     | CheckToMoveToNextVisibleRange Posix Zone
     | SetPresetMenu Bool
     | SelectPreset PresetType Posix
+    | ToggleFormat
 
 
 type MousePosition
@@ -141,8 +142,8 @@ type alias CustomPreset =
 
 
 type InternalSelection
-    = SingleSelection Format Posix
-    | RangeSelection Format PosixRange
+    = SingleSelection Posix
+    | RangeSelection PosixRange
     | Unselected
     | Selecting PosixRange
     | PresetSelection PresetType
@@ -154,8 +155,8 @@ If you select a preset you can use @presetToPosixRange to get the appropriate po
 
 -}
 type Selection
-    = Single Format Posix
-    | Range Format PosixRange
+    = Single Posix
+    | Range PosixRange
     | Preset PresetType PosixRange
 
 
@@ -196,6 +197,7 @@ type alias Model =
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
+    , displayFormat : Format
     }
 
 
@@ -221,6 +223,7 @@ initModel =
     , languageConfig = englishLanguageConfig
     , isPresetMenuOpen = False
     , keyboardSelectedPreset = Nothing
+    , displayFormat = DateFormat
     }
 
 
@@ -248,6 +251,7 @@ type alias LanguageConfig =
     , pastWeek : String
     , pastMonth : String
     , pastYear : String
+    , includeTimeTitle : String
     , dateFormatLanguage : DateFormat.Language
     }
 
@@ -265,6 +269,7 @@ englishLanguageConfig =
     , pastWeek = "Past Week"
     , pastMonth = "Past Month"
     , pastYear = "Past Year"
+    , includeTimeTitle = "Include Time"
     , dateFormatLanguage = DateFormat.english
     }
 
@@ -348,8 +353,8 @@ update msg model =
                 ]
                 { model | isOpen = True }
 
-        Close ->
-            R2.withNoCmd { model | isOpen = False }
+        Close today ->
+            R2.withNoCmd <| finishInput today { model | isOpen = False }
 
         PrevCalendarRange currentVisibleRange ->
             updateCalendarRange model -1 currentVisibleRange
@@ -358,34 +363,18 @@ update msg model =
             updateCalendarRange model 1 currentVisibleRange
 
         SetSelection selection ->
-            R2.withNoCmd { model | selection = selection, inputText = prettyFormatSelection selection model.languageConfig }
+            let
+                updatedSelection =
+                    changeSelectionToDefaultTimes selection
+            in
+            R2.withNoCmd
+                { model
+                    | selection = updatedSelection
+                    , inputText = prettyFormatSelection updatedSelection model.languageConfig model.displayFormat
+                }
 
         OnInputFinish today ->
-            let
-                parseOutput =
-                    parseDateTime
-                        (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
-                        model.languageConfig.dateFormatLanguage
-                        model.inputText
-
-                updatedModel =
-                    case parseOutput of
-                        Ok value ->
-                            -- todo how to do pretty format with time
-                            let
-                                selection =
-                                    convertInput value model
-                            in
-                            { model
-                                | selection = selection
-                                , inputText = prettyFormatSelection selection model.languageConfig
-                                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
-                            }
-
-                        Err _ ->
-                            { model | inputText = prettyFormatSelection model.selection model.languageConfig }
-            in
-            R2.withNoCmd updatedModel
+            R2.withNoCmd <| finishInput today model
 
         OnInputChange newText ->
             R2.withNoCmd { model | inputText = newText }
@@ -405,13 +394,16 @@ update msg model =
                 Just p ->
                     let
                         selection =
-                            RangeSelection DateFormat <| normalizeSelectingRange <| createSelectingRange model p
+                            createSelectingRange model p
+                                |> normalizeSelectingRange
+                                |> RangeSelection
+                                |> changeSelectionToDefaultTimes
                     in
                     R2.withNoCmd
                         { model
                             | isMouseDown = False
                             , selection = selection
-                            , inputText = prettyFormatSelection selection model.languageConfig
+                            , inputText = prettyFormatSelection selection model.languageConfig model.displayFormat
                         }
 
                 Nothing ->
@@ -501,6 +493,74 @@ update msg model =
         SelectPreset presetType today ->
             selectPreset presetType today model
 
+        ToggleFormat ->
+            let
+                updatedModel =
+                    case model.displayFormat of
+                        DateFormat ->
+                            { model
+                                | displayFormat = DateTimeFormat
+                                , inputText = prettyFormatSelection model.selection model.languageConfig DateTimeFormat
+                            }
+
+                        DateTimeFormat ->
+                            let
+                                selection =
+                                    changeSelectionToDefaultTimes model.selection
+                            in
+                            { model
+                                | displayFormat = DateFormat
+                                , inputText = prettyFormatSelection selection model.languageConfig DateFormat
+                                , selection = selection
+                            }
+            in
+            R2.withNoCmd updatedModel
+
+
+finishInput : Posix -> Model -> Model
+finishInput today model =
+    let
+        parseOutput =
+            parseDateTime
+                (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
+                model.languageConfig.dateFormatLanguage
+                model.inputText
+    in
+    case parseOutput of
+        Ok value ->
+            let
+                ( selection, format ) =
+                    convertInput value model
+            in
+            { model
+                | selection = selection
+                , inputText = prettyFormatSelection selection model.languageConfig format
+                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
+                , displayFormat = format
+            }
+
+        Err _ ->
+            { model | inputText = prettyFormatSelection model.selection model.languageConfig model.displayFormat }
+
+
+changeSelectionToDefaultTimes : InternalSelection -> InternalSelection
+changeSelectionToDefaultTimes selection =
+    case selection of
+        SingleSelection posix ->
+            SingleSelection <| getStartOfDay posix
+
+        RangeSelection posixRange ->
+            RangeSelection { start = getStartOfDay posixRange.start, end = getEndOfDay posixRange.end }
+
+        Unselected ->
+            selection
+
+        Selecting _ ->
+            selection
+
+        PresetSelection _ ->
+            selection
+
 
 selectPreset : PresetType -> Posix -> Model -> ( Model, Cmd Msg )
 selectPreset presetType today model =
@@ -514,7 +574,7 @@ selectPreset presetType today model =
             | isPresetMenuOpen = False
             , selection = selection
             , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
-            , inputText = prettyFormatSelection selection model.languageConfig
+            , inputText = prettyFormatSelection selection model.languageConfig model.displayFormat
             , keyboardSelectedPreset = Nothing
         }
 
@@ -615,10 +675,10 @@ calculateMousePosition element event =
 createSelectingRange : Model -> Posix -> PosixRange
 createSelectingRange model changedValue =
     case model.selection of
-        SingleSelection _ _ ->
+        SingleSelection _ ->
             { start = changedValue, end = changedValue }
 
-        RangeSelection _ posixRange ->
+        RangeSelection posixRange ->
             { start = posixRange.start, end = changedValue }
 
         Unselected ->
@@ -639,14 +699,14 @@ cancelShift model =
                 selection =
                     PosixRange posixRange.start posixRange.end
                         |> normalizeSelectingRange
-                        |> RangeSelection DateFormat
+                        |> RangeSelection
             in
             R2.withNoCmd
                 { model
                     | isShiftDown = False
                     , terminationCounter = 10
                     , selection = selection
-                    , inputText = prettyFormatSelection selection model.languageConfig
+                    , inputText = prettyFormatSelection selection model.languageConfig model.displayFormat
                 }
 
         _ ->
@@ -723,7 +783,7 @@ view today zone model =
         div [ Attrs.class "elm-fancy--daterangepicker" ]
             [ div
                 [ Attrs.class "close"
-                , Html.Events.onClick Close
+                , Html.Events.onClick <| Close today
                 , mouseEvent
                 , Html.Events.onMouseLeave <| SetMouseOutside False
                 , Html.Events.onMouseEnter <| SetMouseOutside True
@@ -734,7 +794,7 @@ view today zone model =
                 , leftSelector visibleRange
                 , rightSelector visibleRange
                 , calendarView today model visibleRange
-                , bottomBar model
+                , bottomBar model today
                 ]
             ]
 
@@ -784,13 +844,13 @@ presetMenu model today =
         ]
 
 
-bottomBar : Model -> Html Msg
-bottomBar model =
+bottomBar : Model -> Posix -> Html Msg
+bottomBar model today =
     div [ Attrs.class "bottom-bar" ]
         [ button
             [ Attrs.id "elm-fancy--daterangepicker--done"
             , Attrs.class "done"
-            , Html.Events.onClick Close
+            , Html.Events.onClick <| Close today
             ]
             [ text model.languageConfig.done ]
         , button [ Attrs.class "reset", Html.Events.onClick Reset ]
@@ -811,6 +871,25 @@ rightSelector visibleRange =
         [ div [] [ text "❯" ] ]
 
 
+clockButton : Model -> Html Msg
+clockButton model =
+    let
+        class =
+            case model.displayFormat of
+                DateFormat ->
+                    Attrs.class "clock-unselected"
+
+                DateTimeFormat ->
+                    Attrs.class "clock-selected"
+    in
+    div
+        [ class
+        , Html.Events.onClick ToggleFormat
+        , Attrs.title model.languageConfig.includeTimeTitle
+        ]
+        [ text "🕒" ]
+
+
 topBar : Model -> PosixRange -> Posix -> Zone -> Html Msg
 topBar model visibleRange today zone =
     let
@@ -826,12 +905,13 @@ topBar model visibleRange today zone =
                     ( text "", "top-bar--partial" )
 
         selection =
-            RangeSelection DateFormat { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
+            RangeSelection { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
     in
     div [ Attrs.class class ]
         [ fullCalendarSelector
         , presetsDisplay model today
         , calendarInput model today
+        , clockButton model
         ]
 
 
@@ -855,11 +935,11 @@ calendarInput model today =
         ]
 
 
-convertInput : Input -> Model -> InternalSelection
+convertInput : Input -> Model -> ( InternalSelection, Format )
 convertInput input model =
     case input of
         SingleInput inputDate ->
-            convertInputDate inputDate
+            ( convertInputDate inputDate, DateFormat )
 
         RangeInput start end ->
             combineInputToRange start end
@@ -871,13 +951,13 @@ convertInput input model =
             in
             case List.head selectedPreset of
                 Just preset ->
-                    PresetSelection preset
+                    ( PresetSelection preset, DateFormat )
 
                 Nothing ->
-                    Unselected
+                    ( Unselected, DateFormat )
 
 
-combineInputToRange : InputDate -> InputDate -> InternalSelection
+combineInputToRange : InputDate -> InputDate -> ( InternalSelection, Format )
 combineInputToRange start end =
     let
         startSelection =
@@ -887,36 +967,36 @@ combineInputToRange start end =
             convertInputDate end
     in
     case ( startSelection, endSelection ) of
-        ( SingleSelection _ startPosix, SingleSelection _ endPosix ) ->
-            RangeSelection DateTimeFormat { start = startPosix, end = endPosix }
+        ( SingleSelection startPosix, SingleSelection endPosix ) ->
+            ( RangeSelection { start = startPosix, end = endPosix }, DateTimeFormat )
 
-        ( SingleSelection _ startPosix, RangeSelection _ endPosixRange ) ->
-            RangeSelection DateTimeFormat { start = startPosix, end = endPosixRange.end }
+        ( SingleSelection startPosix, RangeSelection endPosixRange ) ->
+            ( RangeSelection { start = startPosix, end = endPosixRange.end }, DateTimeFormat )
 
-        ( RangeSelection _ startPosixRange, SingleSelection _ endPosix ) ->
-            RangeSelection DateTimeFormat { start = startPosixRange.start, end = endPosix }
+        ( RangeSelection startPosixRange, SingleSelection endPosix ) ->
+            ( RangeSelection { start = startPosixRange.start, end = endPosix }, DateTimeFormat )
 
-        ( RangeSelection _ startPosixRange, RangeSelection _ endPosixRange ) ->
-            RangeSelection DateFormat { start = startPosixRange.start, end = endPosixRange.end }
+        ( RangeSelection startPosixRange, RangeSelection endPosixRange ) ->
+            ( RangeSelection { start = startPosixRange.start, end = endPosixRange.end }, DateFormat )
 
         _ ->
-            Unselected
+            ( Unselected, DateFormat )
 
 
 convertInputDate : InputDate -> InternalSelection
 convertInputDate inputDate =
     case inputDate of
         JustYear year ->
-            RangeSelection DateFormat <| yearToPosixRange year utc
+            RangeSelection <| yearToPosixRange year utc
 
         JustYearAndMonth yearAndMonth ->
-            RangeSelection DateFormat <| yearAndMonthToPosixRange yearAndMonth utc
+            RangeSelection <| yearAndMonthToPosixRange yearAndMonth utc
 
         FullDate dateParts ->
-            RangeSelection DateFormat <| datePartsToPosixRange dateParts utc
+            RangeSelection <| datePartsToPosixRange dateParts utc
 
         FullDateTime dateTimeParts ->
-            SingleSelection DateTimeFormat <| dateTimePartsToPosix dateTimeParts utc
+            SingleSelection <| dateTimePartsToPosix dateTimeParts utc
 
 
 calendarView : Posix -> Model -> PosixRange -> Html Msg
@@ -941,7 +1021,7 @@ yearCalendarView today model visibleRange =
         quarter name startMonth endMonth =
             div
                 [ posixRangeForMonths startMonth endMonth (Time.toYear utc visibleRange.start) utc
-                    |> RangeSelection DateFormat
+                    |> RangeSelection
                     |> SetSelection
                     |> Html.Events.onClick
                 , Attrs.class "selection-hover"
@@ -1019,7 +1099,7 @@ monthCalendarView : Posix -> Posix -> Model -> Html Msg
 monthCalendarView currentMonth today model =
     let
         selection =
-            RangeSelection DateFormat { start = getFirstDayOfMonthStartOfDay utc currentMonth, end = getLastDayOfMonthEndOfDay utc currentMonth }
+            RangeSelection { start = getFirstDayOfMonthStartOfDay utc currentMonth, end = getLastDayOfMonthEndOfDay utc currentMonth }
     in
     td []
         [ table []
@@ -1095,11 +1175,10 @@ isInSelectionRange comparisonPosix model today localZone =
             posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
     in
     case model.selection of
-        SingleSelection _ posix ->
-            -- todo is this concept getting removed - nope, but needs fixing around?
+        SingleSelection _ ->
             False
 
-        RangeSelection _ posixRange ->
+        RangeSelection posixRange ->
             compareRange posixRange
 
         Unselected ->
@@ -1116,10 +1195,10 @@ selectionEnd : InternalSelection -> Posix -> Zone -> Maybe Posix
 selectionEnd selection today localZone =
     -- todo try to combine all these things that are casing
     case selection of
-        SingleSelection _ posix ->
+        SingleSelection posix ->
             Nothing
 
-        RangeSelection _ posixRange ->
+        RangeSelection posixRange ->
             Just posixRange.end
 
         Unselected ->
@@ -1135,10 +1214,10 @@ selectionEnd selection today localZone =
 selectionStart : InternalSelection -> Posix -> Zone -> Maybe Posix
 selectionStart selection today localZone =
     case selection of
-        SingleSelection _ posix ->
+        SingleSelection posix ->
             Just posix
 
-        RangeSelection _ posixRange ->
+        RangeSelection posixRange ->
             Just posixRange.start
 
         Unselected ->
@@ -1189,10 +1268,10 @@ convertToRange day calendarType =
 getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Posix -> Maybe PosixRange
 getVisibleRangeFromSelection selection calendarType today =
     case selection of
-        SingleSelection _ posix ->
+        SingleSelection posix ->
             Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
-        RangeSelection _ posixRange ->
+        RangeSelection posixRange ->
             convertToRange posixRange.start calendarType
                 |> Just
 
@@ -1206,14 +1285,13 @@ getVisibleRangeFromSelection selection calendarType today =
             Just <| presetToPosixRange presetType today utc
 
 
-prettyFormatSelection : InternalSelection -> LanguageConfig -> String
-prettyFormatSelection selection languageConfig =
-    -- todo handling time zones
+prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
+prettyFormatSelection selection languageConfig format =
     case selection of
-        SingleSelection format posix ->
+        SingleSelection posix ->
             singleFormatter languageConfig format utc posix
 
-        RangeSelection format posixRange ->
+        RangeSelection posixRange ->
             if isSameDay posixRange.start posixRange.end && format /= DateTimeFormat then
                 singleFormatter languageConfig format utc posixRange.start
 
@@ -1381,12 +1459,12 @@ setCalendarType calendarType model =
 getLocalSelection : Posix -> Model -> Maybe Selection
 getLocalSelection today model =
     case model.selection of
-        SingleSelection format pos ->
-            Single format pos
+        SingleSelection pos ->
+            Single pos
                 |> Just
 
-        RangeSelection format range ->
-            Range format { start = range.start, end = range.end }
+        RangeSelection range ->
+            Range { start = range.start, end = range.end }
                 |> Just
 
         Unselected ->
@@ -1410,12 +1488,12 @@ getUtcSelection zone today model =
             { start = correctDate start, end = correctDate end }
     in
     case model.selection of
-        SingleSelection format pos ->
-            Single format (correctDate pos)
+        SingleSelection pos ->
+            Single (correctDate pos)
                 |> Just
 
-        RangeSelection format range ->
-            Range format { start = correctDate range.start, end = correctDate range.end }
+        RangeSelection range ->
+            Range { start = correctDate range.start, end = correctDate range.end }
                 |> Just
 
         Unselected ->
@@ -1439,11 +1517,11 @@ getUtcSelectionRange zone today model =
             { start = correctDate start, end = correctDate end }
     in
     case model.selection of
-        SingleSelection _ pos ->
+        SingleSelection pos ->
             { start = correctDate pos, end = correctDate pos }
                 |> Just
 
-        RangeSelection _ range ->
+        RangeSelection range ->
             { start = correctDate range.start, end = correctDate range.end }
                 |> Just
 
@@ -1462,11 +1540,11 @@ getUtcSelectionRange zone today model =
 getLocalSelectionRange : Posix -> Model -> Maybe PosixRange
 getLocalSelectionRange today model =
     case model.selection of
-        SingleSelection _ pos ->
+        SingleSelection pos ->
             { start = pos, end = pos }
                 |> Just
 
-        RangeSelection _ range ->
+        RangeSelection range ->
             { start = range.start, end = range.end }
                 |> Just
 

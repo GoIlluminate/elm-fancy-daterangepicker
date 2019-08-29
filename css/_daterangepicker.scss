@@ -41,11 +41,27 @@
     }
     .top-bar--full {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) 2fr;
+      grid-template-columns: max-content minmax(0, 1fr) 2fr max-content;
     }
     .top-bar--partial {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 2fr;
+      grid-template-columns: minmax(0, 1fr) 2fr max-content;
+    }
+    %clock {
+      display: flex;
+      justify-self: center;
+      align-self: center;
+      margin: 0 5px;
+      padding: 2px;
+      cursor: pointer;
+    }
+    .clock-unselected {
+      @extend %clock;
+    }
+    .clock-selected {
+      @extend %clock;
+      background-color: lighten($illum-color-blue, 7);
+      border-radius: 5px;
     }
     .prev-range-selector {
       @extend %range-selector;
@@ -91,9 +107,11 @@
       padding: 5px 0;
 
       > input {
-        width: calc(100% - 15px);
-        border: 1px solid themed('color-input-border');;
-        padding: 5px 0 5px 5px;
+        $border: 1px;
+        $padding: 5px;
+        width: calc(100% - #{$border * 2 + $padding});
+        border: $border solid themed('color-input-border');;
+        padding: $padding 0 $padding $padding;
         background-color: themed('color-secondary');
         color: themed('color-text-default');
 
