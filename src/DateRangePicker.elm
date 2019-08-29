@@ -80,6 +80,7 @@ type Msg
     | OnMouseMove Mouse.Event
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
+    | OnGetDatePickerButton (Result Error Element)
     | CheckToMoveToNextVisibleRange Posix Zone
     | SetPresetMenu Bool
     | SelectPreset PresetType Posix
@@ -192,10 +193,12 @@ type alias Model =
     , currentlyHoveredDate : Maybe Posix
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
+    , uiButton : Maybe Element
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
+    , buttonId : String
     }
 
 
@@ -217,10 +220,12 @@ initModel =
     , currentlyHoveredDate = Nothing
     , mousePosition = Nothing
     , uiElement = Nothing
+    , uiButton = Nothing
     , isMouseOutside = False
     , languageConfig = englishLanguageConfig
     , isPresetMenuOpen = False
     , keyboardSelectedPreset = Nothing
+    , buttonId = ""
     }
 
 
@@ -233,6 +238,7 @@ type alias Config =
     , calendarType : CalendarType
     , isOpen : Bool
     , languageConfig : LanguageConfig
+    , buttonId : String
     }
 
 
@@ -279,6 +285,7 @@ initModelWithOptions config =
         , presets = config.presets
         , calendarType = config.calendarType
         , isOpen = config.isOpen
+        , buttonId = config.buttonId
     }
 
 
@@ -345,6 +352,8 @@ update msg model =
                     getElement "elm-fancy--daterangepicker-calendar"
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
+                , Task.attempt OnGetDatePickerButton <|
+                    getElement model.buttonId
                 ]
                 { model | isOpen = True }
 
@@ -405,7 +414,11 @@ update msg model =
                 Just p ->
                     let
                         selection =
-                            RangeSelection DateFormat <| normalizeSelectingRange <| createSelectingRange model p
+                            p
+                                |> getEndOfDay
+                                |> createSelectingRange model
+                                |> normalizeSelectingRange
+                                |> RangeSelection DateFormat
                     in
                     R2.withNoCmd
                         { model
@@ -470,7 +483,15 @@ update msg model =
         OnGetElementSuccess result ->
             case result of
                 Ok element ->
-                    R2.withNoCmd { model | uiElement = Just element }
+                    R2.withNoCmd { model | uiElement = Just  element }
+
+                Err _ ->
+                    R2.withNoCmd model
+
+        OnGetDatePickerButton result ->
+            case result of
+                Ok element ->
+                    R2.withNoCmd { model | uiButton = Just <| Debug.log "element" element }
 
                 Err _ ->
                     R2.withNoCmd model
@@ -718,6 +739,8 @@ view today zone model =
 
             else
                 Attrs.class ""
+        positioning =
+            calendarPositioning model.uiButton
     in
     if model.isOpen then
         div [ Attrs.class "elm-fancy--daterangepicker" ]
@@ -729,7 +752,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div [ Attrs.class "body" ]
+            , div (List.append [ Attrs.class "body" ] (calendarPositioning model.uiButton model.uiElement))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange
                 , rightSelector visibleRange
@@ -952,6 +975,7 @@ yearCalendarView today model visibleRange =
             div
                 [ Attrs.class "quarters" ]
                 [ quarter "Q1" Jan Mar, quarter "Q2" Apr Jun, quarter "Q3" Jul Sep, quarter "Q4" Oct Dec ]
+
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar" ]
         [ quarters
@@ -960,7 +984,6 @@ yearCalendarView today model visibleRange =
                 List.map (\m -> monthCalendarView m today model) (getMonthsFromRange 0 11 visibleRange getFirstDayOfYear)
             ]
         ]
-
 
 threeMonthCalendarView : Posix -> Model -> PosixRange -> Html Msg
 threeMonthCalendarView today model visibleRange =
@@ -1075,6 +1098,31 @@ dayCalendarView zone currentMonth currentDay today model =
     in
     td [ classList, setDate, hoverAttr ] content
 
+
+calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
+calendarPositioning buttonElement calendarElement=
+    case (buttonElement, calendarElement) of
+        (Just button, Just calEl) ->
+            let
+                leftContainer =
+                    if button.element.x > (button.viewport.width / 2) then
+                        Attrs.style "right" <| String.fromFloat ((button.viewport.width - button.element.x) - button.element.width) ++ "px"
+                    else
+                        Attrs.style "left" <| String.fromFloat button.element.x ++ "px"
+                
+                _ = Debug.log "button thing" button
+
+                topContainer = 
+                    if button.element.y < (button.viewport.height / 2) then
+                        Attrs.style "top" <| String.fromFloat (button.element.height + button.element.y) ++ "px"
+                    else
+                        Attrs.style "bottom" <| Debug.log "bottom" <| (String.fromFloat <| (button.viewport.height - button.element.y)) ++ "px"
+            in
+            [leftContainer, topContainer]
+
+        _ ->
+            [Attrs.style "left" "-9999px"]
+            
 
 normalizeSelectingRange : PosixRange -> PosixRange
 normalizeSelectingRange posixRange =

@@ -1,5 +1,6 @@
 $blue: rgb(67, 130, 255);
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
 }
@@ -8,15 +9,16 @@ body, html {
   height: 100vh;
   width: 100vw;
   display: grid;
-  grid-template-rows: 75px min-content 1fr;
-  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
 
   .open-button {
-    margin-left: 50px;
+    // margin-left: 50px;
   }
 
   .toggle-theme {
     width: fit-content;
+    height: 20px;
     margin: 10px;
   }
 
@@ -83,4 +85,17 @@ body, html {
       color: white;
     }
   }
+}
+
+.bottom-right {
+  grid-row: 3;
+  grid-column: 3;
+}
+
+.bottom-left {
+  grid-row: 3;
+  grid-column: 1;
+}
+.body {
+  position: absolute;
 }
