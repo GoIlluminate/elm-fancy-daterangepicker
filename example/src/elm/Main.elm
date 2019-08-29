@@ -18,7 +18,7 @@ type Msg
     = ChangeCalendarDisplay DateRangePicker.CalendarType
     | NewTime Posix
     | NewZone Zone
-    | DatePickerMsgs DateRangePicker.Msg
+    | DatePickerMsgs1 DateRangePicker.Msg
     | DatePickerMsgs2 DateRangePicker.Msg
     | DatePickerMsgs3 DateRangePicker.Msg
     | DatePickerMsgs4 DateRangePicker.Msg
@@ -32,7 +32,7 @@ type ColorTheme
 
 type alias Model =
     { calendarDisplay : DateRangePicker.CalendarType
-    , datePicker : DateRangePicker.Model
+    , datePicker1 : DateRangePicker.Model
     , datePicker2 : DateRangePicker.Model
     , datePicker3 : DateRangePicker.Model
     , datePicker4 : DateRangePicker.Model
@@ -66,7 +66,7 @@ init =
                 }
     in
     ( { calendarDisplay = calendarDisplay
-      , datePicker = initDatePicker "datepicker--button-1"
+      , datePicker1 = initDatePicker "datepicker--button-1"
       , datePicker2 = initDatePicker "datepicker--button-2"
       , datePicker3 = initDatePicker "datepicker--button-3"
       , datePicker4 = initDatePicker "datepicker--button-4"
@@ -92,7 +92,7 @@ update msg model =
             in
             ( { model
                 | calendarDisplay = calendarType
-                , datePicker = newDateRangeSelector model.datePicker
+                , datePicker1 = newDateRangeSelector model.datePicker1
                 , datePicker2 = newDateRangeSelector model.datePicker2
                 , datePicker3 = newDateRangeSelector model.datePicker3
                 , datePicker4 = newDateRangeSelector model.datePicker4
@@ -103,12 +103,12 @@ update msg model =
         NewTime posix ->
             ( { model | today = Just posix }, Cmd.none )
 
-        DatePickerMsgs msg_ ->
+        DatePickerMsgs1 msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker
+                    DateRangePicker.update msg_ model.datePicker1
             in
-            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
+            ( { model | datePicker1 = newDateRangePicker }, Cmd.map DatePickerMsgs1 dateRangePickerCmd )
 
         DatePickerMsgs2 msg_ ->
             let
@@ -169,8 +169,8 @@ view model =
                 _ ->
                     text ""
 
-        selector =
-            getSelector model.datePicker model.datePicker.buttonId ""
+        selector1 =
+            getSelector model.datePicker1 model.datePicker1.buttonId ""
 
         selector2 =
             getSelector model.datePicker2 model.datePicker2.buttonId ""
@@ -217,7 +217,7 @@ view model =
                 ]
     in
     div [ class "main" ]
-        [ Html.map DatePickerMsgs selector
+        [ Html.map DatePickerMsgs1 selector1
         , calendarDisplayOptions model
         , Html.map DatePickerMsgs3 selector3
         , Html.map DatePickerMsgs2 selector2
@@ -280,7 +280,7 @@ subscriptions model =
                     Sub.none
     in
     Sub.batch
-        [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
+        [ Sub.map DatePickerMsgs1 (selectorSubscriptions model.datePicker1)
         , Sub.map DatePickerMsgs2 (selectorSubscriptions model.datePicker2)
         , Sub.map DatePickerMsgs3 (selectorSubscriptions model.datePicker3)
         , Sub.map DatePickerMsgs4 (selectorSubscriptions model.datePicker4)
