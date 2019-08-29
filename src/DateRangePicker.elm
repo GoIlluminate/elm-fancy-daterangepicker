@@ -564,7 +564,7 @@ onKeyDown model today zone key =
                 R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing  }
+                R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
@@ -739,7 +739,6 @@ view today zone model =
 
             else
                 Attrs.class ""
-
     in
     if model.isOpen then
         div [ Attrs.class "elm-fancy--daterangepicker" ]
@@ -1104,47 +1103,47 @@ calendarPositioning buttonElement calendarElement =
         addPx x =
             x ++ "px"
     in
-    case (buttonElement, calendarElement) of
-        (Just button, Just calendar)->
+    case ( buttonElement, calendarElement ) of
+        ( Just button, Just calendar ) ->
             let
-                (yNum, yName) =
+                ( yNum, yName ) =
                     if button.element.y < (button.viewport.height / 2) then
-                        (Debug.log "top" <| additionalCalcForTop (button.element.height + button.element.y), "top")
+                        ( additionalCalcForTop (button.element.height + button.element.y), "top" )
 
                     else
-                        (Debug.log "bottom" <| additionalCalcForBottom (button.viewport.height - button.element.y), "bottom")
+                        ( additionalCalcForBottom (button.viewport.height - button.element.y), "bottom" )
 
                 additionalCalcForBottom num =
                     if button.element.y > calendar.element.height then
                         num
-                    else 
+
+                    else
                         num + (button.element.y - calendar.element.height - button.element.height)
 
                 additionalCalcForTop num =
                     if (button.viewport.height - button.element.y) > calendar.element.height then
                         num
-                    else 
+
+                    else
                         0
 
-
-                leftContainer =
+                ( xNum, xName ) =
                     if button.element.x > (button.viewport.width / 2) then
-                        ((button.viewport.width - button.element.x) - button.element.width)
-                            |> String.fromFloat
-                            |> addPx
-                            |> Attrs.style "right"
-                    else
-                        button.element.x
-                            |> String.fromFloat
-                            |> addPx
-                            |> Attrs.style "left"
+                        ( (button.viewport.width - button.element.x) - button.element.width, "right" )
 
+                    else
+                        ( button.element.x, "left" )
             in
-            [ leftContainer
-            , Attrs.style yName 
+            [ Attrs.style xName
+                (xNum
+                    |> String.fromFloat
+                    |> addPx
+                )
+            , Attrs.style yName
                 (yNum
                     |> String.fromFloat
-                    |> addPx)
+                    |> addPx
+                )
             ]
 
         _ ->
