@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , initModel, openDateRangePicker
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString, presetToPosixRange
-    , CalendarType(..), Config, CustomPreset, Interval(..), LanguageConfig, PresetType(..), englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, initModelWithOptions, singleFormatter
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, initModelWithOptions, singleFormatter
     )
 
 {-| A customizable date picker component.
@@ -169,6 +169,11 @@ type CalendarType
     | OneMonth
 
 
+type DatePickerType
+    = DateRangePicker
+    | DatePicker
+
+
 {-| The type which specifies if a user had specified a time in the input box as well as the selected date.
 -}
 type Format
@@ -198,6 +203,7 @@ type alias Model =
     , isPresetMenuOpen : Bool
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
     , displayFormat : Format
+    , datePickerType : DatePickerType
     }
 
 
@@ -224,6 +230,7 @@ initModel =
     , isPresetMenuOpen = False
     , keyboardSelectedPreset = Nothing
     , displayFormat = DateFormat
+    , datePickerType = DateRangePicker
     }
 
 
@@ -236,6 +243,7 @@ type alias Config =
     , calendarType : CalendarType
     , isOpen : Bool
     , languageConfig : LanguageConfig
+    , datePickerType : DatePickerType
     }
 
 
@@ -284,6 +292,7 @@ initModelWithOptions config =
         , presets = config.presets
         , calendarType = config.calendarType
         , isOpen = config.isOpen
+        , datePickerType = config.datePickerType
     }
 
 
@@ -365,7 +374,7 @@ update msg model =
         SetSelection selection ->
             let
                 updatedSelection =
-                    changeSelectionToDefaultTimes selection
+                    finalizeSelection model selection
             in
             R2.withNoCmd
                 { model
@@ -383,11 +392,24 @@ update msg model =
             R2.withNoCmd { model | inputText = "", selection = Unselected, visibleCalendarRange = Nothing }
 
         StartSelection posix ->
-            R2.withNoCmd
-                { model
-                    | isMouseDown = True
-                    , selection = Selecting { start = posix, end = posix }
-                }
+            case model.datePickerType of
+                DatePicker ->
+                    let
+                        selection =
+                            SingleSelection posix
+                    in
+                    R2.withNoCmd
+                        { model
+                            | selection = selection
+                            , inputText = prettyFormatSelection selection model.languageConfig model.displayFormat
+                        }
+
+                DateRangePicker ->
+                    R2.withNoCmd
+                        { model
+                            | isMouseDown = True
+                            , selection = Selecting { start = posix, end = posix }
+                        }
 
         EndSelection posix ->
             case posix of
@@ -397,7 +419,7 @@ update msg model =
                             createSelectingRange model p
                                 |> normalizeSelectingRange
                                 |> RangeSelection
-                                |> changeSelectionToDefaultTimes
+                                |> finalizeSelection model
                     in
                     R2.withNoCmd
                         { model
@@ -506,7 +528,7 @@ update msg model =
                         DateTimeFormat ->
                             let
                                 selection =
-                                    changeSelectionToDefaultTimes model.selection
+                                    finalizeSelection model model.selection
                             in
                             { model
                                 | displayFormat = DateFormat
@@ -520,10 +542,19 @@ update msg model =
 finishInput : Posix -> Model -> Model
 finishInput today model =
     let
+        allowTime =
+            case model.datePickerType of
+                DatePicker ->
+                    False
+
+                DateRangePicker ->
+                    True
+
         parseOutput =
             parseDateTime
                 (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
                 model.languageConfig.dateFormatLanguage
+                allowTime
                 model.inputText
     in
     case parseOutput of
@@ -543,14 +574,19 @@ finishInput today model =
             { model | inputText = prettyFormatSelection model.selection model.languageConfig model.displayFormat }
 
 
-changeSelectionToDefaultTimes : InternalSelection -> InternalSelection
-changeSelectionToDefaultTimes selection =
+finalizeSelection : Model -> InternalSelection -> InternalSelection
+finalizeSelection model selection =
     case selection of
         SingleSelection posix ->
             SingleSelection <| getStartOfDay posix
 
         RangeSelection posixRange ->
-            RangeSelection { start = getStartOfDay posixRange.start, end = getEndOfDay posixRange.end }
+            case model.datePickerType of
+                DatePicker ->
+                    SingleSelection <| getStartOfDay posixRange.start
+
+                DateRangePicker ->
+                    RangeSelection { start = getStartOfDay posixRange.start, end = getEndOfDay posixRange.end }
 
         Unselected ->
             selection
@@ -595,8 +631,12 @@ onKeyDown model today zone key =
                     }
 
             else
-                -- add start selection on shift logic
-                R2.withNoCmd { model | isShiftDown = True }
+                case model.datePickerType of
+                    DateRangePicker ->
+                        R2.withNoCmd { model | isShiftDown = True }
+
+                    DatePicker ->
+                        R2.withNoCmd model
 
         Escape ->
             if model.isPresetMenuOpen then
@@ -904,6 +944,14 @@ topBar model visibleRange today zone =
                 _ ->
                     ( text "", "top-bar--partial" )
 
+        clock =
+            case model.datePickerType of
+                DatePicker ->
+                    div [] []
+
+                DateRangePicker ->
+                    clockButton model
+
         selection =
             RangeSelection { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
     in
@@ -911,7 +959,7 @@ topBar model visibleRange today zone =
         [ fullCalendarSelector
         , presetsDisplay model today
         , calendarInput model today
-        , clockButton model
+        , clock
         ]
 
 
@@ -1148,8 +1196,6 @@ dayCalendarView zone currentMonth currentDay today model =
                 [ ( "day", True )
                 , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange currentDay model today zone )
                 , ( "border-selection", isSameDayOfSelection selectionStart || isSameDayOfSelection selectionEnd )
-
-                -- todo check if zone is correct
                 , ( "today", isSameDay currentDay today )
                 ]
     in
@@ -1378,7 +1424,7 @@ yearToPosixRange year zone =
         posix =
             yearToPosix year zone
     in
-    { start = getStartOfDay <| getFirstDayOfYear zone posix --todo maybe change to zone?
+    { start = getStartOfDay <| getFirstDayOfYear zone posix
     , end = getEndOfDay <| getLastDayOfYear zone posix
     }
 
@@ -1427,7 +1473,6 @@ getEndOfDay posix =
                 , millis = 0
             }
     in
-    --todo  maybe call |> adjustMilliseconds zone?
     civilToPosix updatedDateRecord
 
 
@@ -1445,7 +1490,6 @@ getStartOfDay posix =
                 , millis = 0
             }
     in
-    --todo  maybe call |> adjustMilliseconds zone?
     civilToPosix updatedDateRecord
 
 
@@ -1620,7 +1664,6 @@ presetToPosixRange presetType today localZone =
             { start = getStartOfDay <| addDays -7 today, end = getEndOfDay today }
 
         PastMonth ->
-            -- todo utc?
             { start = getStartOfDay <| addMonths -1 localZone today, end = getEndOfDay today }
 
         PastYear ->

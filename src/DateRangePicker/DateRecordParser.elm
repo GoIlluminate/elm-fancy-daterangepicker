@@ -290,17 +290,22 @@ timeParser =
         ]
 
 
-fullInputDateParser : List String -> Language -> Parser Input
-fullInputDateParser customDates language =
+fullSingleInputParser : Language -> Bool -> Parser Input
+fullSingleInputParser language allowTime =
+    Parser.succeed
+        (\x -> SingleInput x)
+        |= singleInputDateParser language allowTime
+        |. Parser.spaces
+        |. Parser.end
+
+
+fullInputDateParser : List String -> Language -> Bool -> Parser Input
+fullInputDateParser customDates language allowTime =
     Parser.oneOf
         [ Parser.backtrackable
-            (rangeInputDateParser language)
+            (rangeInputDateParser language allowTime)
             |> Parser.andThen Parser.commit
-        , Parser.succeed
-            (\x -> SingleInput x)
-            |= singleInputDateParser language
-            |. Parser.spaces
-            |. Parser.end
+        , fullSingleInputParser language allowTime
         , Parser.succeed
             (\cd -> CustomDate cd)
             |= Parser.oneOf
@@ -308,14 +313,14 @@ fullInputDateParser customDates language =
         ]
 
 
-rangeInputDateParser : Language -> Parser Input
-rangeInputDateParser language =
+rangeInputDateParser : Language -> Bool -> Parser Input
+rangeInputDateParser language allowTime =
     Parser.succeed (\start end -> RangeInput start end)
-        |= singleInputDateParser language
+        |= singleInputDateParser language allowTime
         |. Parser.spaces
         |. rangeSeparator
         |. Parser.spaces
-        |= singleInputDateParser language
+        |= singleInputDateParser language allowTime
         |. Parser.spaces
         |. Parser.end
 
@@ -349,10 +354,10 @@ createYearMonthInput month year =
         }
 
 
-singleInputDateParser : Language -> Parser InputDate
-singleInputDateParser language =
+singleInputDateParser : Language -> Bool -> Parser InputDate
+singleInputDateParser language allowTime =
     let
-        fullDateParser =
+        fullDateTimeParser =
             Parser.succeed
                 createFullInput
                 |= monthParser language
@@ -362,6 +367,15 @@ singleInputDateParser language =
                 |= fullOrAbbreviatedYearParser
                 |. Parser.spaces
                 |= timeParser
+
+        fullDateParser =
+            Parser.succeed
+                (\month day year -> FullDate <| { year = year, month = month, day = day })
+                |= monthParser language
+                |. daySeparatorParser
+                |= dayOfMonthParser
+                |. yearSeparatorParser
+                |= fullOrAbbreviatedYearParser
 
         justYearParser =
             Parser.succeed
@@ -382,7 +396,11 @@ singleInputDateParser language =
         , Parser.backtrackable
             justYearAndMonth
             |> Parser.andThen Parser.commit
-        , fullDateParser
+        , if allowTime then
+            fullDateTimeParser
+
+          else
+            fullDateParser
         ]
 
 
@@ -568,9 +586,9 @@ dateTimePartsToPosix { year, month, day, hour, minute } zone =
     civilToPosix dateRecord
 
 
-parseDateTime : List String -> Language -> String -> Result String Input
-parseDateTime customDateInputs language =
-    Parser.run (fullInputDateParser customDateInputs language)
+parseDateTime : List String -> Language -> Bool -> String -> Result String Input
+parseDateTime customDateInputs language allowTime =
+    Parser.run (fullInputDateParser customDateInputs language allowTime)
         >> Result.mapError (always "")
         >> Result.andThen (validate validateDateViaLibrary)
         >> Result.mapError (always "Not a valid US Date!")

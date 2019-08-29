@@ -57,6 +57,7 @@ init =
                 , calendarType = calendarDisplay
                 , isOpen = False
                 , languageConfig = englishLanguageConfig
+                , datePickerType = DateRangePicker.DateRangePicker
                 }
       , today = Nothing
       , zone = Nothing

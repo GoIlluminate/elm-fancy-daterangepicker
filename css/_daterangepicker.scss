@@ -41,11 +41,11 @@
     }
     .top-bar--full {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) 2fr max-content;
+      grid-template-columns: max-content minmax(0, 1fr) 2fr minmax(15px, max-content);
     }
     .top-bar--partial {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 2fr max-content;
+      grid-template-columns: minmax(0, 1fr) 2fr minmax(15px, max-content);
     }
     %clock {
       display: flex;
