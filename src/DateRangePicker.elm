@@ -483,7 +483,7 @@ update msg model =
         OnGetElementSuccess result ->
             case result of
                 Ok element ->
-                    R2.withNoCmd { model | uiElement = Just  element }
+                    R2.withNoCmd { model | uiElement = Just element }
 
                 Err _ ->
                     R2.withNoCmd model
@@ -739,8 +739,7 @@ view today zone model =
 
             else
                 Attrs.class ""
-        positioning =
-            calendarPositioning model.uiButton
+
     in
     if model.isOpen then
         div [ Attrs.class "elm-fancy--daterangepicker" ]
@@ -752,7 +751,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div (List.append [ Attrs.class "body" ] (calendarPositioning model.uiButton model.uiElement))
+            , div (List.append [ Attrs.class "body" ] (calendarPositioning model.uiButton))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange
                 , rightSelector visibleRange
@@ -975,7 +974,6 @@ yearCalendarView today model visibleRange =
             div
                 [ Attrs.class "quarters" ]
                 [ quarter "Q1" Jan Mar, quarter "Q2" Apr Jun, quarter "Q3" Jul Sep, quarter "Q4" Oct Dec ]
-
     in
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar" ]
         [ quarters
@@ -984,6 +982,7 @@ yearCalendarView today model visibleRange =
                 List.map (\m -> monthCalendarView m today model) (getMonthsFromRange 0 11 visibleRange getFirstDayOfYear)
             ]
         ]
+
 
 threeMonthCalendarView : Posix -> Model -> PosixRange -> Html Msg
 threeMonthCalendarView today model visibleRange =
@@ -1099,30 +1098,45 @@ dayCalendarView zone currentMonth currentDay today model =
     td [ classList, setDate, hoverAttr ] content
 
 
-calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
-calendarPositioning buttonElement calendarElement=
-    case (buttonElement, calendarElement) of
-        (Just button, Just calEl) ->
+calendarPositioning : Maybe Element -> List (Attribute msg)
+calendarPositioning buttonElement  =
+    let
+        addPx x =
+            x ++ "px"
+    in
+    case buttonElement of
+        Just button->
             let
                 leftContainer =
                     if button.element.x > (button.viewport.width / 2) then
-                        Attrs.style "right" <| String.fromFloat ((button.viewport.width - button.element.x) - button.element.width) ++ "px"
+                        ((button.viewport.width - button.element.x) - button.element.width)
+                            |> String.fromFloat
+                            |> addPx
+                            |> Attrs.style "right"
                     else
-                        Attrs.style "left" <| String.fromFloat button.element.x ++ "px"
-                
-                _ = Debug.log "button thing" button
+                        button.element.x
+                            |> String.fromFloat
+                            |> addPx
+                            |> Attrs.style "left"
 
-                topContainer = 
+                topContainer =
                     if button.element.y < (button.viewport.height / 2) then
-                        Attrs.style "top" <| String.fromFloat (button.element.height + button.element.y) ++ "px"
+                        (button.element.height + button.element.y)
+                            |> String.fromFloat
+                            |> addPx
+                            |> Attrs.style "top"
+
                     else
-                        Attrs.style "bottom" <| Debug.log "bottom" <| (String.fromFloat <| (button.viewport.height - button.element.y)) ++ "px"
+                        (button.viewport.height - button.element.y)
+                            |> String.fromFloat
+                            |> addPx
+                            |> Attrs.style "bottom"
             in
-            [leftContainer, topContainer]
+            [ leftContainer, topContainer ]
 
         _ ->
-            [Attrs.style "left" "-9999px"]
-            
+            [ Attrs.style "left" "-9999px" ]
+
 
 normalizeSelectingRange : PosixRange -> PosixRange
 normalizeSelectingRange posixRange =
