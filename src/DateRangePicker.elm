@@ -349,7 +349,7 @@ update msg model =
         Open ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
-                    getElement "elm-fancy--daterangepicker-calendar"
+                    getElement ("daterangepicker--wrapper" ++ model.buttonId)
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
                 , Task.attempt OnGetDatePickerButton <|
@@ -358,7 +358,7 @@ update msg model =
                 { model | isOpen = True }
 
         Close ->
-            R2.withNoCmd { model | isOpen = False }
+            R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
 
         PrevCalendarRange currentVisibleRange ->
             updateCalendarRange model -1 currentVisibleRange
@@ -491,7 +491,7 @@ update msg model =
         OnGetDatePickerButton result ->
             case result of
                 Ok element ->
-                    R2.withNoCmd { model | uiButton = Just <| Debug.log "element" element }
+                    R2.withNoCmd { model | uiButton = Just element }
 
                 Err _ ->
                     R2.withNoCmd model
@@ -564,7 +564,7 @@ onKeyDown model today zone key =
                 R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | isOpen = False }
+                R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing  }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
@@ -751,7 +751,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div (List.append [ Attrs.class "body" ] (calendarPositioning model.uiButton))
+            , div (List.append [ Attrs.class "body", Attrs.id ("daterangepicker--wrapper" ++ model.buttonId) ] (calendarPositioning model.uiButton model.uiElement))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange
                 , rightSelector visibleRange
@@ -1098,15 +1098,35 @@ dayCalendarView zone currentMonth currentDay today model =
     td [ classList, setDate, hoverAttr ] content
 
 
-calendarPositioning : Maybe Element -> List (Attribute msg)
-calendarPositioning buttonElement  =
+calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
+calendarPositioning buttonElement calendarElement =
     let
         addPx x =
             x ++ "px"
     in
-    case buttonElement of
-        Just button->
+    case (buttonElement, calendarElement) of
+        (Just button, Just calendar)->
             let
+                (yNum, yName) =
+                    if button.element.y < (button.viewport.height / 2) then
+                        (Debug.log "top" <| additionalCalcForTop (button.element.height + button.element.y), "top")
+
+                    else
+                        (Debug.log "bottom" <| additionalCalcForBottom (button.viewport.height - button.element.y), "bottom")
+
+                additionalCalcForBottom num =
+                    if button.element.y > calendar.element.height then
+                        num
+                    else 
+                        num + (button.element.y - calendar.element.height - button.element.height)
+
+                additionalCalcForTop num =
+                    if (button.viewport.height - button.element.y) > calendar.element.height then
+                        num
+                    else 
+                        0
+
+
                 leftContainer =
                     if button.element.x > (button.viewport.width / 2) then
                         ((button.viewport.width - button.element.x) - button.element.width)
@@ -1119,20 +1139,13 @@ calendarPositioning buttonElement  =
                             |> addPx
                             |> Attrs.style "left"
 
-                topContainer =
-                    if button.element.y < (button.viewport.height / 2) then
-                        (button.element.height + button.element.y)
-                            |> String.fromFloat
-                            |> addPx
-                            |> Attrs.style "top"
-
-                    else
-                        (button.viewport.height - button.element.y)
-                            |> String.fromFloat
-                            |> addPx
-                            |> Attrs.style "bottom"
             in
-            [ leftContainer, topContainer ]
+            [ leftContainer
+            , Attrs.style yName 
+                (yNum
+                    |> String.fromFloat
+                    |> addPx)
+            ]
 
         _ ->
             [ Attrs.style "left" "-9999px" ]
