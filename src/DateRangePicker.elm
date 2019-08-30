@@ -314,7 +314,7 @@ defaultConfig =
 
 {-| A helper attribute which allows you to open the datepicker using any html element.
 
-    button [ open ] [ text "Open Me!" ]
+    button [ open buttonId ] [ text "Open Me!" ]
 
 You will need to call convert the message to the appropriate type via Html.map
 
