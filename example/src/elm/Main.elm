@@ -63,6 +63,7 @@ init =
                 , isOpen = False
                 , languageConfig = englishLanguageConfig
                 , buttonId = buttonId
+                , datePickerType = DateRangePicker.DateRangePicker
                 }
     in
     ( { calendarDisplay = calendarDisplay
