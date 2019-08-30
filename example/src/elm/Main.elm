@@ -14,7 +14,7 @@ type Msg
     = ChangeCalendarDisplay DateRangePicker.CalendarType
     | NewTime Posix
     | NewZone Zone
-    | DatePickerMsgs1 DateRangePicker.Msg
+    | DatePickerMsgs DateRangePicker.Msg
     | ToggleColorTheme
 
 
@@ -90,12 +90,12 @@ update msg model =
         NewTime posix ->
             ( { model | today = Just posix }, Cmd.none )
 
-        DatePickerMsgs1 msg_ ->
+        DatePickerMsgs msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
                     DateRangePicker.update msg_ model.datePicker
             in
-            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs1 dateRangePickerCmd )
+            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
 
         NewZone zone ->
             ( { model | zone = Just zone }, Cmd.none )
@@ -174,7 +174,7 @@ view model =
                 ]
     in
     div [ class "main" ]
-        [ Html.map DatePickerMsgs1 selector1
+        [ Html.map DatePickerMsgs selector1
         , calendarDisplayOptions model
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
         ]
@@ -233,7 +233,7 @@ subscriptions model =
                     Sub.none
     in
     Sub.batch
-        [ Sub.map DatePickerMsgs1 (selectorSubscriptions model.datePicker)
+        [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
         ]
 
 

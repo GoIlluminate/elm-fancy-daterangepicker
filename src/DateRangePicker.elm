@@ -375,7 +375,7 @@ update msg model =
         Open buttonId ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
-                    getElement ("daterangepicker--wrapper")
+                    getElement ("elm-fancy--daterangepicker--wrapper")
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
                 , Task.attempt OnGetDatePickerButton <|
@@ -865,7 +865,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div (List.append [ Attrs.class "body", Attrs.id "daterangepicker--wrapper" ] (calendarPositioning model.uiButton model.uiElement))
+            , div (List.append [ Attrs.class "body", Attrs.id "elm-fancy--daterangepicker--wrapper" ] (calendarPositioning model.uiButton model.uiElement))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange model zone
                 , rightSelector visibleRange model zone
