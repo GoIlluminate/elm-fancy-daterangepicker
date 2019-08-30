@@ -4,7 +4,7 @@ import Browser
 import DateRangePicker exposing (defaultConfig, open)
 import Derberos.Date.Core as DateCore
 import Html exposing (Html, button, div, span, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, id)
 import Html.Events
 import Task
 import Time exposing (Month(..), Posix, Zone)
@@ -37,9 +37,8 @@ init =
     let
         calendarDisplay =
             DateRangePicker.FullCalendar
-    in
-    ( { calendarDisplay = calendarDisplay
-      , datePicker =
+
+        initDatePicker =
             DateRangePicker.initWithOptions
                 { defaultConfig
                     | presets =
@@ -58,6 +57,9 @@ init =
                         ]
                     , calendarType = calendarDisplay
                 }
+    in
+    ( { calendarDisplay = calendarDisplay
+      , datePicker = initDatePicker 
       , today = Nothing
       , zone = Nothing
       , colorTheme = Light
@@ -74,13 +76,13 @@ update msg model =
     case msg of
         ChangeCalendarDisplay calendarType ->
             let
-                newDateRangeSelector =
-                    model.datePicker
+                newDateRangeSelector datePicker =
+                    datePicker
                         |> DateRangePicker.setCalendarType calendarType
             in
             ( { model
                 | calendarDisplay = calendarType
-                , datePicker = newDateRangeSelector
+                , datePicker = newDateRangeSelector model.datePicker
               }
             , Cmd.none
             )
@@ -110,7 +112,6 @@ update msg model =
             , Cmd.none
             )
 
-
 view : Model -> Html Msg
 view model =
     let
@@ -122,26 +123,27 @@ view model =
                 Dark ->
                     "theme-dark open-button"
 
-        selector =
+        getSelector datepicker buttonId divClass =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
-                    div [ class styleClass ]
-                        [ button [ open ] [ text "Open Me!" ]
-                        , DateRangePicker.view
-                            t
-                            z
-                            model.datePicker
+                    div [ class styleClass, class divClass ]
+                        [ button [ open buttonId, id buttonId ] [ text "Open Me!" ]
+                        , DateRangePicker.view t z datepicker
+                        , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
 
                 _ ->
                     text ""
 
-        ( localSelection, localtimeZoneText ) =
+        selector1 =
+            getSelector model.datePicker "datepicker--button" ""
+
+        getLocal datepicker =
             case model.today of
                 Just t ->
-                    case ( DateRangePicker.getLocalSelectionRange t model.datePicker, model.zone ) of
+                    case ( DateRangePicker.getLocalSelectionRange t datepicker, model.zone ) of
                         ( Just pos, Just tz ) ->
-                            ( DateRangePicker.fullFormatter model.datePicker.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
+                            ( DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
                             , DateCore.getTzOffset tz pos.start
                             )
 
@@ -151,28 +153,30 @@ view model =
                 Nothing ->
                     ( "", 0 )
 
-        utcSelection =
+        utcSelection datepicker =
             case model.today of
                 Just t ->
-                    case DateRangePicker.getUtcSelectionRange (Maybe.withDefault Time.utc model.zone) t model.datePicker of
+                    case DateRangePicker.getUtcSelectionRange (Maybe.withDefault Time.utc model.zone) t datepicker of
                         Just range ->
-                            DateRangePicker.fullFormatter model.datePicker.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
+                            DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
 
                         _ ->
                             ""
 
                 Nothing ->
                     ""
+
+        getStats ( localSel, localTimezone ) utcSel =
+            div []
+                [ div [] [ text <| "LocalTime: " ++ localSel ]
+                , div [] [ text <| "TimeZone: " ++ String.fromInt localTimezone ]
+                , div [] [ text <| "UtcTime: " ++ utcSel ]
+                ]
     in
     div [ class "main" ]
-        [ calendarDisplayOptions model
+        [ Html.map DatePickerMsgs selector1
+        , calendarDisplayOptions model
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
-        , Html.map DatePickerMsgs selector
-        , div []
-            [ div [] [ text <| "LocalTime: " ++ localSelection ]
-            , div [] [ text <| "TimeZone: " ++ String.fromInt localtimeZoneText ]
-            , div [] [ text <| "UtcTime: " ++ utcSelection ]
-            ]
         ]
 
 
@@ -220,15 +224,17 @@ main =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
-        selectorSubscriptions =
+        selectorSubscriptions datepicker =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
-                    DateRangePicker.subscriptions model.datePicker t z
+                    DateRangePicker.subscriptions datepicker t z
 
                 _ ->
                     Sub.none
     in
-    Sub.map DatePickerMsgs selectorSubscriptions
+    Sub.batch
+        [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
+        ]
 
 
 calendarDisplayToDisplayStr : DateRangePicker.CalendarType -> String

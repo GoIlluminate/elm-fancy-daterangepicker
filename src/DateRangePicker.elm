@@ -62,7 +62,7 @@ import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
 -}
 type Msg
     = DoNothing
-    | Open
+    | Open String
     | Close Posix
     | SetVisibleRange PosixRange
     | SetSelection InternalSelection
@@ -79,6 +79,7 @@ type Msg
     | OnMouseMove Mouse.Event
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
+    | OnGetDatePickerButton (Result Error Element)
     | CheckToMoveToNextVisibleRange Posix
     | SetPresetMenu Bool
     | SelectPreset PresetType Posix
@@ -197,6 +198,7 @@ type alias Model =
     , currentlyHoveredDate : Maybe Posix
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
+    , uiButton : Maybe Element
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
@@ -224,6 +226,7 @@ init =
     , currentlyHoveredDate = Nothing
     , mousePosition = Nothing
     , uiElement = Nothing
+    , uiButton = Nothing
     , isMouseOutside = False
     , languageConfig = englishLanguageConfig
     , isPresetMenuOpen = False
@@ -311,14 +314,14 @@ defaultConfig =
 
 {-| A helper attribute which allows you to open the datepicker using any html element.
 
-    button [ open ] [ text "Open Me!" ]
+    button [ open buttonId ] [ text "Open Me!" ]
 
 You will need to call convert the message to the appropriate type via Html.map
 
 -}
-open : Attribute Msg
-open =
-    Html.Events.onClick Open
+open : String -> Attribute Msg
+open buttonId =
+    Html.Events.onClick (Open buttonId)
 
 
 {-| The subscriptions for the datepicker
@@ -369,17 +372,19 @@ update msg model =
         DoNothing ->
             R2.withNoCmd model
 
-        Open ->
+        Open buttonId ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
-                    getElement "elm-fancy--daterangepicker-calendar"
+                    getElement ("elm-fancy--daterangepicker--wrapper")
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
+                , Task.attempt OnGetDatePickerButton <|
+                    getElement buttonId
                 ]
                 { model | isOpen = True }
 
         Close today ->
-            R2.withNoCmd <| finishInput today { model | isOpen = False }
+            R2.withNoCmd <| finishInput today { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -429,10 +434,12 @@ update msg model =
 
         EndSelection posix ->
             case posix of
-                Just p ->
+                Just date ->
                     let
                         selection =
-                            createSelectingRange model p
+                            date
+                                |> getEndOfDay
+                                |> createSelectingRange model
                                 |> normalizeSelectingRange
                                 |> RangeSelection
                                 |> finalizeSelection model
@@ -501,6 +508,14 @@ update msg model =
             case result of
                 Ok element ->
                     R2.withNoCmd { model | uiElement = Just element }
+
+                Err _ ->
+                    R2.withNoCmd model
+
+        OnGetDatePickerButton result ->
+            case result of
+                Ok element ->
+                    R2.withNoCmd { model | uiButton = Just element }
 
                 Err _ ->
                     R2.withNoCmd model
@@ -659,7 +674,7 @@ onKeyDown model today key =
                 R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | isOpen = False }
+                R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
@@ -850,7 +865,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div [ Attrs.class "body" ]
+            , div (List.append [ Attrs.class "body", Attrs.id "elm-fancy--daterangepicker--wrapper" ] (calendarPositioning model.uiButton model.uiElement))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange model zone
                 , rightSelector visibleRange model zone
@@ -1281,6 +1296,86 @@ dayCalendarView zone currentMonth currentDay today model =
                 ]
     in
     td [ classList, setDate, hoverAttr ] content
+
+
+calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
+calendarPositioning buttonElement calendarElement =
+    case ( buttonElement, calendarElement ) of
+        ( Just button, Just calendar ) ->
+            [ calculateYPosition button calendar
+            , calculateXPosition button calendar
+            ]
+
+        _ ->
+            [ Attrs.style "left" "-9999px" ]
+
+addPx : String -> String
+addPx str =
+    str ++ "px"
+
+calculateYPosition : Element -> Element -> (Attribute msg)
+calculateYPosition button calendar =
+    let
+        ( yNum, yName ) =
+            if button.element.y < (button.viewport.height / 2) then
+                ( additionalCalcForTop (button.element.height + button.element.y), "top" )
+
+            else
+                ( additionalCalcForBottom (button.viewport.height - button.element.y), "bottom" )
+
+        additionalCalcForBottom num =
+            if button.element.y > calendar.element.height then
+                num
+
+            else
+                num + (button.element.y - calendar.element.height - button.element.height)
+
+        additionalCalcForTop num =
+            if (button.viewport.height - button.element.y) > calendar.element.height then
+                num
+
+            else
+                0
+
+    in
+    Attrs.style yName
+            (yNum
+                |> String.fromFloat
+                |> addPx
+            )
+
+calculateXPosition : Element -> Element -> (Attribute msg)
+calculateXPosition button calendar =
+    let
+        sideButtonRadius = 15
+
+        ( xNum, xName ) =
+            if button.element.x > (button.viewport.width / 2) then
+                ( additionalCalcForRight ((button.viewport.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
+
+            else
+                ( additionalCalcForLeft button.element.x, "left" )
+        
+        additionalCalcForLeft num =
+            if button.element.x > calendar.element.width then
+                num + (button.element.x - calendar.element.width - button.element.width)
+
+            else
+                num
+
+        
+        additionalCalcForRight num =
+            if (button.viewport.width - button.element.x) > calendar.element.width then
+                num + sideButtonRadius
+
+            else
+                num
+    in
+    Attrs.style xName
+            (xNum
+                |> String.fromFloat
+                |> addPx
+            )
 
 
 dateToPosixRange : Date -> Zone -> PosixRange
