@@ -427,6 +427,7 @@ update msg model =
                         selection =
                             date
                                 |> getEndOfDay
+                                |> createSelectingRange model
                                 |> normalizeSelectingRange
                                 |> RangeSelection
                                 |> finalizeSelection model
