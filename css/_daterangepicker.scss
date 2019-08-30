@@ -38,6 +38,14 @@
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
       color: themed('color-text-default');
+      .disabled {
+        color: themed('color-disabled');
+        &:hover{
+          background-color: themed('color-secondary');
+          cursor: default;
+          color: themed('color-disabled');
+        }
+      }
     }
     .top-bar--full {
       display: grid;
@@ -179,10 +187,10 @@
       font-size: 12px;
       padding: 1px 4px;
       color: $illum-color-blue;
-      cursor: pointer;
 
-      &:hover:not(.border-selection) {
+      &:hover:not(.border-selection):not(.disabled):not(.wrong-month) {
         background: darken(themed("color-bg-light-gray"), 5);
+        cursor: pointer;
       }
     }
 
