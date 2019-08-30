@@ -15,9 +15,6 @@ type Msg
     | NewTime Posix
     | NewZone Zone
     | DatePickerMsgs1 DateRangePicker.Msg
-    | DatePickerMsgs2 DateRangePicker.Msg
-    | DatePickerMsgs3 DateRangePicker.Msg
-    | DatePickerMsgs4 DateRangePicker.Msg
     | ToggleColorTheme
 
 
@@ -28,10 +25,7 @@ type ColorTheme
 
 type alias Model =
     { calendarDisplay : DateRangePicker.CalendarType
-    , datePicker1 : DateRangePicker.Model
-    , datePicker2 : DateRangePicker.Model
-    , datePicker3 : DateRangePicker.Model
-    , datePicker4 : DateRangePicker.Model
+    , datePicker : DateRangePicker.Model
     , today : Maybe Posix
     , zone : Maybe Zone
     , colorTheme : ColorTheme
@@ -44,7 +38,7 @@ init =
         calendarDisplay =
             DateRangePicker.FullCalendar
 
-        initDatePicker buttonId =
+        initDatePicker =
             DateRangePicker.initWithOptions
                 { defaultConfig
                     | presets =
@@ -62,14 +56,10 @@ init =
                             }
                         ]
                     , calendarType = calendarDisplay
-                , buttonId = buttonId
                 }
     in
     ( { calendarDisplay = calendarDisplay
-      , datePicker1 = initDatePicker "datepicker--button-1"
-      , datePicker2 = initDatePicker "datepicker--button-2"
-      , datePicker3 = initDatePicker "datepicker--button-3"
-      , datePicker4 = initDatePicker "datepicker--button-4"
+      , datePicker = initDatePicker 
       , today = Nothing
       , zone = Nothing
       , colorTheme = Light
@@ -92,10 +82,7 @@ update msg model =
             in
             ( { model
                 | calendarDisplay = calendarType
-                , datePicker1 = newDateRangeSelector model.datePicker1
-                , datePicker2 = newDateRangeSelector model.datePicker2
-                , datePicker3 = newDateRangeSelector model.datePicker3
-                , datePicker4 = newDateRangeSelector model.datePicker4
+                , datePicker = newDateRangeSelector model.datePicker
               }
             , Cmd.none
             )
@@ -106,30 +93,9 @@ update msg model =
         DatePickerMsgs1 msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker1
+                    DateRangePicker.update msg_ model.datePicker
             in
-            ( { model | datePicker1 = newDateRangePicker }, Cmd.map DatePickerMsgs1 dateRangePickerCmd )
-
-        DatePickerMsgs2 msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker2
-            in
-            ( { model | datePicker2 = newDateRangePicker }, Cmd.map DatePickerMsgs2 dateRangePickerCmd )
-
-        DatePickerMsgs3 msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker3
-            in
-            ( { model | datePicker3 = newDateRangePicker }, Cmd.map DatePickerMsgs3 dateRangePickerCmd )
-
-        DatePickerMsgs4 msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker4
-            in
-            ( { model | datePicker4 = newDateRangePicker }, Cmd.map DatePickerMsgs4 dateRangePickerCmd )
+            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs1 dateRangePickerCmd )
 
         NewZone zone ->
             ( { model | zone = Just zone }, Cmd.none )
@@ -161,7 +127,7 @@ view model =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
                     div [ class styleClass, class divClass ]
-                        [ button [ open, id buttonId ] [ text "Open Me!" ]
+                        [ button [ open buttonId, id buttonId ] [ text "Open Me!" ]
                         , DateRangePicker.view t z datepicker
                         , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
@@ -170,16 +136,7 @@ view model =
                     text ""
 
         selector1 =
-            getSelector model.datePicker1 model.datePicker1.buttonId ""
-
-        selector2 =
-            getSelector model.datePicker2 model.datePicker2.buttonId ""
-
-        selector3 =
-            getSelector model.datePicker3 model.datePicker3.buttonId "bottom-left"
-
-        selector4 =
-            getSelector model.datePicker4 model.datePicker4.buttonId "bottom-right"
+            getSelector model.datePicker "datepicker--button" ""
 
         getLocal datepicker =
             case model.today of
@@ -219,11 +176,7 @@ view model =
     div [ class "main" ]
         [ Html.map DatePickerMsgs1 selector1
         , calendarDisplayOptions model
-        , Html.map DatePickerMsgs3 selector3
-        , Html.map DatePickerMsgs2 selector2
-        , div [] []
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
-        , Html.map DatePickerMsgs4 selector4
         ]
 
 
@@ -280,10 +233,7 @@ subscriptions model =
                     Sub.none
     in
     Sub.batch
-        [ Sub.map DatePickerMsgs1 (selectorSubscriptions model.datePicker1)
-        , Sub.map DatePickerMsgs2 (selectorSubscriptions model.datePicker2)
-        , Sub.map DatePickerMsgs3 (selectorSubscriptions model.datePicker3)
-        , Sub.map DatePickerMsgs4 (selectorSubscriptions model.datePicker4)
+        [ Sub.map DatePickerMsgs1 (selectorSubscriptions model.datePicker)
         ]
 
 

@@ -62,7 +62,7 @@ import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
 -}
 type Msg
     = DoNothing
-    | Open
+    | Open String
     | Close Posix
     | SetVisibleRange PosixRange
     | SetSelection InternalSelection
@@ -203,7 +203,6 @@ type alias Model =
     , languageConfig : LanguageConfig
     , isPresetMenuOpen : Bool
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
-    , buttonId : String
     , displayFormat : Format
     , datePickerType : DatePickerType
     }
@@ -232,7 +231,6 @@ init =
     , languageConfig = englishLanguageConfig
     , isPresetMenuOpen = False
     , keyboardSelectedPreset = Nothing
-    , buttonId = ""
     , displayFormat = DateFormat
     , datePickerType = DateRangePicker
     }
@@ -247,7 +245,6 @@ type alias Config =
     , calendarType : CalendarType
     , isOpen : Bool
     , languageConfig : LanguageConfig
-    , buttonId : String
     , datePickerType : DatePickerType
     }
 
@@ -297,7 +294,6 @@ initWithOptions config =
         , presets = config.presets
         , calendarType = config.calendarType
         , isOpen = config.isOpen
-        , buttonId = config.buttonId
         , datePickerType = config.datePickerType
     }
 
@@ -313,7 +309,6 @@ defaultConfig =
     , isOpen = False
     , languageConfig = englishLanguageConfig
     , datePickerType = DateRangePicker
-    , buttonId = ""
     }
 
 
@@ -324,9 +319,9 @@ defaultConfig =
 You will need to call convert the message to the appropriate type via Html.map
 
 -}
-open : Attribute Msg
-open =
-    Html.Events.onClick Open
+open : String -> Attribute Msg
+open buttonId =
+    Html.Events.onClick (Open buttonId)
 
 
 {-| The subscriptions for the datepicker
@@ -377,14 +372,14 @@ update msg model =
         DoNothing ->
             R2.withNoCmd model
 
-        Open ->
+        Open buttonId ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
-                    getElement ("daterangepicker--wrapper" ++ model.buttonId)
+                    getElement ("daterangepicker--wrapper")
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
                 , Task.attempt OnGetDatePickerButton <|
-                    getElement model.buttonId
+                    getElement buttonId
                 ]
                 { model | isOpen = True }
 
@@ -870,7 +865,7 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div (List.append [ Attrs.class "body", Attrs.id ("daterangepicker--wrapper" ++ model.buttonId) ] (calendarPositioning model.uiButton model.uiElement))
+            , div (List.append [ Attrs.class "body", Attrs.id "daterangepicker--wrapper" ] (calendarPositioning model.uiButton model.uiElement))
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange model zone
                 , rightSelector visibleRange model zone
