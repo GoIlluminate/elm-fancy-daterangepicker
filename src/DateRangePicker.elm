@@ -1300,73 +1300,83 @@ dayCalendarView zone currentMonth currentDay today model =
 
 calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
 calendarPositioning buttonElement calendarElement =
-    let
-        addPx x =
-            x ++ "px"
-    in
     case ( buttonElement, calendarElement ) of
         ( Just button, Just calendar ) ->
-            let
-                ( yNum, yName ) =
-                    if button.element.y < (button.viewport.height / 2) then
-                        ( additionalCalcForTop (button.element.height + button.element.y), "top" )
-
-                    else
-                        ( additionalCalcForBottom (button.viewport.height - button.element.y), "bottom" )
-
-                additionalCalcForBottom num =
-                    if button.element.y > calendar.element.height then
-                        num
-
-                    else
-                        num + (button.element.y - calendar.element.height - button.element.height)
-
-                additionalCalcForTop num =
-                    if (button.viewport.height - button.element.y) > calendar.element.height then
-                        num
-
-                    else
-                        0
-
-                
-                sideButtonRadius = 15
-
-                ( xNum, xName ) =
-                    if button.element.x > (button.viewport.width / 2) then
-                        ( additionalCalcForRight ((button.viewport.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
-
-                    else
-                        ( additionalCalcForLeft button.element.x, "left" )
-                
-                additionalCalcForLeft num =
-                    if button.element.x > calendar.element.width then
-                        num + (button.element.x - calendar.element.width - button.element.width)
-
-                    else
-                        num
-
-                
-                additionalCalcForRight num =
-                    if (button.viewport.width - button.element.x) > calendar.element.width then
-                        num + sideButtonRadius
-
-                    else
-                        num
-            in
-            [ Attrs.style xName
-                (xNum
-                    |> String.fromFloat
-                    |> addPx
-                )
-            , Attrs.style yName
-                (yNum
-                    |> String.fromFloat
-                    |> addPx
-                )
+            [ calculateYPosition button calendar
+            , calculateXPosition button calendar
             ]
 
         _ ->
             [ Attrs.style "left" "-9999px" ]
+
+addPx : String -> String
+addPx str =
+    str ++ "px"
+
+calculateYPosition : Element -> Element -> (Attribute msg)
+calculateYPosition button calendar =
+    let
+        ( yNum, yName ) =
+            if button.element.y < (button.viewport.height / 2) then
+                ( additionalCalcForTop (button.element.height + button.element.y), "top" )
+
+            else
+                ( additionalCalcForBottom (button.viewport.height - button.element.y), "bottom" )
+
+        additionalCalcForBottom num =
+            if button.element.y > calendar.element.height then
+                num
+
+            else
+                num + (button.element.y - calendar.element.height - button.element.height)
+
+        additionalCalcForTop num =
+            if (button.viewport.height - button.element.y) > calendar.element.height then
+                num
+
+            else
+                0
+
+    in
+    Attrs.style yName
+            (yNum
+                |> String.fromFloat
+                |> addPx
+            )
+
+calculateXPosition : Element -> Element -> (Attribute msg)
+calculateXPosition button calendar =
+    let
+        sideButtonRadius = 15
+
+        ( xNum, xName ) =
+            if button.element.x > (button.viewport.width / 2) then
+                ( additionalCalcForRight ((button.viewport.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
+
+            else
+                ( additionalCalcForLeft button.element.x, "left" )
+        
+        additionalCalcForLeft num =
+            if button.element.x > calendar.element.width then
+                num + (button.element.x - calendar.element.width - button.element.width)
+
+            else
+                num
+
+        
+        additionalCalcForRight num =
+            if (button.viewport.width - button.element.x) > calendar.element.width then
+                num + sideButtonRadius
+
+            else
+                num
+    in
+    Attrs.style xName
+            (xNum
+                |> String.fromFloat
+                |> addPx
+            )
+
 
 dateToPosixRange : Date -> Zone -> PosixRange
 dateToPosixRange d zone =
