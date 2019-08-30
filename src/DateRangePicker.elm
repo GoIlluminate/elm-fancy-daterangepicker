@@ -1,9 +1,9 @@
 module DateRangePicker exposing
     ( Msg, Model, subscriptions, view, update
-    , initModel, openDateRangePicker
+    , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString, presetToPosixRange
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, initModelWithOptions, singleFormatter
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, init, initWithOptions, singleFormatter
     )
 
 {-| A customizable date picker component.
@@ -13,7 +13,7 @@ module DateRangePicker exposing
 
 @docs Msg, Model, subscriptions, view, update
 
-@docs initModel, openDateRangePicker
+@docs initModel, open
 
 
 # Selection
@@ -23,7 +23,7 @@ module DateRangePicker exposing
 
 # Settings
 
-@ docs Config, LanguageConfig, englishLanguageConfig, initModelWithOptions, PresetType, Interval, CustomPreset, CalendarType
+@ docs Config, LanguageConfig, englishLanguageConfig, initModelWithOptions, PresetType, Interval, CustomPreset, CalendarType, defaultConfig
 
 
 # Helpers
@@ -212,8 +212,8 @@ type alias Model =
 
 {-| Initialize the datepicker with the default settings
 -}
-initModel : Model
-initModel =
+init : Model
+init =
     { selection = Unselected
     , availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
     , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
@@ -290,9 +290,9 @@ englishLanguageConfig =
 
 {-| Initialize the datepicker with the custom settings
 -}
-initModelWithOptions : Config -> Model
-initModelWithOptions config =
-    { initModel
+initWithOptions : Config -> Model
+initWithOptions config =
+    { init
         | availableForSelectionStart = config.availableForSelectionStart
         , availableForSelectionEnd = config.availableForSelectionEnd
         , presets = config.presets
@@ -303,15 +303,30 @@ initModelWithOptions config =
     }
 
 
+{-| A default config which can be combined with @initWithOptions so that you only need to specify the fields which you want to customize
+-}
+defaultConfig : Config
+defaultConfig =
+    { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
+    , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
+    , presets = []
+    , calendarType = FullCalendar
+    , isOpen = False
+    , languageConfig = englishLanguageConfig
+    , datePickerType = DateRangePicker
+    , buttonId = ""
+    }
+
+
 {-| A helper attribute which allows you to open the datepicker using any html element.
 
-    button [ openDateRangePicker ] [ text "Open Me!" ]
+    button [ open ] [ text "Open Me!" ]
 
 You will need to call convert the message to the appropriate type via Html.map
 
 -}
-openDateRangePicker : Attribute Msg
-openDateRangePicker =
+open : Attribute Msg
+open =
     Html.Events.onClick Open
 
 

@@ -1,11 +1,7 @@
 module Main exposing (Model, Msg(..), calendarDisplayOptions, calendarDisplayToDisplayStr, init, main, subscriptions, update, view)
 
 import Browser
-import Date
-    exposing
-        ( Date
-        )
-import DateRangePicker exposing (englishLanguageConfig, initModelWithOptions, openDateRangePicker)
+import DateRangePicker exposing (defaultConfig, open)
 import Derberos.Date.Core as DateCore
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class, id)
@@ -49,21 +45,24 @@ init =
             DateRangePicker.FullCalendar
 
         initDatePicker buttonId =
-            initModelWithOptions
-                { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
-                , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
-                , presets =
-                    [ DateRangePicker.Today
-                    , DateRangePicker.Yesterday
-                    , DateRangePicker.PastWeek
-                    , DateRangePicker.PastMonth
-                    , DateRangePicker.PastYear
-                    ]
-                , calendarType = calendarDisplay
-                , isOpen = False
-                , languageConfig = englishLanguageConfig
+            DateRangePicker.initWithOptions
+                { defaultConfig
+                    | presets =
+                        [ DateRangePicker.Today
+                        , DateRangePicker.Yesterday
+                        , DateRangePicker.PastWeek
+                        , DateRangePicker.PastMonth
+                        , DateRangePicker.PastYear
+                        , DateRangePicker.Custom <|
+                            { intervalStart = DateRangePicker.Days
+                            , intervalStartValue = -3
+                            , intervalEnd = DateRangePicker.Days
+                            , intervalEndValue = -1
+                            , display = "Past Three Days"
+                            }
+                        ]
+                    , calendarType = calendarDisplay
                 , buttonId = buttonId
-                , datePickerType = DateRangePicker.DateRangePicker
                 }
     in
     ( { calendarDisplay = calendarDisplay
@@ -162,7 +161,7 @@ view model =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
                     div [ class styleClass, class divClass ]
-                        [ button [ openDateRangePicker, id buttonId ] [ text "Open Me!" ]
+                        [ button [ open, id buttonId ] [ text "Open Me!" ]
                         , DateRangePicker.view t z datepicker
                         , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
