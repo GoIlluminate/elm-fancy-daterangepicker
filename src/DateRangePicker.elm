@@ -212,7 +212,7 @@ init : Model
 init =
     { selection = Unselected
     , availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
-    , availableForSelectionEnd = Date.fromCalendarDate 2100 Jan 1
+    , availableForSelectionEnd = Date.fromCalendarDate 2100 Dec 31
     , visibleCalendarRange = Nothing
     , isMouseDown = False
     , isShiftDown = False
@@ -299,7 +299,7 @@ initWithOptions config =
 -}
 defaultConfig : Config
 defaultConfig =
-    { availableForSelectionStart = Date.fromCalendarDate 2018 Jan 2
+    { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
     , availableForSelectionEnd = Date.fromCalendarDate 2100 Dec 31
     , presets = []
     , calendarType = FullCalendar
