@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange
     )
 
 {-| A customizable date picker component.
@@ -1645,6 +1645,8 @@ datePartsToPosixRange dateParts zone =
     { start = getStartOfDay posix, end = getEndOfDay posix }
 
 
+{-| A helper function to get the end of the day in time given a date
+-}
 getEndOfDay : Posix -> Posix
 getEndOfDay posix =
     let
@@ -1655,13 +1657,15 @@ getEndOfDay posix =
             { dateRecord
                 | hour = 23
                 , minute = 59
-                , second = 0
-                , millis = 0
+                , second = 59
+                , millis = 999
             }
     in
     civilToPosix updatedDateRecord
 
 
+{-| A helper function to get the start of the day in time given a date
+-}
 getStartOfDay : Posix -> Posix
 getStartOfDay posix =
     let
