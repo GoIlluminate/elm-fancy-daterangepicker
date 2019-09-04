@@ -3,6 +3,8 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString, presetToPosixRange
+    , getEndOfDay
+    , getStartOfDay
     , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, init, initWithOptions, singleFormatter
     )
 
@@ -1625,7 +1627,8 @@ datePartsToPosixRange dateParts zone =
     in
     { start = getStartOfDay posix, end = getEndOfDay posix }
 
-
+{-| A helper function to get the end of the day in time given a date
+-}
 getEndOfDay : Posix -> Posix
 getEndOfDay posix =
     let
@@ -1642,7 +1645,8 @@ getEndOfDay posix =
     in
     civilToPosix updatedDateRecord
 
-
+{-| A helper function to get the start of the day in time given a date
+-}
 getStartOfDay : Posix -> Posix
 getStartOfDay posix =
     let
