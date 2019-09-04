@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString, presetToPosixRange
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getLocalSelection, getLocalSelectionRange, getUtcSelection, getUtcSelectionRange, init, initWithOptions, singleFormatter
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, singleFormatter, utcSelection, utcSelectionRange
     )
 
 {-| A customizable date picker component.
@@ -375,7 +375,7 @@ update msg model =
         Open buttonId ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
-                    getElement ("elm-fancy--daterangepicker--wrapper")
+                    getElement "elm-fancy--daterangepicker--wrapper"
                 , Task.attempt (always DoNothing) <|
                     Dom.focus "elm-fancy--daterangepicker--input"
                 , Task.attempt OnGetDatePickerButton <|
@@ -1309,11 +1309,13 @@ calendarPositioning buttonElement calendarElement =
         _ ->
             [ Attrs.style "left" "-9999px" ]
 
+
 addPx : String -> String
 addPx str =
     str ++ "px"
 
-calculateYPosition : Element -> Element -> (Attribute msg)
+
+calculateYPosition : Element -> Element -> Attribute msg
 calculateYPosition button calendar =
     let
         ( yNum, yName ) =
@@ -1336,18 +1338,19 @@ calculateYPosition button calendar =
 
             else
                 0
-
     in
     Attrs.style yName
-            (yNum
-                |> String.fromFloat
-                |> addPx
-            )
+        (yNum
+            |> String.fromFloat
+            |> addPx
+        )
 
-calculateXPosition : Element -> Element -> (Attribute msg)
+
+calculateXPosition : Element -> Element -> Attribute msg
 calculateXPosition button calendar =
     let
-        sideButtonRadius = 15
+        sideButtonRadius =
+            15
 
         ( xNum, xName ) =
             if button.element.x > (button.viewport.width / 2) then
@@ -1355,7 +1358,7 @@ calculateXPosition button calendar =
 
             else
                 ( additionalCalcForLeft button.element.x, "left" )
-        
+
         additionalCalcForLeft num =
             if button.element.x > calendar.element.width then
                 num + (button.element.x - calendar.element.width - button.element.width)
@@ -1363,7 +1366,6 @@ calculateXPosition button calendar =
             else
                 num
 
-        
         additionalCalcForRight num =
             if (button.viewport.width - button.element.x) > calendar.element.width then
                 num + sideButtonRadius
@@ -1372,10 +1374,10 @@ calculateXPosition button calendar =
                 num
     in
     Attrs.style xName
-            (xNum
-                |> String.fromFloat
-                |> addPx
-            )
+        (xNum
+            |> String.fromFloat
+            |> addPx
+        )
 
 
 dateToPosixRange : Date -> Zone -> PosixRange
@@ -1660,6 +1662,47 @@ getStartOfDay posix =
     civilToPosix updatedDateRecord
 
 
+isOpen : Model -> Bool
+isOpen model =
+    model.isOpen
+
+
+hasUtcSelectionChanged : Model -> Maybe Selection -> Zone -> Posix -> Bool
+hasUtcSelectionChanged model comparisonSelection localZone today =
+    if model.isOpen then
+        False
+
+    else
+        utcSelection localZone today model == comparisonSelection
+
+
+hasLocalSelectionChanged : Model -> Maybe Selection -> Posix -> Bool
+hasLocalSelectionChanged model comparisonSelection today =
+    if model.isOpen then
+        False
+
+    else
+        localSelection today model == comparisonSelection
+
+
+hasUtcRangeChanged : Model -> Maybe PosixRange -> Zone -> Posix -> Bool
+hasUtcRangeChanged model comparisonRange localZone today =
+    if model.isOpen then
+        False
+
+    else
+        utcSelectionRange localZone today model == comparisonRange
+
+
+hasLocalRangeChanged : Model -> Maybe PosixRange -> Posix -> Bool
+hasLocalRangeChanged model comparisonRange today =
+    if model.isOpen then
+        False
+
+    else
+        localSelectionRange today model == comparisonRange
+
+
 {-| A helper function to change the calendar type on an existing model
 -}
 setCalendarType : CalendarType -> Model -> Model
@@ -1667,8 +1710,8 @@ setCalendarType calendarType model =
     { model | calendarType = calendarType }
 
 
-getLocalSelection : Posix -> Model -> Maybe Selection
-getLocalSelection today model =
+localSelection : Posix -> Model -> Maybe Selection
+localSelection today model =
     case model.selection of
         SingleSelection pos ->
             Single pos
@@ -1689,8 +1732,8 @@ getLocalSelection today model =
                 |> Just
 
 
-getUtcSelection : Zone -> Posix -> Model -> Maybe Selection
-getUtcSelection zone today model =
+utcSelection : Zone -> Posix -> Model -> Maybe Selection
+utcSelection zone today model =
     let
         correctDate =
             adjustMilliseconds zone
@@ -1718,8 +1761,8 @@ getUtcSelection zone today model =
                 |> Just
 
 
-getUtcSelectionRange : Zone -> Posix -> Model -> Maybe PosixRange
-getUtcSelectionRange zone today model =
+utcSelectionRange : Zone -> Posix -> Model -> Maybe PosixRange
+utcSelectionRange zone today model =
     let
         correctDate =
             adjustMilliseconds zone
@@ -1748,8 +1791,8 @@ getUtcSelectionRange zone today model =
                 |> Just
 
 
-getLocalSelectionRange : Posix -> Model -> Maybe PosixRange
-getLocalSelectionRange today model =
+localSelectionRange : Posix -> Model -> Maybe PosixRange
+localSelectionRange today model =
     case model.selection of
         SingleSelection pos ->
             { start = pos, end = pos }
