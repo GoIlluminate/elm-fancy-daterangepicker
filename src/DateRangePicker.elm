@@ -2,8 +2,8 @@ module DateRangePicker exposing
     ( Msg, Model, subscriptions, view, update
     , open
     , Selection(..), Format(..), PosixRange
-    , setCalendarType, presetToDisplayString, presetToPosixRange
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, singleFormatter, utcSelection, utcSelectionRange
+    , setCalendarType, presetToDisplayString
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange
     )
 
 {-| A customizable date picker component.
@@ -157,7 +157,7 @@ If you select a preset you can use @presetToPosixRange to get the appropriate po
 type Selection
     = Single Posix
     | Range PosixRange
-    | Preset PresetType PosixRange
+    | Preset PresetType
 
 
 {-| The type which specifies what size calendar you want to display
@@ -205,6 +205,7 @@ type alias Model =
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
     , displayFormat : Format
     , datePickerType : DatePickerType
+    , hidePresets : Bool
     }
 
 
@@ -233,6 +234,7 @@ init =
     , keyboardSelectedPreset = Nothing
     , displayFormat = DateFormat
     , datePickerType = DateRangePicker
+    , hidePresets = False
     }
 
 
@@ -246,6 +248,8 @@ type alias Config =
     , isOpen : Bool
     , languageConfig : LanguageConfig
     , datePickerType : DatePickerType
+    , hidePresets : Bool
+    , defaultSelection : Maybe Selection
     }
 
 
@@ -288,14 +292,7 @@ englishLanguageConfig =
 -}
 initWithOptions : Config -> Model
 initWithOptions config =
-    { init
-        | availableForSelectionStart = config.availableForSelectionStart
-        , availableForSelectionEnd = config.availableForSelectionEnd
-        , presets = config.presets
-        , calendarType = config.calendarType
-        , isOpen = config.isOpen
-        , datePickerType = config.datePickerType
-    }
+    updateModelWithConfig init config
 
 
 {-| A default config which can be combined with @initWithOptions so that you only need to specify the fields which you want to customize
@@ -309,6 +306,8 @@ defaultConfig =
     , isOpen = False
     , languageConfig = englishLanguageConfig
     , datePickerType = DateRangePicker
+    , hidePresets = False
+    , defaultSelection = Nothing
     }
 
 
@@ -570,6 +569,24 @@ update msg model =
             R2.withNoCmd updatedModel
 
 
+selectionToInternalSelection : Maybe Selection -> InternalSelection
+selectionToInternalSelection selection =
+    Maybe.withDefault Unselected <|
+        Maybe.map
+            (\s ->
+                case s of
+                    Single val ->
+                        SingleSelection val
+
+                    Range val ->
+                        RangeSelection val
+
+                    Preset val ->
+                        PresetSelection val
+            )
+            selection
+
+
 finishInput : Posix -> Model -> Model
 finishInput today model =
     let
@@ -699,8 +716,8 @@ onKeyDown model today key =
 
 
 createSelectListWithLast : List PresetType -> Maybe (SelectList PresetType)
-createSelectListWithLast presets =
-    Maybe.map SelectList.selectLast (SelectList.fromList presets)
+createSelectListWithLast allPresets =
+    Maybe.map SelectList.selectLast (SelectList.fromList allPresets)
 
 
 arrowMovement : Model -> Int -> (List PresetType -> Maybe (SelectList PresetType)) -> ( Model, Cmd Msg )
@@ -880,7 +897,7 @@ view today zone model =
 
 presetsDisplay : Model -> Posix -> Html Msg
 presetsDisplay model today =
-    if List.isEmpty model.presets then
+    if List.isEmpty model.presets || model.hidePresets then
         div [] []
 
     else if model.isPresetMenuOpen then
@@ -1667,22 +1684,22 @@ isOpen model =
     model.isOpen
 
 
-hasUtcSelectionChanged : Model -> Maybe Selection -> Zone -> Posix -> Bool
-hasUtcSelectionChanged model comparisonSelection localZone today =
+hasUtcSelectionChanged : Model -> Maybe Selection -> Zone -> Bool
+hasUtcSelectionChanged model comparisonSelection localZone =
     if model.isOpen then
         False
 
     else
-        utcSelection localZone today model == comparisonSelection
+        utcSelection localZone model == comparisonSelection
 
 
-hasLocalSelectionChanged : Model -> Maybe Selection -> Posix -> Bool
-hasLocalSelectionChanged model comparisonSelection today =
+hasLocalSelectionChanged : Model -> Maybe Selection -> Bool
+hasLocalSelectionChanged model comparisonSelection =
     if model.isOpen then
         False
 
     else
-        localSelection today model == comparisonSelection
+        localSelection model == comparisonSelection
 
 
 hasUtcRangeChanged : Model -> Maybe PosixRange -> Zone -> Posix -> Bool
@@ -1710,16 +1727,14 @@ setCalendarType calendarType model =
     { model | calendarType = calendarType }
 
 
-localSelection : Posix -> Model -> Maybe Selection
-localSelection today model =
+localSelection : Model -> Maybe Selection
+localSelection model =
     case model.selection of
         SingleSelection pos ->
-            Single pos
-                |> Just
+            Just <| Single pos
 
         RangeSelection range ->
-            Range { start = range.start, end = range.end }
-                |> Just
+            Just <| Range range
 
         Unselected ->
             Nothing
@@ -1728,27 +1743,18 @@ localSelection today model =
             Nothing
 
         PresetSelection presetType ->
-            Preset presetType (presetToPosixRange presetType today utc)
-                |> Just
+            Just <| Preset presetType
 
 
-utcSelection : Zone -> Posix -> Model -> Maybe Selection
-utcSelection zone today model =
-    let
-        correctDate =
-            adjustMilliseconds zone
-
-        fixRange { start, end } =
-            { start = correctDate start, end = correctDate end }
-    in
+utcSelection : Zone -> Model -> Maybe Selection
+utcSelection zone model =
     case model.selection of
         SingleSelection pos ->
-            Single (correctDate pos)
+            Single (adjustMilliseconds zone pos)
                 |> Just
 
         RangeSelection range ->
-            Range { start = correctDate range.start, end = correctDate range.end }
-                |> Just
+            Just <| Range <| convertRangeToUtc zone range
 
         Unselected ->
             Nothing
@@ -1757,27 +1763,23 @@ utcSelection zone today model =
             Nothing
 
         PresetSelection presetType ->
-            Preset presetType (presetToPosixRange presetType today zone |> fixRange)
-                |> Just
+            Just <| Preset presetType
+
+
+convertRangeToUtc : Zone -> PosixRange -> PosixRange
+convertRangeToUtc zone { start, end } =
+    { start = adjustMilliseconds zone start, end = adjustMilliseconds zone end }
 
 
 utcSelectionRange : Zone -> Posix -> Model -> Maybe PosixRange
 utcSelectionRange zone today model =
-    let
-        correctDate =
-            adjustMilliseconds zone
-
-        fixRange { start, end } =
-            { start = correctDate start, end = correctDate end }
-    in
     case model.selection of
         SingleSelection pos ->
-            { start = correctDate pos, end = correctDate pos }
+            { start = adjustMilliseconds zone pos, end = adjustMilliseconds zone pos }
                 |> Just
 
         RangeSelection range ->
-            { start = correctDate range.start, end = correctDate range.end }
-                |> Just
+            Just <| convertRangeToUtc zone range
 
         Unselected ->
             Nothing
@@ -1786,21 +1788,17 @@ utcSelectionRange zone today model =
             Nothing
 
         PresetSelection presetType ->
-            presetToPosixRange presetType today zone
-                |> fixRange
-                |> Just
+            Just <| presetToUtcPosixRange presetType today zone
 
 
 localSelectionRange : Posix -> Model -> Maybe PosixRange
 localSelectionRange today model =
     case model.selection of
         SingleSelection pos ->
-            { start = pos, end = pos }
-                |> Just
+            Just <| { start = pos, end = pos }
 
         RangeSelection range ->
-            { start = range.start, end = range.end }
-                |> Just
+            Just range
 
         Unselected ->
             Nothing
@@ -1809,8 +1807,31 @@ localSelectionRange today model =
             Nothing
 
         PresetSelection presetType ->
-            presetToPosixRange presetType today utc
-                |> Just
+            Just <| presetToLocalPosixRange presetType today
+
+
+presets : Model -> List PresetType
+presets model =
+    model.presets
+
+
+updateModelWithConfig : Model -> Config -> Model
+updateModelWithConfig model config =
+    { model
+        | availableForSelectionStart = config.availableForSelectionStart
+        , availableForSelectionEnd = config.availableForSelectionEnd
+        , presets = config.presets
+        , calendarType = config.calendarType
+        , isOpen = config.isOpen
+        , datePickerType = config.datePickerType
+        , hidePresets = config.hidePresets
+        , selection = selectionToInternalSelection config.defaultSelection
+    }
+
+
+setSelection : Model -> Maybe Selection -> Model
+setSelection model selection =
+    { model | selection = selectionToInternalSelection selection }
 
 
 
@@ -1859,8 +1880,6 @@ convertInterval interval intervalValue today localZone =
             addYears intervalValue today
 
 
-{-| A helper function to get the posix range for a given preset
--}
 presetToPosixRange : PresetType -> Posix -> Zone -> PosixRange
 presetToPosixRange presetType today localZone =
     case presetType of
@@ -1887,6 +1906,20 @@ presetToPosixRange presetType today localZone =
                 convertInterval customPreset.intervalEnd customPreset.intervalEndValue today localZone
                     |> getEndOfDay
             }
+
+
+{-| A helper function to get the posix range for a given preset in utc time
+-}
+presetToUtcPosixRange : PresetType -> Posix -> Zone -> PosixRange
+presetToUtcPosixRange presetType today zone =
+    convertRangeToUtc zone <| presetToPosixRange presetType today zone
+
+
+{-| A helper function to get the posix range for a given preset in local time
+-}
+presetToLocalPosixRange : PresetType -> Posix -> PosixRange
+presetToLocalPosixRange presetType today =
+    presetToPosixRange presetType today utc
 
 
 downArrow : Html msg
