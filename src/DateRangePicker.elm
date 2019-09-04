@@ -1639,8 +1639,8 @@ getEndOfDay posix =
             { dateRecord
                 | hour = 23
                 , minute = 59
-                , second = 0
-                , millis = 0
+                , second = 59
+                , millis = 999
             }
     in
     civilToPosix updatedDateRecord
