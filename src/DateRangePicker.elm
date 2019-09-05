@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, localSelectionSingle, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, setSelection, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange, utcSelectionSingle
     )
 
 {-| A customizable date picker component.
@@ -1812,6 +1812,16 @@ localSelectionRange today model =
 
         PresetSelection presetType ->
             Just <| presetToLocalPosixRange presetType today
+
+
+utcSelectionSingle : Zone -> Posix -> Model -> Maybe Posix
+utcSelectionSingle zone today model =
+    Maybe.map .start (utcSelectionRange zone today model)
+
+
+localSelectionSingle : Posix -> Model -> Maybe Posix
+localSelectionSingle today model =
+    Maybe.map .start (localSelectionRange today model)
 
 
 presets : Model -> List PresetType
