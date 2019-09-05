@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, localSelection, localSelectionRange, localSelectionSingle, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, setSelection, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange, utcSelectionSingle
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, languageConfig, localSelection, localSelectionRange, localSelectionSingle, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, setSelection, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange, utcSelectionSingle
     )
 
 {-| A customizable date picker component.
@@ -1518,17 +1518,17 @@ getVisibleRangeFromSelection selection calendarType today =
 
 
 prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
-prettyFormatSelection selection languageConfig format =
+prettyFormatSelection selection language format =
     case selection of
         SingleSelection posix ->
-            singleFormatter languageConfig format utc posix
+            singleFormatter language format utc posix
 
         RangeSelection posixRange ->
             if isSameDay posixRange.start posixRange.end && format /= DateTimeFormat then
-                singleFormatter languageConfig format utc posixRange.start
+                singleFormatter language format utc posixRange.start
 
             else
-                fullFormatter languageConfig format utc posixRange.start posixRange.end
+                fullFormatter language format utc posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -1537,7 +1537,7 @@ prettyFormatSelection selection languageConfig format =
             ""
 
         PresetSelection presetType ->
-            presetToDisplayString presetType languageConfig
+            presetToDisplayString presetType language
 
 
 singleFormatter : LanguageConfig -> Format -> Zone -> Posix -> String
@@ -1827,6 +1827,11 @@ localSelectionSingle today model =
 presets : Model -> List PresetType
 presets model =
     model.presets
+
+
+languageConfig : Model -> LanguageConfig
+languageConfig model =
+    model.languageConfig
 
 
 updateModelWithConfig : Model -> Config -> Model
