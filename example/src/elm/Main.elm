@@ -141,7 +141,7 @@ view model =
         getLocal datepicker =
             case model.today of
                 Just t ->
-                    case ( DateRangePicker.getLocalSelectionRange t datepicker, model.zone ) of
+                    case ( DateRangePicker.localSelectionRange t datepicker, model.zone ) of
                         ( Just pos, Just tz ) ->
                             ( DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
                             , DateCore.getTzOffset tz pos.start
@@ -156,7 +156,7 @@ view model =
         utcSelection datepicker =
             case model.today of
                 Just t ->
-                    case DateRangePicker.getUtcSelectionRange (Maybe.withDefault Time.utc model.zone) t datepicker of
+                    case DateRangePicker.utcSelectionRange (Maybe.withDefault Time.utc model.zone) t datepicker of
                         Just range ->
                             DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
 

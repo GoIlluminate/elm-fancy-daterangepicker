@@ -357,9 +357,15 @@ subscriptions model today zone =
 
             else
                 []
+        
+        closeSub = 
+            if model.isMouseOutside && not model.isMouseDown then
+                [Browser.Events.onClick (Json.succeed <| Close today)]
+            else
+                []
     in
     if model.isOpen then
-        List.concat [ shiftSubs, mouseSubs, keyDowns ] |> Sub.batch
+        List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub ] |> Sub.batch
 
     else
         Sub.none
@@ -383,7 +389,7 @@ update msg model =
                 { model | isOpen = True }
 
         Close today ->
-            R2.withNoCmd <| finishInput today { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
+            R2.withNoCmd <| finishInput today { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -524,7 +530,7 @@ update msg model =
                 visibleRange =
                     calcRange today model
             in
-            case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
+            case Debug.log " " ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
                     case calculateMousePosition element position of
                         OutsideRight ->
@@ -876,13 +882,19 @@ view today zone model =
         div [ Attrs.class "elm-fancy--daterangepicker" ]
             [ div
                 [ Attrs.class "close"
-                , Html.Events.onClick <| Close today
                 , mouseEvent
                 , Html.Events.onMouseLeave <| SetMouseOutside False
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div (List.append [ Attrs.class "body", Attrs.id "elm-fancy--daterangepicker--wrapper" ] (calendarPositioning model.uiButton model.uiElement))
+            , div 
+                (List.append
+                    [ Attrs.class "body"
+                    , Attrs.id "elm-fancy--daterangepicker--wrapper"
+                    , mouseEvent
+                    ] 
+                    (calendarPositioning model.uiButton model.uiElement)
+                )
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange model zone
                 , rightSelector visibleRange model zone
@@ -1043,7 +1055,7 @@ createSelectionInRange model zone posixRange =
             dateToPosixRange model.availableForSelectionEnd zone
 
         updatedSelectionStart =
-            if Debug.log "bool" (posixToMillis posixRange.start < posixToMillis startRange.start) then
+            if (posixToMillis posixRange.start < posixToMillis startRange.start) then
                 startRange.start
 
             else
