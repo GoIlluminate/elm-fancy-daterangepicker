@@ -339,10 +339,10 @@ defaultOpener model openerId =
                 selectionValue
     in
     button
-        [ Attrs.class "elm-fancy--daterangepicker--opener", Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ] ]
+        [ Attrs.class "elm-fancy--daterangepicker--opener", Attrs.id openerId, Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ] ]
         [ div [ Attrs.class "opener--content" ]
             [ calendarIcon
-            , div [ Attrs.class "opener-text", open openerId, Attrs.id openerId ] [ text displayValue ]
+            , div [ Attrs.class "opener-text", open openerId ] [ text displayValue ]
             , downArrow
             ]
         ]
@@ -556,7 +556,7 @@ update msg model =
                 visibleRange =
                     calcRange today model
             in
-            case Debug.log " " ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
+            case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
                     case calculateMousePosition element position of
                         OutsideRight ->
@@ -1385,10 +1385,10 @@ calculateYPosition button calendar =
     let
         ( yNum, yName ) =
             if button.element.y < (button.scene.height / 2) then
-                ( additionalCalcForTop 0, "top" )
+                ( additionalCalcForTop -button.element.height, "top" )
 
             else
-                ( additionalCalcForBottom button.element.height, "bottom" )
+                ( additionalCalcForBottom 0, "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then
@@ -1399,7 +1399,7 @@ calculateYPosition button calendar =
 
         additionalCalcForTop num =
             if (button.scene.height - button.element.y) > calendar.element.height then
-                0
+                num
 
             else
                 -(button.element.height + button.element.y)
@@ -1416,7 +1416,7 @@ calculateXPosition button calendar =
     let
         ( xNum, xName ) =
             if button.element.x > (button.scene.width / 2) then
-                ( additionalCalcForRight 0, "right" )
+                additionalCalcForRight 0 "right"
 
             else
                 ( additionalCalcForLeft 0, "left" )
@@ -1428,12 +1428,12 @@ calculateXPosition button calendar =
             else
                 num
 
-        additionalCalcForRight num =
-            if (button.scene.width - button.element.x) > calendar.element.width then
-                num + 15
+        additionalCalcForRight num curPosName =
+            if (button.scene.width - button.element.x) > (calendar.element.width + 15) then
+                ( -((button.scene.width - button.element.x) - calendar.element.width), "left" )
 
             else
-                num
+                ( num, curPosName )
     in
     Attrs.style xName
         (xNum
