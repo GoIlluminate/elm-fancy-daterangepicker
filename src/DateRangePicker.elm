@@ -357,10 +357,11 @@ subscriptions model today zone =
 
             else
                 []
-        
-        closeSub = 
+
+        closeSub =
             if model.isMouseOutside && not model.isMouseDown then
-                [Browser.Events.onClick (Json.succeed <| Close today)]
+                [ Browser.Events.onClick (Json.succeed <| Close today) ]
+
             else
                 []
     in
@@ -887,12 +888,12 @@ view today zone model =
                 , Html.Events.onMouseEnter <| SetMouseOutside True
                 ]
                 []
-            , div 
+            , div
                 (List.append
                     [ Attrs.class "body"
                     , Attrs.id "elm-fancy--daterangepicker--wrapper"
                     , mouseEvent
-                    ] 
+                    ]
                     (calendarPositioning model.uiButton model.uiElement)
                 )
                 [ topBar model visibleRange adjustedToday zone
@@ -1055,7 +1056,7 @@ createSelectionInRange model zone posixRange =
             dateToPosixRange model.availableForSelectionEnd zone
 
         updatedSelectionStart =
-            if (posixToMillis posixRange.start < posixToMillis startRange.start) then
+            if posixToMillis posixRange.start < posixToMillis startRange.start then
                 startRange.start
 
             else
@@ -1149,7 +1150,7 @@ convertInputDate inputDate =
             RangeSelection <| yearAndMonthToPosixRange yearAndMonth utc
 
         FullDate dateParts ->
-            RangeSelection <| datePartsToPosixRange dateParts utc
+            SingleSelection <| datePartsToPosix dateParts utc
 
         FullDateTime dateTimeParts ->
             SingleSelection <| dateTimePartsToPosix dateTimeParts utc
