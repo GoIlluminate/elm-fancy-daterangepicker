@@ -15,6 +15,8 @@ type Msg
     | NewTime Posix
     | NewZone Zone
     | DatePickerMsgs DateRangePicker.Msg
+    | DatePickerMsgsAbs DateRangePicker.Msg
+    | DatePickerMsgsFixed DateRangePicker.Msg
     | ToggleColorTheme
 
 
@@ -26,6 +28,8 @@ type ColorTheme
 type alias Model =
     { calendarDisplay : DateRangePicker.CalendarType
     , datePicker : DateRangePicker.Model
+    , datePickerabs : DateRangePicker.Model
+    , datePickerfixed : DateRangePicker.Model
     , today : Maybe Posix
     , zone : Maybe Zone
     , colorTheme : ColorTheme
@@ -61,6 +65,8 @@ init =
     in
     ( { calendarDisplay = calendarDisplay
       , datePicker = initDatePicker
+      , datePickerabs = initDatePicker
+      , datePickerfixed = initDatePicker
       , today = Nothing
       , zone = Nothing
       , colorTheme = Light
@@ -97,6 +103,20 @@ update msg model =
                     DateRangePicker.update msg_ model.datePicker
             in
             ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
+
+        DatePickerMsgsAbs msg_ ->
+            let
+                ( newDateRangePicker, dateRangePickerCmd ) =
+                    DateRangePicker.update msg_ model.datePickerabs
+            in
+            ( { model | datePickerabs = newDateRangePicker }, Cmd.map DatePickerMsgsAbs dateRangePickerCmd )
+
+        DatePickerMsgsFixed msg_ ->
+            let
+                ( newDateRangePicker, dateRangePickerCmd ) =
+                    DateRangePicker.update msg_ model.datePickerfixed
+            in
+            ( { model | datePickerfixed = newDateRangePicker }, Cmd.map DatePickerMsgsFixed dateRangePickerCmd )
 
         NewZone zone ->
             ( { model | zone = Just zone }, Cmd.none )
@@ -138,7 +158,13 @@ view model =
                     text ""
 
         selector1 =
-            getSelector model.datePicker "datepicker--button" ""
+            getSelector model.datePicker "datepicker--button" "relative-class"
+
+        selectorabs =
+            getSelector model.datePickerabs "datepicker--buttonabs" "absolute-class"
+
+        selectorfixed =
+            getSelector model.datePickerfixed "datepicker--buttonfixed" "fixed-class"
 
         getLocal datepicker =
             case model.today of
@@ -179,6 +205,8 @@ view model =
         [ calendarDisplayOptions model
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
         , Html.map DatePickerMsgs selector1
+        , Html.map DatePickerMsgsAbs selectorabs
+        , Html.map DatePickerMsgsFixed selectorfixed
         ]
 
 

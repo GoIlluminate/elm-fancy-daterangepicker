@@ -1349,11 +1349,11 @@ calculateYPosition : Element -> Element -> Attribute msg
 calculateYPosition button calendar =
     let
         ( yNum, yName ) =
-            if button.element.y < (button.viewport.height / 2) then
+            if button.element.y < (button.scene.height / 2) then
                 ( additionalCalcForTop (button.element.height + button.element.y), "top" )
 
             else
-                ( additionalCalcForBottom (button.viewport.height - button.element.y), "bottom" )
+                ( additionalCalcForBottom (button.scene.height - button.element.y), "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then
@@ -1363,7 +1363,7 @@ calculateYPosition button calendar =
                 num + (button.element.y - calendar.element.height - button.element.height)
 
         additionalCalcForTop num =
-            if (button.viewport.height - button.element.y) > calendar.element.height then
+            if (button.scene.height - button.element.y) > calendar.element.height then
                 num
 
             else
@@ -1383,8 +1383,8 @@ calculateXPosition button calendar =
             15
 
         ( xNum, xName ) =
-            if button.element.x > (button.viewport.width / 2) then
-                ( additionalCalcForRight ((button.viewport.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
+            if button.element.x > (button.scene.width / 2) then
+                ( additionalCalcForRight ((button.scene.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
 
             else
                 ( additionalCalcForLeft button.element.x, "left" )
@@ -1397,7 +1397,7 @@ calculateXPosition button calendar =
                 num
 
         additionalCalcForRight num =
-            if (button.viewport.width - button.element.x) > calendar.element.width then
+            if (button.scene.width - button.element.x) > calendar.element.width then
                 num + sideButtonRadius
 
             else

@@ -265,3 +265,13 @@
     }
   }
 }
+.relative-class {
+    position: relative;
+}
+.absolute-class {
+    position: absolute;
+}
+.fixed-class {
+    position: fixed;
+    top: 500px;
+}
