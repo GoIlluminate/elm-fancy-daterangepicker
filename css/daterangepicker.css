@@ -493,4 +493,45 @@
 
 .fixed-class {
   position: fixed;
-  top: 500px; }
+  top: 250px;
+  right: 200px; }
+
+.elm-fancy--daterangepicker--opener.theme-light,
+.theme-light .elm-fancy--daterangepicker--opener {
+  display: table;
+  border: unset;
+  background: unset;
+  outline: unset; }
+  .elm-fancy--daterangepicker--opener.theme-light:focus,
+  .theme-light .elm-fancy--daterangepicker--opener:focus {
+    background-color: #f4f8ff; }
+  .elm-fancy--daterangepicker--opener.theme-light .opener--content,
+  .theme-light .elm-fancy--daterangepicker--opener .opener--content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #4382ff;
+    cursor: pointer; }
+  .elm-fancy--daterangepicker--opener.theme-light .opener-text,
+  .theme-light .elm-fancy--daterangepicker--opener .opener-text {
+    margin: 0 2px 0 10px; }
+
+.elm-fancy--daterangepicker--opener.theme-dark,
+.theme-dark .elm-fancy--daterangepicker--opener {
+  display: table;
+  border: unset;
+  background: unset;
+  outline: unset; }
+  .elm-fancy--daterangepicker--opener.theme-dark:focus,
+  .theme-dark .elm-fancy--daterangepicker--opener:focus {
+    background-color: #3f4147; }
+  .elm-fancy--daterangepicker--opener.theme-dark .opener--content,
+  .theme-dark .elm-fancy--daterangepicker--opener .opener--content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #4382ff;
+    cursor: pointer; }
+  .elm-fancy--daterangepicker--opener.theme-dark .opener-text,
+  .theme-dark .elm-fancy--daterangepicker--opener .opener-text {
+    margin: 0 2px 0 10px; }
