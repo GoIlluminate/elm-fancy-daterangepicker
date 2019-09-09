@@ -1451,8 +1451,8 @@ selectionPoints comparisonPosix { selection } today localZone =
             posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
     in
     case selection of
-        SingleSelection _ ->
-            ( Nothing, Nothing, False )
+        SingleSelection posix ->
+            ( Just posix, Just posix, False )
 
         RangeSelection posixRange ->
             ( Just posixRange.start, Just posixRange.end, compareRange posixRange )
