@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , open
     , Selection(..), Format(..), PosixRange
     , setCalendarType, presetToDisplayString
-    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, languageConfig, localSelection, localSelectionRange, localSelectionSingle, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, setSelection, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange, utcSelectionSingle
+    , CalendarType(..), Config, CustomPreset, DatePickerType(..), Interval(..), LanguageConfig, PresetType(..), defaultConfig, defaultOpener, englishLanguageConfig, fullFormatter, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, init, initWithOptions, isOpen, languageConfig, localSelection, localSelectionRange, localSelectionSingle, presetToLocalPosixRange, presetToUtcPosixRange, presets, selectPreset, setOpen, setSelection, singleFormatter, updateModelWithConfig, utcSelection, utcSelectionRange, utcSelectionSingle
     )
 
 {-| A customizable date picker component.
@@ -52,7 +52,7 @@ import Keyboard exposing (Key(..), RawKey)
 import Keyboard.Events exposing (Event(..))
 import Return2 as R2
 import SelectList exposing (SelectList)
-import Svg exposing (g, svg)
+import Svg exposing (g, path, svg)
 import Svg.Attributes as Svg
 import Task
 import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
@@ -258,7 +258,8 @@ type alias Config =
 type alias LanguageConfig =
     { done : String
     , reset : String
-    , inputPlaceholder : String
+    , datePickerInputPlaceholder : String
+    , dateRangePickerInputPlaceholder : String
     , presets : String
     , today : String
     , yesterday : String
@@ -276,7 +277,8 @@ englishLanguageConfig : LanguageConfig
 englishLanguageConfig =
     { done = "Done"
     , reset = "Reset"
-    , inputPlaceholder = "Start date - End date"
+    , datePickerInputPlaceholder = "Select a date"
+    , dateRangePickerInputPlaceholder = "Select a date range"
     , presets = "Presets"
     , today = "Today"
     , yesterday = "Yesterday"
@@ -319,8 +321,31 @@ You will need to call convert the message to the appropriate type via Html.map
 
 -}
 open : String -> Attribute Msg
-open buttonId =
-    Html.Events.onClick (Open buttonId)
+open openerId =
+    Html.Events.onClick (Open openerId)
+
+
+defaultOpener : Model -> String -> Html Msg
+defaultOpener model openerId =
+    let
+        selectionValue =
+            prettyFormatSelection model.selection model.languageConfig model.displayFormat
+
+        displayValue =
+            if String.isEmpty selectionValue then
+                inputPlaceHolder model
+
+            else
+                selectionValue
+    in
+    button
+        [ Attrs.class "elm-fancy--daterangepicker--opener", Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ] ]
+        [ div [ Attrs.class "opener--content" ]
+            [ calendarIcon
+            , div [ Attrs.class "opener-text", open openerId, Attrs.id openerId ] [ text displayValue ]
+            , downArrow
+            ]
+        ]
 
 
 {-| The subscriptions for the datepicker
@@ -1085,11 +1110,21 @@ calendarInput model today =
             , Html.Events.onBlur <| OnInputFinish today
             , Html.Events.onInput OnInputChange
             , Attrs.id "elm-fancy--daterangepicker--input"
-            , Attrs.placeholder model.languageConfig.inputPlaceholder
+            , Attrs.placeholder <| inputPlaceHolder model
             , Attrs.value model.inputText
             ]
             []
         ]
+
+
+inputPlaceHolder : Model -> String
+inputPlaceHolder model =
+    case model.datePickerType of
+        DateRangePicker ->
+            model.languageConfig.dateRangePickerInputPlaceholder
+
+        DatePicker ->
+            model.languageConfig.datePickerInputPlaceholder
 
 
 convertInput : Input -> Model -> ( InternalSelection, Format )
@@ -1531,14 +1566,14 @@ prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
 prettyFormatSelection selection language format =
     case selection of
         SingleSelection posix ->
-            singleFormatter language format utc posix
+            singleFormatter language format posix
 
         RangeSelection posixRange ->
             if isSameDay posixRange.start posixRange.end && format /= DateTimeFormat then
-                singleFormatter language format utc posixRange.start
+                singleFormatter language format posixRange.start
 
             else
-                fullFormatter language format utc posixRange.start posixRange.end
+                fullFormatter language format posixRange.start posixRange.end
 
         Unselected ->
             ""
@@ -1550,7 +1585,7 @@ prettyFormatSelection selection language format =
             presetToDisplayString presetType language
 
 
-singleFormatter : LanguageConfig -> Format -> Zone -> Posix -> String
+singleFormatter : LanguageConfig -> Format -> Posix -> String
 singleFormatter language format =
     let
         timeParts =
@@ -1574,6 +1609,7 @@ singleFormatter language format =
          ]
             ++ timeParts
         )
+        utc
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String
@@ -1583,11 +1619,11 @@ monthFormatter language =
         ]
 
 
-fullFormatter : LanguageConfig -> Format -> Zone -> Posix -> Posix -> String
-fullFormatter language format zone start end =
-    singleFormatter language format zone start
+fullFormatter : LanguageConfig -> Format -> Posix -> Posix -> String
+fullFormatter language format start end =
+    singleFormatter language format start
         ++ " to "
-        ++ singleFormatter language format zone end
+        ++ singleFormatter language format end
 
 
 
@@ -1696,6 +1732,11 @@ getStartOfDay posix =
 isOpen : Model -> Bool
 isOpen model =
     model.isOpen
+
+
+setOpen : Model -> Bool -> Model
+setOpen model openState =
+    { model | isOpen = openState }
 
 
 hasUtcSelectionChanged : Model -> Maybe Selection -> Zone -> Bool
@@ -1957,6 +1998,24 @@ downArrow =
         [ g [ Svg.stroke "none", Svg.strokeWidth "1", Svg.fill "none", Svg.fillRule "evenodd", Svg.strokeLinecap "round", Svg.strokeLinejoin "round" ]
             [ g [ Svg.transform "translate(15.000000, 15.000000) scale(-1, 1) rotate(90.000000) translate(-15.000000, -15.000000) translate(12.000000, 9.000000)", Svg.stroke "currentColor", Svg.strokeWidth "2" ]
                 [ Svg.polyline [ Svg.points "0 12 6 6 0 0" ]
+                    []
+                ]
+            ]
+        ]
+
+
+calendarIcon : Html msg
+calendarIcon =
+    svg [ Svg.width "30", Svg.height "30", Svg.viewBox "0 0 30 30" ]
+        [ g [ Svg.stroke "none", Svg.strokeWidth "1", Svg.fill "none", Svg.fillRule "evenodd", Svg.strokeLinecap "round", Svg.strokeLinejoin "round" ]
+            [ g [ Svg.transform "translate(6.000000, 5.000000)", Svg.stroke "currentColor", Svg.strokeWidth "2" ]
+                [ Svg.rect [ Svg.x "0", Svg.y "2", Svg.width "18", Svg.height "18", Svg.rx "2" ]
+                    []
+                , path [ Svg.d "M13,0 L13,4" ]
+                    []
+                , path [ Svg.d "M5,0 L5,4" ]
+                    []
+                , path [ Svg.d "M0,8 L18,8" ]
                     []
                 ]
             ]
