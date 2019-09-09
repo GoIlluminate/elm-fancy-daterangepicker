@@ -56,10 +56,11 @@ init =
                             }
                         ]
                     , calendarType = calendarDisplay
+                    , datePickerType = DateRangePicker.DatePicker
                 }
     in
     ( { calendarDisplay = calendarDisplay
-      , datePicker = initDatePicker 
+      , datePicker = initDatePicker
       , today = Nothing
       , zone = Nothing
       , colorTheme = Light
@@ -111,6 +112,7 @@ update msg model =
               }
             , Cmd.none
             )
+
 
 view : Model -> Html Msg
 view model =
@@ -174,9 +176,9 @@ view model =
                 ]
     in
     div [ class "main" ]
-        [ Html.map DatePickerMsgs selector1
-        , calendarDisplayOptions model
+        [ calendarDisplayOptions model
         , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
+        , Html.map DatePickerMsgs selector1
         ]
 
 
