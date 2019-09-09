@@ -339,10 +339,14 @@ defaultOpener model openerId =
                 selectionValue
     in
     button
-        [ Attrs.class "elm-fancy--daterangepicker--opener", Attrs.id openerId, Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ] ]
+        [ Attrs.class "elm-fancy--daterangepicker--opener"
+        , Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ]
+        , open openerId
+        , Attrs.id openerId
+        ]
         [ div [ Attrs.class "opener--content" ]
             [ calendarIcon
-            , div [ Attrs.class "opener-text", open openerId ] [ text displayValue ]
+            , div [ Attrs.class "opener-text" ] [ text displayValue ]
             , downArrow
             ]
         ]
