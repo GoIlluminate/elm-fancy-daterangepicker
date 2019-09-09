@@ -1163,13 +1163,13 @@ calendarView model =
             yearCalendarView model
 
         ThreeMonths ->
-            monthlyCalendarView model "two-month" 2
+            monthlyCalendarView model "monthly-small" 2
 
         TwoMonths ->
-            monthlyCalendarView model "two-month" 1
+            monthlyCalendarView model "monthly-large" 1
 
         OneMonth ->
-            monthlyCalendarView model "one-month" 0
+            monthlyCalendarView model "monthly-large" 0
 
 
 yearCalendarView : Model -> Posix -> PosixRange -> Zone -> Html Msg

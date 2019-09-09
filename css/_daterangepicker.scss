@@ -1,5 +1,8 @@
 
 .elm-fancy--daterangepicker {
+  * {
+    box-sizing: border-box;
+  }
   table {
     border-spacing: 2px 0;
   }
@@ -168,19 +171,13 @@
       grid-template-rows: repeat(4, 1fr);
       grid-template-columns: repeat(3, 1fr);
     }
-    .one-month .day {
+    .monthly-large .day {
       font-size: 16px;
-      width: 25px;
+      padding: 2px 8px;
     }
-    .two-month .day {
-      font-size: 16px;
-      width: 25px;
-      height: 20px;
-    }
-    .three-month .day {
+    .monthly-small .day {
       font-size: 14px;
-      width: 20px;
-      height: 20px;
+      padding: 2px 6px;
     }
     .day {
       display: flex;
