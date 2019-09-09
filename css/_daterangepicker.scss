@@ -125,7 +125,7 @@
 
         &:focus {
           background-color: themed('color-input-focus');
-          border: 1px solid themed('color-primary');
+          border: 1px solid $illum-color-blue;
         }
       }
     }
