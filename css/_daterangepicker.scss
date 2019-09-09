@@ -183,7 +183,9 @@
       height: 20px;
     }
     .day {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 12px;
       padding: 1px 4px;
       color: $illum-color-blue;

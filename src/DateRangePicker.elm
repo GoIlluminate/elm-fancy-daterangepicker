@@ -1325,7 +1325,7 @@ dayCalendarView zone currentMonth currentDay today model =
                 , ( "wrong-month", not contentIsInCorrectMonth )
                 ]
     in
-    td [ classList, setDate, hoverAttr ] content
+    td [ classList, setDate, hoverAttr ] [ div [] content ]
 
 
 calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
