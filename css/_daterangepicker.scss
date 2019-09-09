@@ -1,5 +1,6 @@
 
 .elm-fancy--daterangepicker {
+    position: relative;
   * {
     box-sizing: border-box;
   }
@@ -37,7 +38,7 @@
       0 4px 8px 3px themed('color-box-shadow-body2');
       border-radius: 6px;
       z-index: 1001;
-      position: fixed;
+      position: absolute;
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
       color: themed('color-text-default');
@@ -273,5 +274,6 @@
 }
 .fixed-class {
     position: fixed;
-    top: 500px;
+    top: 250px;
+    right:200px;
 }

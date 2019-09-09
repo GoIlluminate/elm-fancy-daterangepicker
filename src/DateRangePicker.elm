@@ -1350,24 +1350,24 @@ calculateYPosition button calendar =
     let
         ( yNum, yName ) =
             if button.element.y < (button.scene.height / 2) then
-                ( additionalCalcForTop (button.element.height + button.element.y), "top" )
+                ( additionalCalcForTop 0, "top" )
 
             else
-                ( additionalCalcForBottom (button.scene.height - button.element.y), "bottom" )
+                ( additionalCalcForBottom button.element.height, "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then
                 num
 
             else
-                num + (button.element.y - calendar.element.height - button.element.height)
+                -button.element.y
 
         additionalCalcForTop num =
             if (button.scene.height - button.element.y) > calendar.element.height then
-                num
+                0
 
             else
-                0
+                -(button.element.height + button.element.y)
     in
     Attrs.style yName
         (yNum
@@ -1379,26 +1379,23 @@ calculateYPosition button calendar =
 calculateXPosition : Element -> Element -> Attribute msg
 calculateXPosition button calendar =
     let
-        sideButtonRadius =
-            15
-
         ( xNum, xName ) =
             if button.element.x > (button.scene.width / 2) then
-                ( additionalCalcForRight ((button.scene.width - button.element.x) - button.element.width - sideButtonRadius), "right" )
+                ( additionalCalcForRight 0, "right" )
 
             else
-                ( additionalCalcForLeft button.element.x, "left" )
+                ( additionalCalcForLeft 0, "left" )
 
         additionalCalcForLeft num =
             if button.element.x > calendar.element.width then
-                num + (button.element.x - calendar.element.width - button.element.width)
+                -button.element.x
 
             else
                 num
 
         additionalCalcForRight num =
             if (button.scene.width - button.element.x) > calendar.element.width then
-                num + sideButtonRadius
+                num + 15
 
             else
                 num

@@ -60,7 +60,7 @@ init =
                             }
                         ]
                     , calendarType = calendarDisplay
-                    , datePickerType = DateRangePicker.DatePicker
+                    , datePickerType = DateRangePicker.DateRangePicker
                 }
     in
     ( { calendarDisplay = calendarDisplay
@@ -264,6 +264,8 @@ subscriptions model =
     in
     Sub.batch
         [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
+        , Sub.map DatePickerMsgsAbs (selectorSubscriptions model.datePickerabs)
+        , Sub.map DatePickerMsgsFixed (selectorSubscriptions model.datePickerfixed)
         ]
 
 
