@@ -3,6 +3,7 @@
   * {
     box-sizing: border-box;
   }
+
   table {
     border-spacing: 2px 0;
   }
@@ -41,9 +42,11 @@
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
       color: themed('color-text-default');
+
       .disabled {
         color: themed('color-disabled');
-        &:hover{
+
+        &:hover {
           background-color: themed('color-secondary');
           cursor: default;
           color: themed('color-disabled');
@@ -274,4 +277,26 @@
 .fixed-class {
     position: fixed;
     top: 500px;
+}
+
+.elm-fancy--daterangepicker--opener {
+  @include themify($themes) {
+    display: table;
+    border: unset;
+    background: unset;
+    outline: unset;
+    &:focus {
+      background-color: themed('color-input-focus');
+    }
+    .opener--content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: $illum-color-blue;
+      cursor: pointer;
+    }
+    .opener-text {
+      margin: 0 2px 0 10px;
+    }
+  }
 }

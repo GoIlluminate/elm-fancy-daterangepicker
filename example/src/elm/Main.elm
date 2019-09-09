@@ -149,7 +149,7 @@ view model =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
                     div [ class styleClass, class divClass ]
-                        [ button [ open buttonId, id buttonId ] [ text "Open Me!" ]
+                        [ DateRangePicker.defaultOpener model.datePicker buttonId
                         , DateRangePicker.view t z datepicker
                         , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
@@ -171,7 +171,7 @@ view model =
                 Just t ->
                     case ( DateRangePicker.localSelectionRange t datepicker, model.zone ) of
                         ( Just pos, Just tz ) ->
-                            ( DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc pos.start pos.end
+                            ( DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat pos.start pos.end
                             , DateCore.getTzOffset tz pos.start
                             )
 
@@ -186,7 +186,7 @@ view model =
                 Just t ->
                     case DateRangePicker.utcSelectionRange (Maybe.withDefault Time.utc model.zone) t datepicker of
                         Just range ->
-                            DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat Time.utc range.start range.end
+                            DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat range.start range.end
 
                         _ ->
                             ""
