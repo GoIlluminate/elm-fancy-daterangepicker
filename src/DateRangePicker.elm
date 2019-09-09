@@ -1745,38 +1745,31 @@ setOpen model openState =
 
 hasUtcSelectionChanged : Model -> Maybe Selection -> Zone -> Bool
 hasUtcSelectionChanged model comparisonSelection localZone =
-    if model.isOpen then
-        False
-
-    else
-        utcSelection localZone model == comparisonSelection
+    checkForChange (utcSelection localZone) model comparisonSelection
 
 
 hasLocalSelectionChanged : Model -> Maybe Selection -> Bool
-hasLocalSelectionChanged model comparisonSelection =
-    if model.isOpen then
-        False
-
-    else
-        localSelection model == comparisonSelection
+hasLocalSelectionChanged =
+    checkForChange localSelection
 
 
 hasUtcRangeChanged : Model -> Maybe PosixRange -> Zone -> Posix -> Bool
 hasUtcRangeChanged model comparisonRange localZone today =
-    if model.isOpen then
-        False
-
-    else
-        utcSelectionRange localZone today model == comparisonRange
+    checkForChange (utcSelectionRange localZone today) model comparisonRange
 
 
 hasLocalRangeChanged : Model -> Maybe PosixRange -> Posix -> Bool
 hasLocalRangeChanged model comparisonRange today =
+    checkForChange (localSelectionRange today) model comparisonRange
+
+
+checkForChange : (Model -> Maybe a) -> Model -> Maybe a -> Bool
+checkForChange checkFunc model elementForComparison =
     if model.isOpen then
         False
 
     else
-        localSelectionRange today model == comparisonRange
+        checkFunc model /= elementForComparison
 
 
 {-| A helper function to change the calendar type on an existing model
