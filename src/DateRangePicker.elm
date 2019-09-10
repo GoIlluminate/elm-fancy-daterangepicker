@@ -1429,10 +1429,10 @@ calculateYPosition button calendar { width, height } =
     let
         ( yNum, yName ) =
             if button.element.y < (height / 2) then
-                ( additionalCalcForTop (button.element.height + button.element.y), "top" )
+                ( additionalCalcForTop button.element.y, "top" )
 
             else
-                ( additionalCalcForBottom (height - button.element.y), "bottom" )
+                ( additionalCalcForBottom (height - (button.element.y + button.element.height)), "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then
@@ -1481,9 +1481,16 @@ calculateXPosition button calendar { width, height } =
 
             else
                 num
+
+        newNum =
+            if xNum == 0 then
+                sideButtonRadius
+
+            else
+                xNum
     in
     Attrs.style xName
-        (xNum
+        (newNum
             |> String.fromFloat
             |> addPx
         )

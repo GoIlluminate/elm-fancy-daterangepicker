@@ -1,5 +1,6 @@
 .elm-fancy--daterangepicker {
-  position: absolute; }
+  position: absolute;
+  z-index: 1000000; }
   .elm-fancy--daterangepicker * {
     box-sizing: border-box; }
   .elm-fancy--daterangepicker table {
