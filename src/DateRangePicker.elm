@@ -1563,7 +1563,7 @@ convertInput input model =
         SingleInput inputDate ->
             let
                 ( initialSelection, format ) =
-                    convertInputDate inputDate
+                    convertInputDate inputDate False
 
                 selection =
                     case model.dateSelectionType of
@@ -1599,31 +1599,42 @@ convertInput input model =
 combineInputToRange : InputDate -> InputDate -> ( InternalSelection, Format )
 combineInputToRange start end =
     let
-        ( startSelection, _ ) =
-            convertInputDate start
+        ( startSelection, startFormat ) =
+            convertInputDate start False
 
-        ( endSelection, _ ) =
-            convertInputDate end
+        ( endSelection, endFormat ) =
+            convertInputDate end True
+
+        fullFormat =
+            case ( startFormat, endFormat ) of
+                ( Just DateTimeFormat, _ ) ->
+                    DateTimeFormat
+
+                ( _, Just DateTimeFormat ) ->
+                    DateTimeFormat
+
+                _ ->
+                    DateFormat
     in
     case ( startSelection, endSelection ) of
         ( SingleSelection startPosix, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosix, end = addEndingDateTimeParts endPosix }, DateTimeFormat )
+            ( RangeSelection { start = startPosix, end = endPosix }, fullFormat )
 
         ( SingleSelection startPosix, RangeSelection endPosixRange ) ->
-            ( RangeSelection { start = startPosix, end = endPosixRange.end }, DateTimeFormat )
+            ( RangeSelection { start = startPosix, end = endPosixRange.end }, fullFormat )
 
         ( RangeSelection startPosixRange, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosixRange.start, end = addEndingDateTimeParts endPosix }, DateTimeFormat )
+            ( RangeSelection { start = startPosixRange.start, end = endPosix }, fullFormat )
 
         ( RangeSelection startPosixRange, RangeSelection endPosixRange ) ->
-            ( RangeSelection { start = startPosixRange.start, end = endPosixRange.end }, DateFormat )
+            ( RangeSelection { start = startPosixRange.start, end = endPosixRange.end }, fullFormat )
 
         _ ->
             ( Unselected, DateFormat )
 
 
-convertInputDate : InputDate -> ( InternalSelection, Maybe Format )
-convertInputDate inputDate =
+convertInputDate : InputDate -> Bool -> ( InternalSelection, Maybe Format )
+convertInputDate inputDate isEndSelection =
     case inputDate of
         JustYear year ->
             ( RangeSelection <| yearToPosixRange year utc, Nothing )
@@ -1632,10 +1643,32 @@ convertInputDate inputDate =
             ( RangeSelection <| yearAndMonthToPosixRange yearAndMonth utc, Nothing )
 
         FullDate dateParts ->
-            ( SingleSelection <| datePartsToPosix dateParts utc, Nothing )
+            let
+                unAdjustedPosix =
+                    datePartsToPosix dateParts utc
+
+                adjusted =
+                    if isEndSelection then
+                        getEndOfDay unAdjustedPosix
+
+                    else
+                        unAdjustedPosix
+            in
+            ( SingleSelection adjusted, Nothing )
 
         FullDateTime dateTimeParts ->
-            ( SingleSelection <| dateTimePartsToPosix dateTimeParts utc, Just DateTimeFormat )
+            let
+                unAdjustedPosix =
+                    dateTimePartsToPosix dateTimeParts utc
+
+                adjusted =
+                    if isEndSelection then
+                        addEndingDateTimeParts unAdjustedPosix
+
+                    else
+                        unAdjustedPosix
+            in
+            ( SingleSelection adjusted, Just DateTimeFormat )
 
 
 calendarView : Model -> Posix -> PosixRange -> Zone -> Html Msg
