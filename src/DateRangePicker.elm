@@ -1135,7 +1135,11 @@ convertInput : Input -> Model -> ( InternalSelection, Format )
 convertInput input model =
     case input of
         SingleInput inputDate ->
-            ( convertInputDate inputDate, DateFormat )
+            let
+                ( selection, format ) =
+                    convertInputDate inputDate
+            in
+            ( selection, Maybe.withDefault DateFormat format )
 
         RangeInput start end ->
             combineInputToRange start end
@@ -1156,10 +1160,10 @@ convertInput input model =
 combineInputToRange : InputDate -> InputDate -> ( InternalSelection, Format )
 combineInputToRange start end =
     let
-        startSelection =
+        ( startSelection, _ ) =
             convertInputDate start
 
-        endSelection =
+        ( endSelection, _ ) =
             convertInputDate end
     in
     case ( startSelection, endSelection ) of
@@ -1179,20 +1183,20 @@ combineInputToRange start end =
             ( Unselected, DateFormat )
 
 
-convertInputDate : InputDate -> InternalSelection
+convertInputDate : InputDate -> ( InternalSelection, Maybe Format )
 convertInputDate inputDate =
     case inputDate of
         JustYear year ->
-            RangeSelection <| yearToPosixRange year utc
+            ( RangeSelection <| yearToPosixRange year utc, Nothing )
 
         JustYearAndMonth yearAndMonth ->
-            RangeSelection <| yearAndMonthToPosixRange yearAndMonth utc
+            ( RangeSelection <| yearAndMonthToPosixRange yearAndMonth utc, Nothing )
 
         FullDate dateParts ->
-            SingleSelection <| datePartsToPosix dateParts utc
+            ( SingleSelection <| datePartsToPosix dateParts utc, Nothing )
 
         FullDateTime dateTimeParts ->
-            SingleSelection <| dateTimePartsToPosix dateTimeParts utc
+            ( SingleSelection <| dateTimePartsToPosix dateTimeParts utc, Just DateTimeFormat )
 
 
 calendarView : Model -> Posix -> PosixRange -> Zone -> Html Msg
@@ -1827,8 +1831,7 @@ utcSelectionRange : Zone -> Posix -> Model -> Maybe PosixRange
 utcSelectionRange zone today model =
     case model.selection of
         SingleSelection pos ->
-            { start = adjustMilliseconds zone <| getStartOfDay pos, end = adjustMilliseconds zone <| getEndOfDay pos }
-                |> Just
+            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
 
         RangeSelection range ->
             Just <| convertRangeToUtc zone range
@@ -1847,7 +1850,7 @@ localSelectionRange : Posix -> Model -> Maybe PosixRange
 localSelectionRange today model =
     case model.selection of
         SingleSelection pos ->
-            Just <| { start = getStartOfDay pos, end = getEndOfDay pos }
+            Just <| convertSingleIntoRange pos
 
         RangeSelection range ->
             Just range
@@ -1860,6 +1863,19 @@ localSelectionRange today model =
 
         PresetSelection presetType ->
             Just <| presetToLocalPosixRange presetType today
+
+
+convertSingleIntoRange : Posix -> PosixRange
+convertSingleIntoRange posix =
+    let
+        timeHasBeenSetByUser =
+            posix /= getStartOfDay posix
+    in
+    if timeHasBeenSetByUser then
+        { start = posix, end = posix }
+
+    else
+        { start = getStartOfDay posix, end = getEndOfDay posix }
 
 
 utcSelectionSingle : Zone -> Posix -> Model -> Maybe Posix
