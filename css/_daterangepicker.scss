@@ -125,6 +125,7 @@
       > input {
         $border: 1px;
         $padding: 5px;
+        font-size: 14px;
         width: calc(100% - #{$border * 2 + $padding});
         border: $border solid themed('color-input-border');;
         padding: $padding 0 $padding $padding;
