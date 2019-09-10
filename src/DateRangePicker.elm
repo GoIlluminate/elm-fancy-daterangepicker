@@ -1423,14 +1423,14 @@ calculateXPosition button calendar =
                 additionalCalcForRight 0 "right"
 
             else
-                ( additionalCalcForLeft 0, "left" )
+                additionalCalcForLeft 0 "left"
 
-        additionalCalcForLeft num =
+        additionalCalcForLeft num curPosName =
             if button.element.x > calendar.element.width then
-                -button.element.x
+                ( 0, "right" )
 
             else
-                num
+                ( num, curPosName )
 
         additionalCalcForRight num curPosName =
             if (button.scene.width - button.element.x) > (calendar.element.width + 15) then
