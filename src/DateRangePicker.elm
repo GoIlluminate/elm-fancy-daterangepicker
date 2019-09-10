@@ -485,7 +485,6 @@ update msg model =
                 Just date ->
                     let
                         selection =
-                            -- todo potentially fix this?
                             date
                                 |> getEndOfDay
                                 |> createSelectingRange model
@@ -1204,13 +1203,13 @@ combineInputToRange start end =
     in
     case ( startSelection, endSelection ) of
         ( SingleSelection startPosix, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosix, end = endPosix }, DateTimeFormat )
+            ( RangeSelection { start = startPosix, end = addEndingDateTimeParts endPosix }, DateTimeFormat )
 
         ( SingleSelection startPosix, RangeSelection endPosixRange ) ->
             ( RangeSelection { start = startPosix, end = endPosixRange.end }, DateTimeFormat )
 
         ( RangeSelection startPosixRange, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosixRange.start, end = endPosix }, DateTimeFormat )
+            ( RangeSelection { start = startPosixRange.start, end = addEndingDateTimeParts endPosix }, DateTimeFormat )
 
         ( RangeSelection startPosixRange, RangeSelection endPosixRange ) ->
             ( RangeSelection { start = startPosixRange.start, end = endPosixRange.end }, DateFormat )
@@ -1783,6 +1782,21 @@ getStartOfDay posix =
     civilToPosix updatedDateRecord
 
 
+addEndingDateTimeParts : Posix -> Posix
+addEndingDateTimeParts posix =
+    let
+        dateRecord =
+            posixToCivil posix
+
+        updatedDateRecord =
+            { dateRecord
+                | second = 59
+                , millis = 99
+            }
+    in
+    civilToPosix updatedDateRecord
+
+
 isOpen : Model -> Bool
 isOpen model =
     model.isOpen
@@ -1918,7 +1932,7 @@ convertSingleIntoRange posix =
             posix /= getStartOfDay posix
     in
     if timeHasBeenSetByUser then
-        { start = posix, end = posix }
+        { start = posix, end = addEndingDateTimeParts posix }
 
     else
         { start = getStartOfDay posix, end = getEndOfDay posix }
