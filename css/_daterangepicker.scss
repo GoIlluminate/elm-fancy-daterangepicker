@@ -1,6 +1,5 @@
 
 .elm-fancy--daterangepicker {
-    position: relative;
   * {
     box-sizing: border-box;
   }
@@ -39,7 +38,7 @@
       0 4px 8px 3px themed('color-box-shadow-body2');
       border-radius: 6px;
       z-index: 1001;
-      position: absolute;
+      position: fixed;
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
       color: themed('color-text-default');
@@ -268,17 +267,6 @@
       background-color: #cbcbcb;
     }
   }
-}
-.relative-class {
-    position: relative;
-}
-.absolute-class {
-    position: absolute;
-}
-.fixed-class {
-    position: fixed;
-    top: 250px;
-    right:200px;
 }
 
 .elm-fancy--daterangepicker--opener {

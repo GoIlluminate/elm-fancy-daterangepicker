@@ -32,7 +32,7 @@ module DateRangePicker exposing
 
 -}
 
-import Browser.Dom as Dom exposing (Element, Error, getElement)
+import Browser.Dom as Dom exposing (Element, Error, Viewport, getElement)
 import Browser.Events
 import Date exposing (Date)
 import DateFormat
@@ -84,6 +84,8 @@ type Msg
     | SetPresetMenu Bool
     | SelectPreset PresetType Posix
     | ToggleFormat
+    | OnWindowsResize Int Int
+    | GotViewPort (Result Error Viewport)
 
 
 type MousePosition
@@ -181,6 +183,10 @@ type Format
     | DateTimeFormat
 
 
+type alias WindowSize =
+    { width : Float, height : Float }
+
+
 {-| A record which represents the main datepicker model
 -}
 type alias Model =
@@ -206,6 +212,7 @@ type alias Model =
     , displayFormat : Format
     , datePickerType : DatePickerType
     , hidePresets : Bool
+    , windowSize : WindowSize
     }
 
 
@@ -235,6 +242,7 @@ init =
     , displayFormat = DateFormat
     , datePickerType = DateRangePicker
     , hidePresets = False
+    , windowSize = WindowSize 0 0
     }
 
 
@@ -387,6 +395,9 @@ subscriptions model today zone =
             else
                 []
 
+        window =
+            Browser.Events.onResize OnWindowsResize
+
         closeSub =
             if model.isMouseOutside && not model.isMouseDown then
                 [ Browser.Events.onClick (Json.succeed <| Close today) ]
@@ -398,7 +409,7 @@ subscriptions model today zone =
         List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub ] |> Sub.batch
 
     else
-        Sub.none
+        window
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -415,6 +426,8 @@ update msg model =
                     Dom.focus "elm-fancy--daterangepicker--input"
                 , Task.attempt OnGetDatePickerButton <|
                     getElement buttonId
+                , Task.attempt GotViewPort <|
+                    Dom.getViewport
                 ]
                 { model | isOpen = True }
 
@@ -603,6 +616,15 @@ update msg model =
                             }
             in
             R2.withNoCmd updatedModel
+
+        OnWindowsResize width height ->
+            R2.withNoCmd { model | windowSize = WindowSize (toFloat width) (toFloat height) }
+
+        GotViewPort (Result.Ok viewPort) ->
+            R2.withNoCmd { model | windowSize = WindowSize viewPort.viewport.width viewPort.viewport.height }
+
+        GotViewPort _ ->
+            R2.withNoCmd model
 
 
 selectionToInternalSelection : Maybe Selection -> InternalSelection
@@ -923,7 +945,7 @@ view today zone model =
                     , Attrs.id "elm-fancy--daterangepicker--wrapper"
                     , mouseEvent
                     ]
-                    (calendarPositioning model.uiButton model.uiElement)
+                    (calendarPositioning model.uiButton model.uiElement model.windowSize)
                 )
                 [ topBar model visibleRange adjustedToday zone
                 , leftSelector visibleRange model zone
@@ -1367,12 +1389,12 @@ dayCalendarView zone currentMonth currentDay today model =
     td [ classList, setDate, hoverAttr ] [ div [] content ]
 
 
-calendarPositioning : Maybe Element -> Maybe Element -> List (Attribute msg)
-calendarPositioning buttonElement calendarElement =
+calendarPositioning : Maybe Element -> Maybe Element -> WindowSize -> List (Attribute msg)
+calendarPositioning buttonElement calendarElement size =
     case ( buttonElement, calendarElement ) of
         ( Just button, Just calendar ) ->
-            [ calculateYPosition button calendar
-            , calculateXPosition button calendar
+            [ calculateYPosition button calendar size
+            , calculateXPosition button calendar size
             ]
 
         _ ->
@@ -1384,29 +1406,29 @@ addPx str =
     str ++ "px"
 
 
-calculateYPosition : Element -> Element -> Attribute msg
-calculateYPosition button calendar =
+calculateYPosition : Element -> Element -> WindowSize -> Attribute msg
+calculateYPosition button calendar { width, height } =
     let
         ( yNum, yName ) =
-            if button.element.y < (button.scene.height / 2) then
-                ( additionalCalcForTop -button.element.height, "top" )
+            if button.element.y < (height / 2) then
+                ( additionalCalcForTop (button.element.height + button.element.y), "top" )
 
             else
-                ( additionalCalcForBottom 0, "bottom" )
+                ( additionalCalcForBottom (height - button.element.y), "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then
                 num
 
             else
-                -button.element.y
+                num + (button.element.y - calendar.element.height - button.element.height)
 
         additionalCalcForTop num =
-            if (button.scene.height - button.element.y) > calendar.element.height then
+            if (height - button.element.y) > calendar.element.height then
                 num
 
             else
-                -(button.element.height + button.element.y)
+                0
     in
     Attrs.style yName
         (yNum
@@ -1415,29 +1437,32 @@ calculateYPosition button calendar =
         )
 
 
-calculateXPosition : Element -> Element -> Attribute msg
-calculateXPosition button calendar =
+calculateXPosition : Element -> Element -> WindowSize -> Attribute msg
+calculateXPosition button calendar { width, height } =
     let
+        sideButtonRadius =
+            15
+
         ( xNum, xName ) =
-            if button.element.x > (button.scene.width / 2) then
-                additionalCalcForRight 0 "right"
+            if button.element.x > (width / 2) then
+                ( additionalCalcForRight ((width - button.element.x) - button.element.width - sideButtonRadius), "right" )
 
             else
-                additionalCalcForLeft 0 "left"
+                ( additionalCalcForLeft button.element.x, "left" )
 
-        additionalCalcForLeft num curPosName =
+        additionalCalcForLeft num =
             if button.element.x > calendar.element.width then
-                ( 0, "right" )
+                num + (button.element.x - calendar.element.width - button.element.width)
 
             else
-                ( num, curPosName )
+                num
 
-        additionalCalcForRight num curPosName =
-            if (button.scene.width - button.element.x) > (calendar.element.width + 15) then
-                ( -((button.scene.width - button.element.x) - calendar.element.width), "left" )
+        additionalCalcForRight num =
+            if (width - button.element.x) > calendar.element.width then
+                num + sideButtonRadius
 
             else
-                ( num, curPosName )
+                num
     in
     Attrs.style xName
         (xNum
