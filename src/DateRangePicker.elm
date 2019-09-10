@@ -1827,7 +1827,7 @@ utcSelectionRange : Zone -> Posix -> Model -> Maybe PosixRange
 utcSelectionRange zone today model =
     case model.selection of
         SingleSelection pos ->
-            { start = adjustMilliseconds zone pos, end = adjustMilliseconds zone pos }
+            { start = adjustMilliseconds zone <| getStartOfDay pos, end = adjustMilliseconds zone <| getEndOfDay pos }
                 |> Just
 
         RangeSelection range ->
@@ -1847,7 +1847,7 @@ localSelectionRange : Posix -> Model -> Maybe PosixRange
 localSelectionRange today model =
     case model.selection of
         SingleSelection pos ->
-            Just <| { start = pos, end = pos }
+            Just <| { start = getStartOfDay pos, end = getEndOfDay pos }
 
         RangeSelection range ->
             Just range
