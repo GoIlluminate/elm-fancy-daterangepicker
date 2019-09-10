@@ -1,10 +1,10 @@
 module Main exposing (Model, Msg(..), calendarDisplayOptions, calendarDisplayToDisplayStr, init, main, subscriptions, update, view)
 
 import Browser
-import DateRangePicker exposing (defaultConfig, open)
+import DateRangePicker exposing (defaultConfig)
 import Derberos.Date.Core as DateCore
 import Html exposing (Html, button, div, span, text)
-import Html.Attributes exposing (class, id)
+import Html.Attributes exposing (class)
 import Html.Events
 import Task
 import Time exposing (Month(..), Posix, Zone)
@@ -27,9 +27,9 @@ type ColorTheme
 
 type alias Model =
     { calendarDisplay : DateRangePicker.CalendarType
-    , datePicker : DateRangePicker.Model
-    , datePickerabs : DateRangePicker.Model
-    , datePickerfixed : DateRangePicker.Model
+    , datePicker : DateRangePicker.DatePicker
+    , datePickerabs : DateRangePicker.DatePicker
+    , datePickerfixed : DateRangePicker.DatePicker
     , today : Maybe Posix
     , zone : Maybe Zone
     , colorTheme : ColorTheme
@@ -60,7 +60,7 @@ init =
                             }
                         ]
                     , calendarType = calendarDisplay
-                    , datePickerType = DateRangePicker.DateRangePicker
+                    , dateSelectionType = DateRangePicker.DateRangeSelection
                 }
     in
     ( { calendarDisplay = calendarDisplay
@@ -171,7 +171,7 @@ view model =
                 Just t ->
                     case ( DateRangePicker.localSelectionRange t datepicker, model.zone ) of
                         ( Just pos, Just tz ) ->
-                            ( DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat pos.start pos.end
+                            ( DateRangePicker.displaySelection datepicker
                             , DateCore.getTzOffset tz pos.start
                             )
 
@@ -182,14 +182,9 @@ view model =
                     ( "", 0 )
 
         utcSelection datepicker =
-            case model.today of
-                Just t ->
-                    case DateRangePicker.utcSelectionRange (Maybe.withDefault Time.utc model.zone) t datepicker of
-                        Just range ->
-                            DateRangePicker.fullFormatter datepicker.languageConfig DateRangePicker.DateTimeFormat range.start range.end
-
-                        _ ->
-                            ""
+            case model.zone of
+                Just zone ->
+                    DateRangePicker.displayUtcSelection zone datepicker
 
                 Nothing ->
                     ""

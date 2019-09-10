@@ -45,7 +45,7 @@ view model =
 
 There is a helper method for opening the daterangepicker, which puts an onClick with the appropriate message onto the html element.
 ```elm
-button [ DateRangePicker.open ] [ text "Open Picker" ]
+button [ DateRangePicker.open "datepicker-button", Html.Attribute.id "datepicker-button" ] [ text "Open Picker" ]
 ``` 
 
 #### Update
@@ -94,7 +94,7 @@ init =
         dateRangePicker = DateRangePicker.initWithOptions
                               { defaultConfig
                                   | calendarType = TwoMonths
-                                  , datePickerType = DatePicker
+                                  , dateSelectionType = DateSelection
                               }
       ...
     }
