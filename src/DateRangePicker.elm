@@ -1766,7 +1766,7 @@ addPx str =
 
 
 calculateYPosition : Element -> Element -> WindowSize -> Attribute msg
-calculateYPosition button calendar { width, height } =
+calculateYPosition button calendar { height } =
     let
         ( yNum, yName ) =
             if button.element.y < (height / 2) then
@@ -1797,14 +1797,14 @@ calculateYPosition button calendar { width, height } =
 
 
 calculateXPosition : Element -> Element -> WindowSize -> Attribute msg
-calculateXPosition button calendar { width, height } =
+calculateXPosition button calendar { width } =
     let
         sideButtonRadius =
             15
 
         ( xNum, xName ) =
             if button.element.x > (width / 2) then
-                ( additionalCalcForRight ((width - button.element.x) - button.element.width - sideButtonRadius), "right" )
+                ( additionalCalcForRight ((width - button.element.x) - button.element.width), "right" )
 
             else
                 ( additionalCalcForLeft button.element.x, "left" )
@@ -1824,8 +1824,8 @@ calculateXPosition button calendar { width, height } =
                 num
 
         newNum =
-            if xNum == 0 then
-                sideButtonRadius
+            if xNum <= 15 then
+                xNum + sideButtonRadius
 
             else
                 xNum
