@@ -472,6 +472,7 @@ update msg model =
                 Just date ->
                     let
                         selection =
+                            -- todo potentially fix this?
                             date
                                 |> getEndOfDay
                                 |> createSelectingRange model
@@ -1136,8 +1137,21 @@ convertInput input model =
     case input of
         SingleInput inputDate ->
             let
-                ( selection, format ) =
+                ( initialSelection, format ) =
                     convertInputDate inputDate
+
+                selection =
+                    case model.datePickerType of
+                        DateRangePicker ->
+                            case initialSelection of
+                                SingleSelection posix ->
+                                    RangeSelection <| convertSingleIntoRange posix
+
+                                _ ->
+                                    initialSelection
+
+                        DatePicker ->
+                            initialSelection
             in
             ( selection, Maybe.withDefault DateFormat format )
 
