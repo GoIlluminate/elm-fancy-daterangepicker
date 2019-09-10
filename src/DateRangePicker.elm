@@ -43,10 +43,10 @@ import Browser.Events
 import Date exposing (Date)
 import DateFormat
 import DateFormat.Language as DateFormat
-import DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
+import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
-import Derberos.Date.Core exposing (DateRecord, addTimezoneMilliseconds, adjustMilliseconds, civilToPosix, posixToCivil)
+import Derberos.Date.Core exposing (addTimezoneMilliseconds, adjustMilliseconds, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Derberos.Date.Utils exposing (monthToNumber1)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
@@ -102,14 +102,12 @@ type MousePosition
     | OutsideBottom
 
 
-type alias DateRange =
-    { start : Date, end : Date }
-
-
 {-| The type of that represents a range of two posix times.
 -}
 type alias PosixRange =
-    { start : Posix, end : Posix }
+    { start : Posix
+    , end : Posix
+    }
 
 
 {-| The type of that represents available presets that can be put in a preset menu.
@@ -155,6 +153,8 @@ type InternalSelection
     | Unselected
     | Selecting PosixRange
     | PresetSelection PresetType
+    | BeforeSelection Posix
+    | AfterSelection Posix
 
 
 {-| The type which represents what the current selection is in the datepicker.
@@ -166,6 +166,8 @@ type Selection
     = Single Posix
     | Range PosixRange
     | Preset PresetType
+    | Before Posix
+    | After Posix
 
 
 {-| The type which specifies what size calendar you want to display
@@ -190,7 +192,9 @@ type Format
 
 
 type alias WindowSize =
-    { width : Float, height : Float }
+    { width : Float
+    , height : Float
+    }
 
 
 {-| A record which represents the main datepicker model
@@ -287,6 +291,8 @@ type alias LanguageConfig =
     , pastYear : String
     , includeTimeTitle : String
     , dateFormatLanguage : DateFormat.Language
+    , beforeThisDate : String
+    , afterThisDate : String
     }
 
 
@@ -306,6 +312,8 @@ englishLanguageConfig =
     , pastYear = "Past Year"
     , includeTimeTitle = "Include Time"
     , dateFormatLanguage = DateFormat.english
+    , beforeThisDate = " And Before"
+    , afterThisDate = " And After"
     }
 
 
@@ -653,6 +661,12 @@ localSelection (DatePicker model) =
         PresetSelection presetType ->
             Just <| Preset presetType
 
+        BeforeSelection pos ->
+            Just <| Before pos
+
+        AfterSelection pos ->
+            Just <| After pos
+
 
 {-| Get the current selection in utc time.
 -}
@@ -675,6 +689,12 @@ utcSelection zone (DatePicker model) =
         PresetSelection presetType ->
             Just <| Preset presetType
 
+        BeforeSelection pos ->
+            Just <| Before (adjustMilliseconds zone pos)
+
+        AfterSelection pos ->
+            Just <| After (adjustMilliseconds zone pos)
+
 
 {-| A convenience function to get the current selection as a posix range in utc time.
 -}
@@ -696,6 +716,12 @@ utcSelectionRange zone today (DatePicker model) =
         PresetSelection presetType ->
             Just <| presetToUtcPosixRange presetType today zone
 
+        BeforeSelection pos ->
+            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
+
+        AfterSelection pos ->
+            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
+
 
 {-| A convenience function to get the current selection as a posix range in local time.
 -}
@@ -716,6 +742,12 @@ localSelectionRange today (DatePicker model) =
 
         PresetSelection presetType ->
             Just <| presetToLocalPosixRange presetType today
+
+        BeforeSelection pos ->
+            Just <| convertSingleIntoRange pos
+
+        AfterSelection pos ->
+            Just <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
@@ -767,7 +799,19 @@ updateModelWithConfig (DatePicker model) config =
 -}
 setSelection : DatePicker -> Maybe Selection -> DatePicker
 setSelection (DatePicker model) selection =
-    DatePicker { model | selection = selectionToInternalSelection selection }
+    case selection of
+        Just _ ->
+            DatePicker
+                { model
+                    | selection = selectionToInternalSelection selection
+                    , inputText = prettyFormatSelection (selectionToInternalSelection selection) model.languageConfig model.displayFormat
+                }
+        Nothing ->
+            DatePicker
+                { model | selection = selectionToInternalSelection selection
+                        , inputText = ""
+                }
+            
 
 
 {-| A helper function to get the posix range for a given preset in utc time
@@ -1034,6 +1078,12 @@ selectionToInternalSelection selection =
 
                     Preset val ->
                         PresetSelection val
+
+                    Before pos ->
+                        BeforeSelection pos
+
+                    After pos ->
+                        AfterSelection pos
             )
             selection
 
@@ -1095,6 +1145,12 @@ finalizeSelection model selection =
 
         PresetSelection _ ->
             selection
+
+        BeforeSelection pos ->
+            BeforeSelection <| getEndOfDay pos
+
+        AfterSelection pos ->
+            AfterSelection <| getStartOfDay pos
 
 
 selectPresetInternal : PresetType -> Posix -> Model -> ( Model, Cmd Msg )
@@ -1227,6 +1283,12 @@ createSelectingRange model changedValue =
             { start = posixRange.start, end = changedValue }
 
         PresetSelection _ ->
+            { start = changedValue, end = changedValue }
+
+        BeforeSelection _ ->
+            { start = changedValue, end = changedValue }
+
+        AfterSelection _ ->
             { start = changedValue, end = changedValue }
 
 
@@ -1901,6 +1963,12 @@ selectionPoints comparisonPosix { selection } today localZone =
             in
             ( Just posixRange.start, Just posixRange.end, compareRange posixRange )
 
+        AfterSelection posix ->
+            ( Just posix, Just posix, False )
+
+        BeforeSelection posix ->
+            ( Just posix, Just posix, False )
+
 
 isSameDay : Posix -> Posix -> Bool
 isSameDay posix1 posix2 =
@@ -1956,6 +2024,12 @@ getVisibleRangeFromSelection selection calendarType today =
         PresetSelection presetType ->
             Just <| presetToPosixRange presetType today utc
 
+        BeforeSelection posix ->
+            Just { start = getStartOfDay posix, end = getEndOfDay posix }
+
+        AfterSelection posix ->
+            Just { start = getStartOfDay posix, end = getEndOfDay posix }
+
 
 prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
 prettyFormatSelection selection language format =
@@ -1978,6 +2052,12 @@ prettyFormatSelection selection language format =
 
         PresetSelection presetType ->
             presetToDisplayString presetType language
+
+        BeforeSelection posix ->
+            starFormatter language format language.beforeThisDate posix
+
+        AfterSelection posix ->
+            starFormatter language format language.afterThisDate posix
 
 
 singleFormatter : LanguageConfig -> Format -> Posix -> String
@@ -2005,6 +2085,38 @@ singleFormatter language format =
             ++ timeParts
         )
         utc
+
+
+starFormatter : LanguageConfig -> Format -> String -> Posix -> String
+starFormatter language format additionalString =
+    let
+        timeParts =
+            case format of
+                DateFormat ->
+                    []
+
+                DateTimeFormat ->
+                    [ DateFormat.text " "
+                    , DateFormat.hourMilitaryFixed
+                    , DateFormat.text ":"
+                    , DateFormat.minuteFixed
+                    ]
+
+        dateString pos =
+            DateFormat.formatWithLanguage language.dateFormatLanguage
+                ([ DateFormat.monthNameAbbreviated
+                 , DateFormat.text " "
+                 , DateFormat.dayOfMonthNumber
+                 , DateFormat.text ", "
+                 , DateFormat.yearNumber
+                 ]
+                    ++ timeParts
+                )
+                utc
+                pos
+                ++ additionalString
+    in
+    dateString
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String

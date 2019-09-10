@@ -18,6 +18,8 @@ type Msg
     | DatePickerMsgsAbs DateRangePicker.Msg
     | DatePickerMsgsFixed DateRangePicker.Msg
     | ToggleColorTheme
+    | ChangeToBefore
+    | ChangeToAfter
 
 
 type ColorTheme
@@ -133,6 +135,22 @@ update msg model =
             , Cmd.none
             )
 
+        ChangeToAfter ->
+            case model.today of
+                Just today ->
+                    ( { model | datePicker = DateRangePicker.setSelection model.datePicker <| Just (DateRangePicker.After today) }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        ChangeToBefore ->
+            case model.today of
+                Just today ->
+                    ( { model | datePicker = DateRangePicker.setSelection model.datePicker <| Just (DateRangePicker.Before today) }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
 
 view : Model -> Html Msg
 view model =
@@ -202,6 +220,10 @@ view model =
         , Html.map DatePickerMsgs selector1
         , Html.map DatePickerMsgsAbs selectorabs
         , Html.map DatePickerMsgsFixed selectorfixed
+        , div []
+            [ button [ Html.Events.onClick ChangeToBefore ] [ text "before" ]
+            , button [ Html.Events.onClick ChangeToAfter ] [ text "after" ]
+            ]
         ]
 
 
