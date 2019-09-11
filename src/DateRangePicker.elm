@@ -399,6 +399,7 @@ defaultOpener (DatePicker model) openerId =
 subscriptions : DatePicker -> Posix -> Zone -> Sub Msg
 subscriptions (DatePicker model) today zone =
     let
+    --TODO Check if the default get today task is in utc
         adjustedToday =
             adjustMilliseconds zone today
 
@@ -469,6 +470,7 @@ update msg (DatePicker model) =
 view : Posix -> Zone -> DatePicker -> Html Msg
 view today zone (DatePicker model) =
     let
+        --TODO somehow ensure that this time is in utc
         -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
         adjustedToday =
             addTimezoneMilliseconds zone today
@@ -670,6 +672,7 @@ localSelection (DatePicker model) =
 
 {-| Get the current selection in utc time.
 -}
+--TODO This should not have any zone because the model should hold the dates in utc
 utcSelection : Zone -> DatePicker -> Maybe Selection
 utcSelection zone (DatePicker model) =
     case model.selection of
@@ -698,6 +701,7 @@ utcSelection zone (DatePicker model) =
 
 {-| A convenience function to get the current selection as a posix range in utc time.
 -}
+--TODO This should not have any zone because the model should hold the dates in utc
 utcSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
 utcSelectionRange zone today (DatePicker model) =
     case model.selection of
@@ -705,7 +709,7 @@ utcSelectionRange zone today (DatePicker model) =
             Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
 
         RangeSelection range ->
-            Just <| convertRangeToUtc zone range
+            Just range
 
         Unselected ->
             Nothing
@@ -725,6 +729,7 @@ utcSelectionRange zone today (DatePicker model) =
 
 {-| A convenience function to get the current selection as a posix range in local time.
 -}
+-- TODO This should have a zone passed t it
 localSelectionRange : Posix -> DatePicker -> Maybe PosixRange
 localSelectionRange today (DatePicker model) =
     case model.selection of
@@ -806,12 +811,13 @@ setSelection (DatePicker model) selection =
                     | selection = selectionToInternalSelection selection
                     , inputText = prettyFormatSelection (selectionToInternalSelection selection) model.languageConfig model.displayFormat
                 }
+
         Nothing ->
             DatePicker
-                { model | selection = selectionToInternalSelection selection
-                        , inputText = ""
+                { model
+                    | selection = selectionToInternalSelection selection
+                    , inputText = ""
                 }
-            
 
 
 {-| A helper function to get the posix range for a given preset in utc time
@@ -1500,7 +1506,7 @@ topBar model visibleRange today zone =
         , clock
         ]
 
-
+--TODO Why does this have a zone passed to it
 createSelectionInRange : Model -> Zone -> PosixRange -> PosixRange
 createSelectionInRange model zone posixRange =
     let
@@ -1738,7 +1744,7 @@ monthlyCalendarView model monthClass endInterval today visibleRange zone =
             ]
         ]
 
-
+--TODO is this function only used in view
 getMonthsFromRange : Int -> Int -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
 getMonthsFromRange start end visibleRange fn =
     List.map
@@ -1748,7 +1754,7 @@ getMonthsFromRange start end visibleRange fn =
     <|
         List.range start end
 
-
+--TODO is this function only used in view
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
     let
@@ -1931,7 +1937,7 @@ calculateXPosition button calendar { width } =
             |> addPx
         )
 
-
+-- TODO why does this have zone is it external?
 dateToPosixRange : Date -> Zone -> PosixRange
 dateToPosixRange d zone =
     datePartsToPosixRange
@@ -1941,7 +1947,7 @@ dateToPosixRange d zone =
         }
         zone
 
-
+-- TODO why does this have zone is it external?
 posixIsOutOfAllowedRange : Posix -> Model -> Zone -> Bool
 posixIsOutOfAllowedRange posix model zone =
     let
@@ -1963,6 +1969,7 @@ normalizeSelectingRange posixRange =
         posixRange
 
 
+-- TODO why does this have zone is it external?
 selectionPoints : Posix -> Model -> Posix -> Zone -> ( Maybe Posix, Maybe Posix, Bool )
 selectionPoints comparisonPosix { selection } today localZone =
     let
@@ -2190,6 +2197,7 @@ getCurrentMonthDatesFullWeeks zone time =
         |> List.map (\delta -> addDays delta firstDayOfMonth)
 
 
+--TODO zone?
 yearToPosixRange : Int -> Zone -> PosixRange
 yearToPosixRange year zone =
     let
@@ -2200,7 +2208,7 @@ yearToPosixRange year zone =
     , end = getEndOfDay <| getLastDayOfYear zone posix
     }
 
-
+--TODO zone?
 yearAndMonthToPosixRange : YearAndMonth -> Zone -> PosixRange
 yearAndMonthToPosixRange yearMonth zone =
     let
@@ -2211,12 +2219,12 @@ yearAndMonthToPosixRange yearMonth zone =
     , end = getLastDayOfMonthEndOfDay zone posix
     }
 
-
+--TODO zone?
 getLastDayOfMonthEndOfDay : Zone -> Posix -> Posix
 getLastDayOfMonthEndOfDay zone =
     getLastDayOfMonth zone >> getEndOfDay
 
-
+--TODO zone?
 getFirstDayOfMonthStartOfDay : Zone -> Posix -> Posix
 getFirstDayOfMonthStartOfDay zone =
     getFirstDayOfMonth zone >> getStartOfDay
