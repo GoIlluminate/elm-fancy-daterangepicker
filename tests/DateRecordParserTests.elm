@@ -1,7 +1,7 @@
 module DateRecordParserTests exposing (dateTestSuite)
 
 import DateFormat.Language as DateFormat
-import DateRangePicker.DateRecordParser exposing (DateTimeParts, Input(..), InputDate(..), parseDateTime)
+import DateRangePicker.DateRecordParser exposing (DateTimeParts, Input(..), InputDate(..), ParsingConfig, parseDateTime)
 import Expect exposing (equal)
 import Test exposing (Test, describe, test)
 
@@ -200,23 +200,59 @@ dateTestSuite =
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english True "Past Month")
+                    (parseDateTime { defaultParseConfig | customDateInputs = [ "Past Month" ] } "Past Month")
         , test "allows a custom date string to be written without spaces" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english True "PastMonth")
+                    (parseDateTime { defaultParseConfig | customDateInputs = [ "Past Month" ] } "PastMonth")
         , test "allows a custom date string to be written as lowercase" <|
             \_ ->
                 equal
                     (Ok <| CustomDate "Past Month")
-                    (parseDateTime [ "Past Month" ] DateFormat.english True "pastmonth")
+                    (parseDateTime { defaultParseConfig | customDateInputs = [ "Past Month" ] } "pastmonth")
+        , test "allows a wildcard to be used as before a date" <|
+            \_ ->
+                equal
+                    (Ok <| Before <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (defaultParse "* to 01-01-2000")
+        , test "allows a wildcard to be used after a date" <|
+            \_ ->
+                equal
+                    (Ok <| After <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (defaultParse "01-01-2000 to *")
+        , test "allows a phrase to be used after a date to indicate before" <|
+            \_ ->
+                equal
+                    (Ok <| Before <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (defaultParse "01-01-2000 and before")
+        , test "allows a phrase to be used after a date to indicate after" <|
+            \_ ->
+                equal
+                    (Ok <| After <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (defaultParse "01-01-2000 and after")
         ]
 
 
 defaultParse : String -> Result String Input
 defaultParse =
-    parseDateTime [] DateFormat.english True
+    parseDateTime defaultParseConfig
+
+
+defaultParseConfig : ParsingConfig
+defaultParseConfig =
+    { customDateInputs = []
+    , language =
+        { toMonthName = DateFormat.english.toMonthName
+        , toMonthAbbreviation = DateFormat.english.toMonthAbbreviation
+        , am = "am"
+        , pm = "pm"
+        , to = "to"
+        , andBefore = "And Before"
+        , andAfter = "And After"
+        }
+    , allowTime = True
+    }
 
 
 justYear : Int -> Result String Input

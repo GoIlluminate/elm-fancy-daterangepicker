@@ -1,7 +1,6 @@
-module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
+module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), Language, ParsingConfig, YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 
 import Date exposing (Date)
-import DateFormat.Language exposing (Language)
 import Derberos.Date.Core exposing (civilToPosix)
 import Parser exposing ((|.), (|=), Parser)
 import Time exposing (Month(..), Posix, Zone, posixToMillis, utc)
@@ -36,11 +35,29 @@ type alias DateTimeParts =
     }
 
 
-convert12FormatTo24 : TimeParts -> TimeParts
-convert12FormatTo24 timeParts =
+type alias Language =
+    { toMonthName : Month -> String
+    , toMonthAbbreviation : Month -> String
+    , am : String
+    , pm : String
+    , to : String
+    , andBefore : String
+    , andAfter : String
+    }
+
+
+type alias ParsingConfig =
+    { customDateInputs : List String
+    , language : Language
+    , allowTime : Bool
+    }
+
+
+convert12FormatTo24 : Language -> TimeParts -> TimeParts
+convert12FormatTo24 language timeParts =
     case timeParts.period of
         Just period ->
-            if period == "AM" then
+            if period == String.toUpper language.am then
                 if timeParts.hour == 12 then
                     { timeParts | hour = 0 }
 
@@ -64,6 +81,8 @@ type InputDate
 type Input
     = SingleInput InputDate
     | RangeInput InputDate InputDate
+    | BeforeInput InputDate
+    | AfterInput InputDate
     | CustomDate String
 
 
@@ -205,13 +224,13 @@ daySeparatorParser =
         |. Parser.spaces
 
 
-rangeSeparator : Parser ()
-rangeSeparator =
+rangeSeparator : Language -> Parser ()
+rangeSeparator language =
     Parser.oneOf
         [ Parser.succeed ()
-            |. Parser.keyword "to"
+            |. Parser.keyword language.to
         , Parser.succeed ()
-            |. Parser.keyword "TO"
+            |. Parser.keyword (String.toUpper language.to)
         , Parser.succeed ()
             |. Parser.symbol "-"
         ]
@@ -239,23 +258,24 @@ digitsParser digits =
             digits
 
 
-periodParser : Parser String
-periodParser =
+periodParser : Language -> Parser String
+periodParser language =
     Parser.succeed String.toUpper
         |= Parser.oneOf
-            [ match "am"
-            , match "pm"
+            [ match language.am
+            , match language.pm
             ]
 
 
-timeParser : Parser (Maybe TimeParts)
-timeParser =
+timeParser : Language -> Parser (Maybe TimeParts)
+timeParser language =
     let
         twelveHour =
             Parser.succeed
                 (\hour minutes period ->
                     Just <|
                         convert12FormatTo24
+                            language
                             { hour = hour
                             , minutes = minutes
                             , period = Just period
@@ -266,7 +286,7 @@ timeParser =
                 |= digitsParser minuteDigits
                 |. Parser.symbol " "
                 |. Parser.spaces
-                |= periodParser
+                |= periodParser language
 
         twentyFourHour =
             Parser.succeed
@@ -290,39 +310,95 @@ timeParser =
         ]
 
 
-fullSingleInputParser : Language -> Bool -> Parser Input
-fullSingleInputParser language allowTime =
+fullSingleInputParser : ParsingConfig -> Parser Input
+fullSingleInputParser parsingConfig =
     Parser.succeed
         (\x -> SingleInput x)
-        |= singleInputDateParser language allowTime
+        |= singleInputDateParser parsingConfig
         |. Parser.spaces
         |. Parser.end
 
 
-fullInputDateParser : List String -> Language -> Bool -> Parser Input
-fullInputDateParser customDates language allowTime =
+fullInputDateParser : ParsingConfig -> Parser Input
+fullInputDateParser parsingConfig =
     Parser.oneOf
-        [ Parser.backtrackable
-            (rangeInputDateParser language allowTime)
+        [ rangeInputWithWildcardsDateParser parsingConfig
+        , Parser.backtrackable
+            (rangeInputDateParser parsingConfig)
             |> Parser.andThen Parser.commit
-        , fullSingleInputParser language allowTime
+        , fullSingleInputParser parsingConfig
         , Parser.succeed
             (\cd -> CustomDate cd)
             |= Parser.oneOf
-                (List.map match customDates)
+                (List.map match parsingConfig.customDateInputs)
         ]
 
 
-rangeInputDateParser : Language -> Bool -> Parser Input
-rangeInputDateParser language allowTime =
+rangeInputDateParser : ParsingConfig -> Parser Input
+rangeInputDateParser parsingConfig =
     Parser.succeed (\start end -> RangeInput start end)
-        |= singleInputDateParser language allowTime
+        |= singleInputDateParser parsingConfig
         |. Parser.spaces
-        |. rangeSeparator
+        |. rangeSeparator parsingConfig.language
         |. Parser.spaces
-        |= singleInputDateParser language allowTime
+        |= singleInputDateParser parsingConfig
         |. Parser.spaces
         |. Parser.end
+
+
+rangeInputWithWildcardsDateParser : ParsingConfig -> Parser Input
+rangeInputWithWildcardsDateParser parsingConfig =
+    Parser.oneOf
+        [ beforeWildCard parsingConfig
+        , Parser.backtrackable
+            (otherWildCard parsingConfig)
+            |> Parser.andThen Parser.commit
+        ]
+
+
+beforeWildCard : ParsingConfig -> Parser Input
+beforeWildCard parsingConfig =
+    Parser.succeed (\date -> BeforeInput date)
+        |. Parser.symbol "*"
+        |. Parser.spaces
+        |. rangeSeparator parsingConfig.language
+        |. Parser.spaces
+        |= singleInputDateParser parsingConfig
+
+
+otherWildCard : ParsingConfig -> Parser Input
+otherWildCard parsingConfig =
+    Parser.succeed
+        (\date isBefore ->
+            if isBefore then
+                BeforeInput date
+
+            else
+                AfterInput date
+        )
+        |= singleInputDateParser parsingConfig
+        |. Parser.spaces
+        |. rangeSeparator parsingConfig.language
+        |. Parser.spaces
+        |= Parser.oneOf
+            [ after parsingConfig.language
+            , before parsingConfig.language
+            ]
+
+
+after : Language -> Parser Bool
+after language =
+    Parser.succeed False
+        |. Parser.oneOf
+            [ Parser.symbol "*"
+            , Parser.succeed () |. match language.andAfter
+            ]
+
+
+before : Language -> Parser Bool
+before language =
+    Parser.succeed True
+        |. match language.andBefore
 
 
 createFullInput : Int -> Int -> Int -> Maybe TimeParts -> InputDate
@@ -354,24 +430,24 @@ createYearMonthInput month year =
         }
 
 
-singleInputDateParser : Language -> Bool -> Parser InputDate
-singleInputDateParser language allowTime =
+singleInputDateParser : ParsingConfig -> Parser InputDate
+singleInputDateParser parsingConfig =
     let
         fullDateTimeParser =
             Parser.succeed
                 createFullInput
-                |= monthParser language
+                |= monthParser parsingConfig.language
                 |. daySeparatorParser
                 |= dayOfMonthParser
                 |. yearSeparatorParser
                 |= fullOrAbbreviatedYearParser
                 |. Parser.spaces
-                |= timeParser
+                |= timeParser parsingConfig.language
 
         fullDateParser =
             Parser.succeed
                 (\month day year -> FullDate <| { year = year, month = month, day = day })
-                |= monthParser language
+                |= monthParser parsingConfig.language
                 |. daySeparatorParser
                 |= dayOfMonthParser
                 |. yearSeparatorParser
@@ -385,7 +461,7 @@ singleInputDateParser language allowTime =
         justYearAndMonth =
             Parser.succeed
                 createYearMonthInput
-                |= monthParser language
+                |= monthParser parsingConfig.language
                 |. yearSeparatorParser
                 |= fourDigitYear
     in
@@ -396,7 +472,7 @@ singleInputDateParser language allowTime =
         , Parser.backtrackable
             justYearAndMonth
             |> Parser.andThen Parser.commit
-        , if allowTime then
+        , if parsingConfig.allowTime then
             fullDateTimeParser
 
           else
@@ -473,9 +549,6 @@ requireEndToBeAfterStart input =
             posixToMillis <| convertInputDateToPosix endInputDate
     in
     case input of
-        SingleInput _ ->
-            Ok input
-
         RangeInput start end ->
             if startMillis start <= endMillis end then
                 Ok input
@@ -483,7 +556,7 @@ requireEndToBeAfterStart input =
             else
                 Err "The starting date must be before the end date!"
 
-        CustomDate _ ->
+        _ ->
             Ok input
 
 
@@ -516,6 +589,12 @@ validate validateInputDateFunc input =
 
         CustomDate _ ->
             Ok input
+
+        BeforeInput inputDate ->
+            validateInputDateFunc inputDate input
+
+        AfterInput inputDate ->
+            validateInputDateFunc inputDate input
 
 
 yearToPosix : Int -> Zone -> Posix
@@ -586,9 +665,9 @@ dateTimePartsToPosix { year, month, day, hour, minute } zone =
     civilToPosix dateRecord
 
 
-parseDateTime : List String -> Language -> Bool -> String -> Result String Input
-parseDateTime customDateInputs language allowTime =
-    Parser.run (fullInputDateParser customDateInputs language allowTime)
+parseDateTime : ParsingConfig -> String -> Result String Input
+parseDateTime parsingConfig =
+    Parser.run (fullInputDateParser parsingConfig)
         >> Result.mapError (always "")
         >> Result.andThen (validate validateDateViaLibrary)
         >> Result.mapError (always "Not a valid US Date!")

@@ -46,7 +46,7 @@ import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
-import Derberos.Date.Core as DateCore exposing (addTimezoneMilliseconds, adjustMilliseconds, civilToPosix, posixToCivil)
+import Derberos.Date.Core as DateCore exposing (adjustMilliseconds, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Derberos.Date.Utils exposing (monthToNumber1)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
@@ -302,6 +302,9 @@ type alias LanguageConfig =
     , dateFormatLanguage : DateFormat.Language
     , beforeThisDate : String
     , afterThisDate : String
+    , am : String
+    , pm : String
+    , to : String
     }
 
 
@@ -321,8 +324,11 @@ englishLanguageConfig =
     , pastYear = "Past Year"
     , includeTimeTitle = "Include Time"
     , dateFormatLanguage = DateFormat.english
-    , beforeThisDate = " And Before"
-    , afterThisDate = " And After"
+    , beforeThisDate = "And Before"
+    , afterThisDate = "And After"
+    , am = "am"
+    , pm = "pm"
+    , to = "to"
     }
 
 
@@ -485,7 +491,7 @@ view today zone (DatePicker model) =
     let
         -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
         adjustedToday =
-             today
+            today
 
         visibleRange =
             calcRange adjustedToday model
@@ -1118,12 +1124,22 @@ finishInput today zone model =
                 DateRangeSelection ->
                     True
 
+        parseConfig =
+            { customDateInputs = List.map (\p -> presetToDisplayString p model.languageConfig) model.presets
+            , language =
+                { toMonthName = model.languageConfig.dateFormatLanguage.toMonthName
+                , toMonthAbbreviation = model.languageConfig.dateFormatLanguage.toMonthAbbreviation
+                , am = model.languageConfig.am
+                , pm = model.languageConfig.pm
+                , to = model.languageConfig.to
+                , andBefore = model.languageConfig.beforeThisDate
+                , andAfter = model.languageConfig.afterThisDate
+                }
+            , allowTime = allowTime
+            }
+
         parseOutput =
-            parseDateTime
-                (List.map (\p -> presetToDisplayString p model.languageConfig) model.presets)
-                model.languageConfig.dateFormatLanguage
-                allowTime
-                model.inputText
+            parseDateTime parseConfig model.inputText
     in
     case parseOutput of
         Ok value ->
@@ -1600,24 +1616,7 @@ convertInput : Input -> Model -> ( InternalSelection, Format )
 convertInput input model =
     case input of
         SingleInput inputDate ->
-            let
-                ( initialSelection, format ) =
-                    convertInputDate inputDate False
-
-                selection =
-                    case model.dateSelectionType of
-                        DateRangeSelection ->
-                            case initialSelection of
-                                SingleSelection posix ->
-                                    RangeSelection <| convertSingleIntoRange posix
-
-                                _ ->
-                                    initialSelection
-
-                        DateSelection ->
-                            initialSelection
-            in
-            ( selection, Maybe.withDefault DateFormat format )
+            singleInputConversion inputDate model False
 
         RangeInput start end ->
             combineInputToRange start end
@@ -1633,6 +1632,34 @@ convertInput input model =
 
                 Nothing ->
                     ( Unselected, DateFormat )
+
+        BeforeInput inputDate ->
+            singleInputConversion inputDate model True
+
+        AfterInput inputDate ->
+            singleInputConversion inputDate model False
+
+
+singleInputConversion : InputDate -> Model -> Bool -> ( InternalSelection, Format )
+singleInputConversion inputDate model isEndSelection =
+    let
+        ( initialSelection, format ) =
+            convertInputDate inputDate isEndSelection
+
+        selection =
+            case model.dateSelectionType of
+                DateRangeSelection ->
+                    case initialSelection of
+                        SingleSelection posix ->
+                            RangeSelection <| convertSingleIntoRange posix
+
+                        _ ->
+                            initialSelection
+
+                DateSelection ->
+                    initialSelection
+    in
+    ( selection, Maybe.withDefault DateFormat format )
 
 
 combineInputToRange : InputDate -> InputDate -> ( InternalSelection, Format )
@@ -1871,7 +1898,7 @@ dayCalendarView zone currentMonth currentDay today model =
                     ( Attrs.class "", [ text <| String.fromInt <| Time.toDay utc currentDay ], Attrs.class "" )
 
                 else
-                    ( Html.Events.onMouseOver <| OnHoverOverDay (currentDay)
+                    ( Html.Events.onMouseOver <| OnHoverOverDay currentDay
                     , [ text <| String.fromInt <| Time.toDay utc currentDay ]
                     , setDateAttr
                     )
@@ -1881,10 +1908,10 @@ dayCalendarView zone currentMonth currentDay today model =
 
         setDateAttr =
             if model.isShiftDown || model.isMouseDown then
-                Just ( currentDay) |> EndSelection |> onClickNoDefault
+                Just currentDay |> EndSelection |> onClickNoDefault
 
             else
-                StartSelection ( currentDay) |> DateRangePicker.Helper.mouseDownNoDefault
+                StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
 
         isSameDayOfSelection posixFromSelection =
             contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) posixFromSelection)
