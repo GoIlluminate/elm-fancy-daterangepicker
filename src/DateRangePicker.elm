@@ -485,7 +485,7 @@ view today zone (DatePicker model) =
     let
         -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
         adjustedToday =
-            addTimezoneMilliseconds zone today
+             today
 
         visibleRange =
             calcRange adjustedToday model
@@ -1871,7 +1871,7 @@ dayCalendarView zone currentMonth currentDay today model =
                     ( Attrs.class "", [ text <| String.fromInt <| Time.toDay utc currentDay ], Attrs.class "" )
 
                 else
-                    ( Html.Events.onMouseOver <| OnHoverOverDay (addTimezoneMilliseconds zone currentDay)
+                    ( Html.Events.onMouseOver <| OnHoverOverDay (currentDay)
                     , [ text <| String.fromInt <| Time.toDay utc currentDay ]
                     , setDateAttr
                     )
@@ -1881,10 +1881,10 @@ dayCalendarView zone currentMonth currentDay today model =
 
         setDateAttr =
             if model.isShiftDown || model.isMouseDown then
-                Just (addTimezoneMilliseconds zone currentDay) |> EndSelection |> onClickNoDefault
+                Just ( currentDay) |> EndSelection |> onClickNoDefault
 
             else
-                StartSelection (addTimezoneMilliseconds zone currentDay) |> DateRangePicker.Helper.mouseDownNoDefault
+                StartSelection ( currentDay) |> DateRangePicker.Helper.mouseDownNoDefault
 
         isSameDayOfSelection posixFromSelection =
             contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) posixFromSelection)
