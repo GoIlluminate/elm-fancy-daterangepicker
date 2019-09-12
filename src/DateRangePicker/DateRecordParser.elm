@@ -378,27 +378,28 @@ otherWildCard parsingConfig =
         )
         |= singleInputDateParser parsingConfig
         |. Parser.spaces
-        |. rangeSeparator parsingConfig.language
-        |. Parser.spaces
         |= Parser.oneOf
-            [ after parsingConfig.language
-            , before parsingConfig.language
+            [ afterWildCard parsingConfig.language
+            , wildCardWords parsingConfig.language
             ]
 
 
-after : Language -> Parser Bool
-after language =
+wildCardWords : Language -> Parser Bool
+wildCardWords language =
+    Parser.succeed identity
+        |= Parser.oneOf
+            [ Parser.succeed True
+                |. match language.andBefore
+            , Parser.succeed False |. match language.andAfter
+            ]
+
+
+afterWildCard : Language -> Parser Bool
+afterWildCard language =
     Parser.succeed False
-        |. Parser.oneOf
-            [ Parser.symbol "*"
-            , Parser.succeed () |. match language.andAfter
-            ]
-
-
-before : Language -> Parser Bool
-before language =
-    Parser.succeed True
-        |. match language.andBefore
+        |. rangeSeparator language
+        |. Parser.spaces
+        |. Parser.symbol "*"
 
 
 createFullInput : Int -> Int -> Int -> Maybe TimeParts -> InputDate

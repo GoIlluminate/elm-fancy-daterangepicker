@@ -214,22 +214,22 @@ dateTestSuite =
         , test "allows a wildcard to be used as before a date" <|
             \_ ->
                 equal
-                    (Ok <| Before <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (Ok <| BeforeInput <| FullDate <| { year = 2000, month = 1, day = 1 })
                     (defaultParse "* to 01-01-2000")
         , test "allows a wildcard to be used after a date" <|
             \_ ->
                 equal
-                    (Ok <| After <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (Ok <| AfterInput <| FullDate <| { year = 2000, month = 1, day = 1 })
                     (defaultParse "01-01-2000 to *")
         , test "allows a phrase to be used after a date to indicate before" <|
             \_ ->
                 equal
-                    (Ok <| Before <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (Ok <| BeforeInput <| FullDate <| { year = 2000, month = 1, day = 1 })
                     (defaultParse "01-01-2000 and before")
         , test "allows a phrase to be used after a date to indicate after" <|
             \_ ->
                 equal
-                    (Ok <| After <| FullDate <| { year = 2000, month = 1, day = 1 })
+                    (Ok <| AfterInput <| FullDate <| { year = 2000, month = 1, day = 1 })
                     (defaultParse "01-01-2000 and after")
         ]
 
