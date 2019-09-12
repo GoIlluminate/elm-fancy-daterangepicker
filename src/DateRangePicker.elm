@@ -395,11 +395,12 @@ defaultOpener (DatePicker model) openerId =
     Sub.map DatePickerMsgs <|
         DateRangePicker.subscriptions model.datePicker currentTime localZone
 
+    Pass in Today as utc
+
 -}
 subscriptions : DatePicker -> Posix -> Zone -> Sub Msg
 subscriptions (DatePicker model) today zone =
     let
-    --TODO Check if the default get today task is in utc
         adjustedToday =
             adjustMilliseconds zone today
 
@@ -453,11 +454,11 @@ subscriptions (DatePicker model) today zone =
         ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
 
 -}
-update : Msg -> DatePicker -> ( DatePicker, Cmd Msg )
-update msg (DatePicker model) =
+update : Zone -> Msg -> DatePicker -> ( DatePicker, Cmd Msg )
+update zone msg (DatePicker model) =
     let
         ( model_, cmd ) =
-            innerUpdate msg model
+            innerUpdate zone msg model
     in
     ( DatePicker model_, cmd )
 
@@ -466,11 +467,13 @@ update msg (DatePicker model) =
 
     DateRangePicker.view currentTime localZone datePicker
 
+
+    Pass in today as utc.
+
 -}
 view : Posix -> Zone -> DatePicker -> Html Msg
 view today zone (DatePicker model) =
     let
-        --TODO somehow ensure that this time is in utc
         -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
         adjustedToday =
             addTimezoneMilliseconds zone today
@@ -540,11 +543,11 @@ presetToDisplayString presetType language =
 
 {-| A helper function to set a preset outside of the default preset ui
 -}
-selectPreset : PresetType -> Posix -> DatePicker -> ( DatePicker, Cmd Msg )
-selectPreset presetType today (DatePicker model) =
+selectPreset : PresetType -> Posix -> Zone -> DatePicker -> ( DatePicker, Cmd Msg )
+selectPreset presetType today zone (DatePicker model) =
     let
         ( model_, cmd ) =
-            selectPresetInternal presetType today model
+            selectPresetInternal presetType today zone model
     in
     ( DatePicker model_, cmd )
 
@@ -610,9 +613,9 @@ setOpen (DatePicker model) openState =
 
 {-| Check if the selection has changed.
 -}
-hasUtcSelectionChanged : DatePicker -> Maybe Selection -> Zone -> Bool
-hasUtcSelectionChanged model comparisonSelection localZone =
-    checkForChange (utcSelection localZone) model comparisonSelection
+hasUtcSelectionChanged : DatePicker -> Maybe Selection -> Bool
+hasUtcSelectionChanged model comparisonSelection =
+    checkForChange utcSelection model comparisonSelection
 
 
 {-| Check if the selection has changed.
@@ -624,16 +627,16 @@ hasLocalSelectionChanged =
 
 {-| Check if the selection has changed.
 -}
-hasUtcRangeChanged : DatePicker -> Maybe PosixRange -> Zone -> Posix -> Bool
-hasUtcRangeChanged model comparisonRange localZone today =
-    checkForChange (utcSelectionRange localZone today) model comparisonRange
+hasUtcRangeChanged : DatePicker -> Maybe PosixRange -> Posix -> Zone -> Bool
+hasUtcRangeChanged model comparisonRange today zone =
+    checkForChange (utcSelectionRange zone today) model comparisonRange
 
 
 {-| Check if the selection has changed.
 -}
-hasLocalRangeChanged : DatePicker -> Maybe PosixRange -> Posix -> Bool
-hasLocalRangeChanged model comparisonRange today =
-    checkForChange (localSelectionRange today) model comparisonRange
+hasLocalRangeChanged : DatePicker -> Maybe PosixRange -> Posix -> Zone -> Bool
+hasLocalRangeChanged model comparisonRange today zone =
+    checkForChange (localSelectionRange zone today) model comparisonRange
 
 
 {-| A helper function to change the calendar type on an existing model. Usually you should use @initWithOptions and configure this at initialization.
@@ -672,16 +675,15 @@ localSelection (DatePicker model) =
 
 {-| Get the current selection in utc time.
 -}
---TODO This should not have any zone because the model should hold the dates in utc
-utcSelection : Zone -> DatePicker -> Maybe Selection
-utcSelection zone (DatePicker model) =
+utcSelection : DatePicker -> Maybe Selection
+utcSelection (DatePicker model) =
     case model.selection of
         SingleSelection pos ->
-            Single (adjustMilliseconds zone pos)
+            Single pos
                 |> Just
 
         RangeSelection range ->
-            Just <| Range <| convertRangeToUtc zone range
+            Just <| Range range
 
         Unselected ->
             Nothing
@@ -693,20 +695,23 @@ utcSelection zone (DatePicker model) =
             Just <| Preset presetType
 
         BeforeSelection pos ->
-            Just <| Before (adjustMilliseconds zone pos)
+            Just <| Before pos
 
         AfterSelection pos ->
-            Just <| After (adjustMilliseconds zone pos)
+            Just <| After pos
 
 
 {-| A convenience function to get the current selection as a posix range in utc time.
+
+Pass in today as utc
+Pass in Zone to convert the presets to utc
+
 -}
---TODO This should not have any zone because the model should hold the dates in utc
 utcSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
 utcSelectionRange zone today (DatePicker model) =
     case model.selection of
         SingleSelection pos ->
-            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
         RangeSelection range ->
             Just range
@@ -721,23 +726,22 @@ utcSelectionRange zone today (DatePicker model) =
             Just <| presetToUtcPosixRange presetType today zone
 
         BeforeSelection pos ->
-            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
         AfterSelection pos ->
-            Just <| convertRangeToUtc zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a posix range in local time.
 -}
--- TODO This should have a zone passed t it
-localSelectionRange : Posix -> DatePicker -> Maybe PosixRange
-localSelectionRange today (DatePicker model) =
+localSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
+localSelectionRange zone today (DatePicker model) =
     case model.selection of
         SingleSelection pos ->
-            Just <| convertSingleIntoRange pos
+            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
 
         RangeSelection range ->
-            Just range
+            Just <| convertRangeToLocal zone range
 
         Unselected ->
             Nothing
@@ -746,13 +750,13 @@ localSelectionRange today (DatePicker model) =
             Nothing
 
         PresetSelection presetType ->
-            Just <| presetToLocalPosixRange presetType today
+            Just <| convertRangeToLocal zone <| presetToLocalPosixRange presetType today
 
         BeforeSelection pos ->
-            Just <| convertSingleIntoRange pos
+            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
 
         AfterSelection pos ->
-            Just <| convertSingleIntoRange pos
+            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
@@ -764,9 +768,9 @@ utcSelectionSingle zone today model =
 
 {-| A convenience function to get the current selection as a single posix in local time. This is particularly useful when you only allow for single date selection.
 -}
-localSelectionSingle : Posix -> DatePicker -> Maybe Posix
-localSelectionSingle today model =
-    Maybe.map .start (localSelectionRange today model)
+localSelectionSingle : Zone -> Posix -> DatePicker -> Maybe Posix
+localSelectionSingle zone today model =
+    Maybe.map .start (localSelectionRange zone today model)
 
 
 {-| Gets the current presets
@@ -847,7 +851,7 @@ displayUtcSelection : Zone -> DatePicker -> String
 displayUtcSelection zone datePicker =
     let
         selection =
-            selectionToInternalSelection <| utcSelection zone datePicker
+            selectionToInternalSelection <| utcSelection datePicker
 
         format (DatePicker picker) =
             prettyFormatSelection selection picker.languageConfig picker.displayFormat
@@ -855,8 +859,8 @@ displayUtcSelection zone datePicker =
     format datePicker
 
 
-innerUpdate : Msg -> Model -> ( Model, Cmd Msg )
-innerUpdate msg model =
+innerUpdate : Zone -> Msg -> Model -> ( Model, Cmd Msg )
+innerUpdate zone msg model =
     case msg of
         DoNothing ->
             R2.withNoCmd model
@@ -875,7 +879,7 @@ innerUpdate msg model =
                 { model | isOpen = True }
 
         Close today ->
-            R2.withNoCmd <| finishInput today { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+            R2.withNoCmd <| finishInput today zone { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -895,7 +899,7 @@ innerUpdate msg model =
                 }
 
         OnInputFinish today ->
-            R2.withNoCmd <| finishInput today model
+            R2.withNoCmd <| finishInput today zone model
 
         OnInputChange newText ->
             R2.withNoCmd { model | inputText = newText }
@@ -946,7 +950,7 @@ innerUpdate msg model =
                     R2.withNoCmd model
 
         KeyDown today rawKey ->
-            onKey rawKey model (onKeyDown model today)
+            onKey rawKey model (onKeyDown model today zone)
 
         KeyUp rawKey ->
             onKey rawKey
@@ -1035,7 +1039,7 @@ innerUpdate msg model =
             R2.withNoCmd { model | isPresetMenuOpen = bool, keyboardSelectedPreset = Nothing }
 
         SelectPreset presetType today ->
-            selectPresetInternal presetType today model
+            selectPresetInternal presetType today zone model
 
         ToggleFormat ->
             let
@@ -1094,8 +1098,8 @@ selectionToInternalSelection selection =
             selection
 
 
-finishInput : Posix -> Model -> Model
-finishInput today model =
+finishInput : Posix -> Zone -> Model -> Model
+finishInput today zone model =
     let
         allowTime =
             case model.dateSelectionType of
@@ -1121,7 +1125,7 @@ finishInput today model =
             { model
                 | selection = selection
                 , inputText = prettyFormatSelection selection model.languageConfig format
-                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
+                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType zone today
                 , displayFormat = format
             }
 
@@ -1159,8 +1163,8 @@ finalizeSelection model selection =
             AfterSelection <| getStartOfDay pos
 
 
-selectPresetInternal : PresetType -> Posix -> Model -> ( Model, Cmd Msg )
-selectPresetInternal presetType today model =
+selectPresetInternal : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
+selectPresetInternal presetType today zone model =
     let
         selection =
             PresetSelection presetType
@@ -1170,14 +1174,14 @@ selectPresetInternal presetType today model =
         { model
             | isPresetMenuOpen = False
             , selection = selection
-            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType today
+            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType zone today
             , inputText = prettyFormatSelection selection model.languageConfig model.displayFormat
             , keyboardSelectedPreset = Nothing
         }
 
 
-onKeyDown : Model -> Posix -> Key -> ( Model, Cmd Msg )
-onKeyDown model today key =
+onKeyDown : Model -> Posix -> Zone -> Key -> ( Model, Cmd Msg )
+onKeyDown model today zone key =
     case key of
         Shift ->
             if model.isShiftDown then
@@ -1216,7 +1220,7 @@ onKeyDown model today key =
             if model.isPresetMenuOpen then
                 case model.keyboardSelectedPreset of
                     Just a ->
-                        selectPresetInternal (SelectList.selected a) today model
+                        selectPresetInternal (SelectList.selected a) today zone model
 
                     Nothing ->
                         R2.withNoCmd model
@@ -1425,14 +1429,26 @@ bottomBar model today =
         ]
 
 
+
+{- Posix range is local -}
+
+
 leftSelector : PosixRange -> Model -> Zone -> Html Msg
 leftSelector =
     mkSelector -1 .end "prev-range-selector" "❮"
 
 
+
+{- Posix range is local -}
+
+
 rightSelector : PosixRange -> Model -> Zone -> Html Msg
 rightSelector =
     mkSelector 1 .start "next-range-selector" "❯"
+
+
+
+{- Posix range is local -}
 
 
 mkSelector : Int -> (PosixRange -> Posix) -> String -> String -> PosixRange -> Model -> Zone -> Html Msg
@@ -1472,6 +1488,10 @@ clockButton model =
         [ text "🕒" ]
 
 
+
+{- Posix range is Local -> Today Posix is Local -}
+
+
 topBar : Model -> PosixRange -> Posix -> Zone -> Html Msg
 topBar model visibleRange today zone =
     let
@@ -1506,7 +1526,11 @@ topBar model visibleRange today zone =
         , clock
         ]
 
---TODO Why does this have a zone passed to it
+
+
+-- View Function
+
+
 createSelectionInRange : Model -> Zone -> PosixRange -> PosixRange
 createSelectionInRange model zone posixRange =
     let
@@ -1677,6 +1701,10 @@ convertInputDate inputDate isEndSelection =
             ( SingleSelection adjusted, Just DateTimeFormat )
 
 
+
+{- Posix range is local -> Posix today is In UTC -}
+
+
 calendarView : Model -> Posix -> PosixRange -> Zone -> Html Msg
 calendarView model =
     case model.calendarType of
@@ -1691,6 +1719,10 @@ calendarView model =
 
         OneMonth ->
             monthlyCalendarView model "monthly-large" 0
+
+
+
+{- Posix range is local -> Posix today is In UTC -}
 
 
 yearCalendarView : Model -> Posix -> PosixRange -> Zone -> Html Msg
@@ -1735,6 +1767,10 @@ yearCalendarView model today visibleRange zone =
         ]
 
 
+
+{- Posix range is local -> Posix today is In UTC -}
+
+
 monthlyCalendarView : Model -> String -> Int -> Posix -> PosixRange -> Zone -> Html Msg
 monthlyCalendarView model monthClass endInterval today visibleRange zone =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
@@ -1744,7 +1780,7 @@ monthlyCalendarView model monthClass endInterval today visibleRange zone =
             ]
         ]
 
---TODO is this function only used in view
+
 getMonthsFromRange : Int -> Int -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
 getMonthsFromRange start end visibleRange fn =
     List.map
@@ -1754,7 +1790,7 @@ getMonthsFromRange start end visibleRange fn =
     <|
         List.range start end
 
---TODO is this function only used in view
+
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
     let
@@ -1767,13 +1803,19 @@ posixRangeForMonths startMonth endMonth currentYear zone =
     { start = start.start, end = end.end }
 
 
+
+{- Posix Month is local -> Posix today is In UTC -}
+
+
 monthCalendarView : Posix -> Posix -> Model -> Zone -> Html Msg
 monthCalendarView currentMonth today model zone =
     let
-        selection =
-            { start = getFirstDayOfMonthStartOfDay utc currentMonth, end = getLastDayOfMonthEndOfDay utc currentMonth }
-                |> createSelectionInRange model zone
-                |> RangeSelection
+        range = 
+            { start = addTimezoneMilliseconds zone <| getFirstDayOfMonthStartOfDay utc currentMonth
+            , end = addTimezoneMilliseconds zone <| getLastDayOfMonthEndOfDay utc currentMonth
+            }
+        selectionInUtc =
+            RangeSelection range
 
         wholeMonthIsOutOfRange =
             posixIsOutOfAllowedRange (getFirstDayOfMonthStartOfDay utc currentMonth) model zone
@@ -1784,24 +1826,28 @@ monthCalendarView currentMonth today model zone =
                 [ Attrs.class "disabled", Attrs.class "month--header" ]
 
             else
-                [ Attrs.class "month--header", onClick <| SetSelection selection ]
+                [ Attrs.class "month--header", onClick <| SetSelection selectionInUtc ]
     in
     td []
         [ table []
             [ thead attrs
                 [ text <| monthFormatter model.languageConfig utc currentMonth ]
             , tbody [ Attrs.class "month" ] <|
-                List.map (\x -> dayCalendarView utc currentMonth x today model) <|
-                    getCurrentMonthDatesFullWeeks utc currentMonth
+                List.map (\x -> dayCalendarView zone currentMonth x today model) <|
+                   getCurrentMonthDatesFullWeeks utc currentMonth
             ]
         ]
+
+
+
+{- currentMonth is local, currrentDay is local, today is utc -}
 
 
 dayCalendarView : Zone -> Posix -> Posix -> Posix -> Model -> Html Msg
 dayCalendarView zone currentMonth currentDay today model =
     let
         monthOfDate =
-            Time.toMonth zone
+            Time.toMonth utc
 
         wantedMonth =
             monthOfDate currentMonth
@@ -1815,7 +1861,7 @@ dayCalendarView zone currentMonth currentDay today model =
                     ( Attrs.class "", [ text <| String.fromInt <| Time.toDay utc currentDay ], Attrs.class "" )
 
                 else
-                    ( Html.Events.onMouseOver <| OnHoverOverDay currentDay
+                    ( Html.Events.onMouseOver <| OnHoverOverDay (addTimezoneMilliseconds zone currentDay)
                     , [ text <| String.fromInt <| Time.toDay utc currentDay ]
                     , setDateAttr
                     )
@@ -1825,14 +1871,15 @@ dayCalendarView zone currentMonth currentDay today model =
 
         setDateAttr =
             if model.isShiftDown || model.isMouseDown then
-                Just currentDay |> EndSelection |> onClickNoDefault
+                Just (addTimezoneMilliseconds zone currentDay) |> EndSelection |> onClickNoDefault
 
             else
-                StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
+                StartSelection (addTimezoneMilliseconds zone currentDay) |> DateRangePicker.Helper.mouseDownNoDefault
 
         isSameDayOfSelection posixFromSelection =
             contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) posixFromSelection)
 
+        --All local
         ( selectionStart, selectionEnd, isInSelectionRange ) =
             selectionPoints currentDay model today zone
 
@@ -1937,7 +1984,7 @@ calculateXPosition button calendar { width } =
             |> addPx
         )
 
--- TODO why does this have zone is it external?
+
 dateToPosixRange : Date -> Zone -> PosixRange
 dateToPosixRange d zone =
     datePartsToPosixRange
@@ -1947,7 +1994,7 @@ dateToPosixRange d zone =
         }
         zone
 
--- TODO why does this have zone is it external?
+
 posixIsOutOfAllowedRange : Posix -> Model -> Zone -> Bool
 posixIsOutOfAllowedRange posix model zone =
     let
@@ -1969,7 +2016,10 @@ normalizeSelectingRange posixRange =
         posixRange
 
 
--- TODO why does this have zone is it external?
+
+--View Function
+
+{-comparisonPosix is local, selection is utc, today is utc-}
 selectionPoints : Posix -> Model -> Posix -> Zone -> ( Maybe Posix, Maybe Posix, Bool )
 selectionPoints comparisonPosix { selection } today localZone =
     let
@@ -1977,14 +2027,24 @@ selectionPoints comparisonPosix { selection } today localZone =
             posixToMillis comparisonPosix
 
         compareRange range =
+            let
+
+            in
             posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
     in
+    -- we adjust the utc times to local for comparison 
     case selection of
         SingleSelection posix ->
-            ( Just posix, Just posix, False )
+            ( Just <| adjustMilliseconds localZone posix
+            , Just <| adjustMilliseconds localZone posix
+            , False 
+            )
 
         RangeSelection posixRange ->
-            ( Just posixRange.start, Just posixRange.end, compareRange posixRange )
+            ( Just <| adjustMilliseconds localZone posixRange.start
+            , Just <| adjustMilliseconds localZone posixRange.end
+            , compareRange <| convertRangeToLocal localZone posixRange 
+            )
 
         Unselected ->
             ( Nothing, Nothing, False )
@@ -1994,20 +2054,31 @@ selectionPoints comparisonPosix { selection } today localZone =
                 normalized =
                     normalizeSelectingRange posixRange
             in
-            ( Just normalized.start, Just normalized.end, compareRange normalized )
+            ( Just <| adjustMilliseconds localZone normalized.start
+            , Just <| adjustMilliseconds localZone normalized.end
+            , compareRange <| convertRangeToLocal localZone normalized 
+            )
 
         PresetSelection presetType ->
             let
                 posixRange =
                     presetToPosixRange presetType today localZone
             in
-            ( Just posixRange.start, Just posixRange.end, compareRange posixRange )
+            ( Just <| adjustMilliseconds localZone posixRange.start
+            , Just <| adjustMilliseconds localZone posixRange.end
+            , compareRange posixRange 
+            )
 
         AfterSelection posix ->
-            ( Just posix, Just posix, False )
+            ( Just <| adjustMilliseconds localZone posix
+            , Just <| adjustMilliseconds localZone posix
+            , False )
 
         BeforeSelection posix ->
-            ( Just posix, Just posix, False )
+            ( Just <| adjustMilliseconds localZone posix
+            , Just <| adjustMilliseconds localZone posix
+            , False 
+            )
 
 
 isSameDay : Posix -> Posix -> Bool
@@ -2021,7 +2092,7 @@ isSameDay posix1 posix2 =
     in
     civel1.day == civel2.day && civel1.month == civel2.month && civel1.year == civel2.year
 
-
+{-today is local output is local-}
 calcRange : Posix -> Model -> PosixRange
 calcRange today model =
     Maybe.withDefault (convertToRange today model.calendarType) model.visibleCalendarRange
@@ -2045,14 +2116,15 @@ convertToRange day calendarType =
             { start = getFirstDayOfMonthStartOfDay utc day, end = getLastDayOfMonthEndOfDay utc day }
 
 
-getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Posix -> Maybe PosixRange
-getVisibleRangeFromSelection selection calendarType today =
+{-internal Selection is in utc, outout posix range is in local-}
+getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Zone -> Posix -> Maybe PosixRange
+getVisibleRangeFromSelection selection calendarType zone today =
     case selection of
         SingleSelection posix ->
-            Just { start = getStartOfDay posix, end = getEndOfDay posix }
+            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
 
         RangeSelection posixRange ->
-            convertToRange posixRange.start calendarType
+            convertToRange (adjustMilliseconds zone posixRange.start) calendarType
                 |> Just
 
         Unselected ->
@@ -2065,10 +2137,10 @@ getVisibleRangeFromSelection selection calendarType today =
             Just <| presetToPosixRange presetType today utc
 
         BeforeSelection posix ->
-            Just { start = getStartOfDay posix, end = getEndOfDay posix }
+            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
 
         AfterSelection posix ->
-            Just { start = getStartOfDay posix, end = getEndOfDay posix }
+            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
 
 
 prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
@@ -2197,7 +2269,6 @@ getCurrentMonthDatesFullWeeks zone time =
         |> List.map (\delta -> addDays delta firstDayOfMonth)
 
 
---TODO zone?
 yearToPosixRange : Int -> Zone -> PosixRange
 yearToPosixRange year zone =
     let
@@ -2208,7 +2279,7 @@ yearToPosixRange year zone =
     , end = getEndOfDay <| getLastDayOfYear zone posix
     }
 
---TODO zone?
+
 yearAndMonthToPosixRange : YearAndMonth -> Zone -> PosixRange
 yearAndMonthToPosixRange yearMonth zone =
     let
@@ -2219,12 +2290,12 @@ yearAndMonthToPosixRange yearMonth zone =
     , end = getLastDayOfMonthEndOfDay zone posix
     }
 
---TODO zone?
+
 getLastDayOfMonthEndOfDay : Zone -> Posix -> Posix
 getLastDayOfMonthEndOfDay zone =
     getLastDayOfMonth zone >> getEndOfDay
 
---TODO zone?
+
 getFirstDayOfMonthStartOfDay : Zone -> Posix -> Posix
 getFirstDayOfMonthStartOfDay zone =
     getFirstDayOfMonth zone >> getStartOfDay
@@ -2265,6 +2336,11 @@ checkForChange checkFunc model elementForComparison =
 
 convertRangeToUtc : Zone -> PosixRange -> PosixRange
 convertRangeToUtc zone { start, end } =
+    { start = adjustMilliseconds zone start, end = adjustMilliseconds zone end }
+
+
+convertRangeToLocal : Zone -> PosixRange -> PosixRange
+convertRangeToLocal zone { start, end } =
     { start = adjustMilliseconds zone start, end = adjustMilliseconds zone end }
 
 
