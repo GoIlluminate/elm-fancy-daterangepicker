@@ -22,7 +22,8 @@
             "miyamoen/select-list": "4.1.0",
             "mpizenberg/elm-pointer-events": "4.0.1",
             "ohanhi/keyboard": "2.0.0",
-            "ryannhg/date-format": "2.3.0"
+            "ryannhg/date-format": "2.3.0",
+            "justinmimbs/time-extra": "1.1.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8",

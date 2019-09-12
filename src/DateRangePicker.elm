@@ -747,10 +747,10 @@ localSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
 localSelectionRange zone today (DatePicker model) =
     case model.selection of
         SingleSelection pos ->
-            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
         RangeSelection range ->
-            Just <| convertRangeToLocal zone range
+            Just range
 
         Unselected ->
             Nothing
@@ -759,13 +759,13 @@ localSelectionRange zone today (DatePicker model) =
             Nothing
 
         PresetSelection presetType ->
-            Just <| convertRangeToLocal zone <| presetToLocalPosixRange presetType today
+            Just <| presetToLocalPosixRange presetType today
 
         BeforeSelection pos ->
-            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
         AfterSelection pos ->
-            Just <| convertRangeToLocal zone <| convertSingleIntoRange pos
+            Just <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
@@ -837,7 +837,7 @@ setSelection (DatePicker model) selection =
 -}
 presetToUtcPosixRange : PresetType -> Posix -> Zone -> PosixRange
 presetToUtcPosixRange presetType today zone =
-    convertRangeToUtc zone <| presetToPosixRange presetType today zone
+    presetToPosixRange presetType today zone
 
 
 {-| A helper function to get the posix range for a given preset in local time
@@ -1820,8 +1820,8 @@ monthCalendarView : Posix -> Posix -> Model -> Zone -> Html Msg
 monthCalendarView currentMonth today model zone =
     let
         range =
-            { start = addTimezoneMilliseconds zone <| getFirstDayOfMonthStartOfDay utc currentMonth
-            , end = addTimezoneMilliseconds zone <| getLastDayOfMonthEndOfDay utc currentMonth
+            { start = getFirstDayOfMonthStartOfDay utc currentMonth
+            , end = getLastDayOfMonthEndOfDay utc currentMonth
             }
 
         selectionInUtc =
@@ -2043,15 +2043,15 @@ selectionPoints comparisonPosix { selection } today localZone =
     -- we adjust the utc times to local for comparison
     case selection of
         SingleSelection posix ->
-            ( Just <| adjustMilliseconds localZone posix
-            , Just <| adjustMilliseconds localZone posix
+            ( Just posix
+            , Just posix
             , False
             )
 
         RangeSelection posixRange ->
-            ( Just <| adjustMilliseconds localZone posixRange.start
-            , Just <| adjustMilliseconds localZone posixRange.end
-            , compareRange <| convertRangeToLocal localZone posixRange
+            ( Just posixRange.start
+            , Just posixRange.end
+            , compareRange posixRange
             )
 
         Unselected ->
@@ -2062,9 +2062,9 @@ selectionPoints comparisonPosix { selection } today localZone =
                 normalized =
                     normalizeSelectingRange posixRange
             in
-            ( Just <| adjustMilliseconds localZone normalized.start
-            , Just <| adjustMilliseconds localZone normalized.end
-            , compareRange <| convertRangeToLocal localZone normalized
+            ( Just normalized.start
+            , Just normalized.end
+            , compareRange normalized
             )
 
         PresetSelection presetType ->
@@ -2072,20 +2072,20 @@ selectionPoints comparisonPosix { selection } today localZone =
                 posixRange =
                     presetToPosixRange presetType today localZone
             in
-            ( Just <| adjustMilliseconds localZone posixRange.start
-            , Just <| adjustMilliseconds localZone posixRange.end
+            ( Just posixRange.start
+            , Just posixRange.end
             , compareRange posixRange
             )
 
         AfterSelection posix ->
-            ( Just <| adjustMilliseconds localZone posix
-            , Just <| adjustMilliseconds localZone posix
+            ( Just posix
+            , Just posix
             , False
             )
 
         BeforeSelection posix ->
-            ( Just <| adjustMilliseconds localZone posix
-            , Just <| adjustMilliseconds localZone posix
+            ( Just posix
+            , Just posix
             , False
             )
 
@@ -2137,7 +2137,7 @@ getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Zone -> Posi
 getVisibleRangeFromSelection selection calendarType zone today =
     case selection of
         SingleSelection posix ->
-            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
+            Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
         RangeSelection posixRange ->
             convertToRange (adjustMilliseconds zone posixRange.start) calendarType
@@ -2153,10 +2153,10 @@ getVisibleRangeFromSelection selection calendarType zone today =
             Just <| presetToPosixRange presetType today utc
 
         BeforeSelection posix ->
-            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
+            Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
         AfterSelection posix ->
-            Just { start = getStartOfDay <| adjustMilliseconds zone posix, end = getEndOfDay <| adjustMilliseconds zone posix }
+            Just { start = getStartOfDay posix, end = getEndOfDay posix }
 
 
 prettyFormatSelection : InternalSelection -> LanguageConfig -> Format -> String
@@ -2348,16 +2348,6 @@ checkForChange checkFunc model elementForComparison =
 
     else
         checkFunc model /= elementForComparison
-
-
-convertRangeToUtc : Zone -> PosixRange -> PosixRange
-convertRangeToUtc zone { start, end } =
-    { start = adjustMilliseconds zone start, end = adjustMilliseconds zone end }
-
-
-convertRangeToLocal : Zone -> PosixRange -> PosixRange
-convertRangeToLocal zone { start, end } =
-    { start = adjustMilliseconds zone start, end = adjustMilliseconds zone end }
 
 
 convertSingleIntoRange : Posix -> PosixRange
