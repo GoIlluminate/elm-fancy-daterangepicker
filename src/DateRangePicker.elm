@@ -46,7 +46,7 @@ import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
-import Derberos.Date.Core exposing (addTimezoneMilliseconds, adjustMilliseconds, civilToPosix, posixToCivil)
+import Derberos.Date.Core as DateCore exposing (addTimezoneMilliseconds, adjustMilliseconds, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Derberos.Date.Utils exposing (monthToNumber1)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
@@ -146,7 +146,7 @@ type alias CustomPreset =
     , display : String
     }
 
-
+{-Stored as UTC -}
 type InternalSelection
     = SingleSelection Posix
     | RangeSelection PosixRange
@@ -198,11 +198,14 @@ type alias WindowSize =
 
 
 {-| A record which represents the main datepicker model
+Selection stored as UTC
+Presets Are currently stored as Local
+HoveredDate is Utc
 -}
 type alias Model =
     { selection : InternalSelection
-    , availableForSelectionStart : Date
-    , availableForSelectionEnd : Date
+    , availableForSelectionStart : Posix
+    , availableForSelectionEnd : Posix
     , visibleCalendarRange : Maybe PosixRange
     , isMouseDown : Bool
     , isShiftDown : Bool
@@ -226,6 +229,8 @@ type alias Model =
     }
 
 
+{-| A record which represents the main datepicker model
+-}
 type DatePicker
     = DatePicker Model
 
@@ -236,8 +241,8 @@ init : DatePicker
 init =
     DatePicker <|
         { selection = Unselected
-        , availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
-        , availableForSelectionEnd = Date.fromCalendarDate 2100 Dec 31
+        , availableForSelectionStart = civilToPosix <| DateCore.newDateRecord 1900 1 1 0 0 0 0 Time.utc
+        , availableForSelectionEnd = civilToPosix <| DateCore.newDateRecord 2100 12 31 23 59 59 0 Time.utc
         , visibleCalendarRange = Nothing
         , isMouseDown = False
         , isShiftDown = False
@@ -264,8 +269,8 @@ init =
 {-| A record which specifies config options which can be set when initializes the datepicker
 -}
 type alias Config =
-    { availableForSelectionStart : Date
-    , availableForSelectionEnd : Date
+    { availableForSelectionStart : Posix
+    , availableForSelectionEnd : Posix
     , presets : List PresetType
     , calendarType : CalendarType
     , isOpen : Bool
@@ -328,8 +333,8 @@ initWithOptions config =
 -}
 defaultConfig : Config
 defaultConfig =
-    { availableForSelectionStart = Date.fromCalendarDate 1900 Jan 1
-    , availableForSelectionEnd = Date.fromCalendarDate 2100 Dec 31
+    { availableForSelectionStart = civilToPosix <| DateCore.newDateRecord 1900 1 1 0 0 0 0 Time.utc
+    , availableForSelectionEnd = civilToPosix <| DateCore.newDateRecord 2100 12 31 23 59 59 0 Time.utc
     , presets = []
     , calendarType = FullCalendar
     , isOpen = False
@@ -399,7 +404,7 @@ defaultOpener (DatePicker model) openerId =
 subscriptions : DatePicker -> Posix -> Zone -> Sub Msg
 subscriptions (DatePicker model) today zone =
     let
-    --TODO Check if the default get today task is in utc
+        --TODO Check if the default get today task is in utc
         adjustedToday =
             adjustMilliseconds zone today
 
@@ -672,7 +677,12 @@ localSelection (DatePicker model) =
 
 {-| Get the current selection in utc time.
 -}
+
+
+
 --TODO This should not have any zone because the model should hold the dates in utc
+
+
 utcSelection : Zone -> DatePicker -> Maybe Selection
 utcSelection zone (DatePicker model) =
     case model.selection of
@@ -701,7 +711,12 @@ utcSelection zone (DatePicker model) =
 
 {-| A convenience function to get the current selection as a posix range in utc time.
 -}
+
+
+
 --TODO This should not have any zone because the model should hold the dates in utc
+
+
 utcSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
 utcSelectionRange zone today (DatePicker model) =
     case model.selection of
@@ -729,7 +744,12 @@ utcSelectionRange zone today (DatePicker model) =
 
 {-| A convenience function to get the current selection as a posix range in local time.
 -}
+
+
+
 -- TODO This should have a zone passed t it
+
+
 localSelectionRange : Posix -> DatePicker -> Maybe PosixRange
 localSelectionRange today (DatePicker model) =
     case model.selection of
@@ -1506,26 +1526,30 @@ topBar model visibleRange today zone =
         , clock
         ]
 
+
+
 --TODO Why does this have a zone passed to it
+
+
 createSelectionInRange : Model -> Zone -> PosixRange -> PosixRange
 createSelectionInRange model zone posixRange =
     let
         startRange =
-            dateToPosixRange model.availableForSelectionStart zone
+            model.availableForSelectionStart
 
         endRange =
-            dateToPosixRange model.availableForSelectionEnd zone
+            model.availableForSelectionEnd
 
         updatedSelectionStart =
-            if posixToMillis posixRange.start < posixToMillis startRange.start then
-                startRange.start
+            if posixToMillis posixRange.start < posixToMillis startRange then
+                startRange
 
             else
                 posixRange.start
 
         updatedSelectionEnd =
-            if posixToMillis posixRange.end > posixToMillis endRange.end then
-                endRange.end
+            if posixToMillis posixRange.end > posixToMillis endRange then
+                endRange
 
             else
                 posixRange.end
@@ -1744,7 +1768,11 @@ monthlyCalendarView model monthClass endInterval today visibleRange zone =
             ]
         ]
 
+
+
 --TODO is this function only used in view
+
+
 getMonthsFromRange : Int -> Int -> PosixRange -> (Zone -> Posix -> Posix) -> List Posix
 getMonthsFromRange start end visibleRange fn =
     List.map
@@ -1754,7 +1782,11 @@ getMonthsFromRange start end visibleRange fn =
     <|
         List.range start end
 
+
+
 --TODO is this function only used in view
+
+
 posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
     let
@@ -1937,7 +1969,11 @@ calculateXPosition button calendar { width } =
             |> addPx
         )
 
+
+
 -- TODO why does this have zone is it external?
+
+
 dateToPosixRange : Date -> Zone -> PosixRange
 dateToPosixRange d zone =
     datePartsToPosixRange
@@ -1947,17 +1983,21 @@ dateToPosixRange d zone =
         }
         zone
 
+
+
 -- TODO why does this have zone is it external?
+
+
 posixIsOutOfAllowedRange : Posix -> Model -> Zone -> Bool
 posixIsOutOfAllowedRange posix model zone =
     let
         start =
-            dateToPosixRange model.availableForSelectionStart zone
+            model.availableForSelectionStart
 
         end =
-            dateToPosixRange model.availableForSelectionEnd zone
+            model.availableForSelectionEnd
     in
-    posixToMillis posix < posixToMillis start.start || posixToMillis posix > posixToMillis end.end
+    posixToMillis posix < posixToMillis start || posixToMillis posix > posixToMillis end
 
 
 normalizeSelectingRange : PosixRange -> PosixRange
@@ -1969,7 +2009,10 @@ normalizeSelectingRange posixRange =
         posixRange
 
 
+
 -- TODO why does this have zone is it external?
+
+
 selectionPoints : Posix -> Model -> Posix -> Zone -> ( Maybe Posix, Maybe Posix, Bool )
 selectionPoints comparisonPosix { selection } today localZone =
     let
@@ -2197,7 +2240,10 @@ getCurrentMonthDatesFullWeeks zone time =
         |> List.map (\delta -> addDays delta firstDayOfMonth)
 
 
+
 --TODO zone?
+
+
 yearToPosixRange : Int -> Zone -> PosixRange
 yearToPosixRange year zone =
     let
@@ -2208,7 +2254,11 @@ yearToPosixRange year zone =
     , end = getEndOfDay <| getLastDayOfYear zone posix
     }
 
+
+
 --TODO zone?
+
+
 yearAndMonthToPosixRange : YearAndMonth -> Zone -> PosixRange
 yearAndMonthToPosixRange yearMonth zone =
     let
@@ -2219,12 +2269,20 @@ yearAndMonthToPosixRange yearMonth zone =
     , end = getLastDayOfMonthEndOfDay zone posix
     }
 
+
+
 --TODO zone?
+
+
 getLastDayOfMonthEndOfDay : Zone -> Posix -> Posix
 getLastDayOfMonthEndOfDay zone =
     getLastDayOfMonth zone >> getEndOfDay
 
+
+
 --TODO zone?
+
+
 getFirstDayOfMonthStartOfDay : Zone -> Posix -> Posix
 getFirstDayOfMonthStartOfDay zone =
     getFirstDayOfMonth zone >> getStartOfDay
