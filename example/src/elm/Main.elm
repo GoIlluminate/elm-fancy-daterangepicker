@@ -82,6 +82,10 @@ init =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        zone =
+            Maybe.withDefault Time.utc model.zone
+    in
     case msg of
         ChangeCalendarDisplay calendarType ->
             let
@@ -102,26 +106,26 @@ update msg model =
         DatePickerMsgs msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePicker
+                    DateRangePicker.update zone msg_ model.datePicker
             in
             ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
 
         DatePickerMsgsAbs msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePickerabs
+                    DateRangePicker.update zone msg_ model.datePickerabs
             in
             ( { model | datePickerabs = newDateRangePicker }, Cmd.map DatePickerMsgsAbs dateRangePickerCmd )
 
         DatePickerMsgsFixed msg_ ->
             let
                 ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update msg_ model.datePickerfixed
+                    DateRangePicker.update zone msg_ model.datePickerfixed
             in
             ( { model | datePickerfixed = newDateRangePicker }, Cmd.map DatePickerMsgsFixed dateRangePickerCmd )
 
-        NewZone zone ->
-            ( { model | zone = Just zone }, Cmd.none )
+        NewZone z ->
+            ( { model | zone = Just z }, Cmd.none )
 
         ToggleColorTheme ->
             ( { model
@@ -185,18 +189,18 @@ view model =
             getSelector model.datePickerfixed "datepicker--buttonfixed" "fixed-class"
 
         getLocal datepicker =
-            case model.today of
-                Just t ->
-                    case ( DateRangePicker.localSelectionRange t datepicker, model.zone ) of
-                        ( Just pos, Just tz ) ->
+            case ( model.today, model.zone ) of
+                ( Just t, Just timezone ) ->
+                    case DateRangePicker.localSelectionRange timezone t datepicker of
+                        Just pos ->
                             ( DateRangePicker.displaySelection datepicker
-                            , DateCore.getTzOffset tz pos.start
+                            , DateCore.getTzOffset timezone pos.start
                             )
 
                         _ ->
                             ( "", 0 )
 
-                Nothing ->
+                _ ->
                     ( "", 0 )
 
         utcSelection datepicker =
