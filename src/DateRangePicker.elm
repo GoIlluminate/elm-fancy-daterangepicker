@@ -48,7 +48,7 @@ import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
 import Derberos.Date.Core as DateCore exposing (adjustMilliseconds, civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
-import Derberos.Date.Utils exposing (monthToNumber1)
+import Derberos.Date.Utils exposing (monthToNumber1, getNextMonth, getPrevMonth, numberOfDaysInMonth, monthToNumber, numberToMonth)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
 import Html.Attributes as Attrs
 import Html.Events exposing (onClick)
@@ -62,6 +62,7 @@ import Svg exposing (g, path, svg)
 import Svg.Attributes as Svg
 import Task
 import Time exposing (Month(..), Posix, Weekday(..), Zone, posixToMillis, utc)
+import Time.Extra as TimeExtra exposing (Parts, partsToPosix, posixToParts)
 
 
 {-| An opaque type representing messages that are passed inside the DatePicker.
@@ -200,6 +201,10 @@ type alias WindowSize =
     , height : Float
     }
 
+type alias PartsRange = 
+    { start : Parts
+    , end : Parts
+    }
 
 {-| A record which represents the main datepicker model
 Selection stored as UTC
@@ -492,10 +497,19 @@ view today zone (DatePicker model) =
         -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
         adjustedToday =
             today
+        
+        utcToday = posixToParts utc today
+        localToday = posixToParts zone today
+
+        _ = Debug.log "utc" <| utcToday
+        _  = Debug.log "zone" <| posixToParts zone today
 
         visibleRange =
             calcRange adjustedToday model
 
+        visibleRangeParts =
+            calcVisibleRange localToday model
+        _ = Debug.log "vis" visibleRangeParts
         mouseEvent =
             if model.isMouseDown && model.isMouseOutside then
                 Mouse.onMove OnMouseMove
@@ -520,9 +534,9 @@ view today zone (DatePicker model) =
                     ]
                     (calendarPositioning model.uiButton model.uiElement model.windowSize)
                 )
-                [ topBar model visibleRange adjustedToday zone
-                , leftSelector visibleRange model zone
-                , rightSelector visibleRange model zone
+                [ topBar model visibleRangeParts adjustedToday zone
+                , leftSelector visibleRangeParts model zone
+                , rightSelector visibleRangeParts model zone
                 , calendarView model today visibleRange zone
                 , bottomBar model today
                 ]
@@ -1363,7 +1377,7 @@ onKey rawKey model onValidKey =
             R2.withNoCmd model
 
 
-updateCalendarRange : Model -> Int -> PosixRange -> ( Model, Cmd Msg )
+updateCalendarRange : Model -> Int -> PartsRange -> ( Model, Cmd Msg )
 updateCalendarRange model intervalChange currentVisibleRange =
     R2.withNoCmd
         { model
@@ -1373,29 +1387,38 @@ updateCalendarRange model intervalChange currentVisibleRange =
         }
 
 
-calculateNewCalendarRange : Model -> Int -> PosixRange -> PosixRange
+calculateNewCalendarRange : Model -> Int -> PartsRange -> PartsRange
 calculateNewCalendarRange model intervalChange currentVisibleRange =
     let
         updateWithIntervalFunc intervalFunc range =
-            { start = intervalFunc intervalChange utc range.start
-            , end = intervalFunc intervalChange utc range.end
+            { start = intervalFunc range.start
+            , end = intervalFunc range.end
             }
 
-        visibleRange =
-            Maybe.withDefault currentVisibleRange model.visibleCalendarRange
+        yearChange parts =
+            {parts | year = parts.year + intervalChange}
+        
+        monthChange interval parts =
+            {parts | month = parts.month 
+                    |> monthToNumber 
+                    |> (\x -> x + interval) 
+                    |> (\y -> modBy 11 y) 
+                    |> numberToMonth 
+                    |> Maybe.withDefault Jan}
+
     in
     case model.calendarType of
         FullCalendar ->
-            updateWithIntervalFunc (\int _ time -> addYears int time) visibleRange
+            updateWithIntervalFunc yearChange currentVisibleRange
 
         ThreeMonths ->
-            updateWithIntervalFunc addMonths visibleRange
+            updateWithIntervalFunc (monthChange (intervalChange * 3)) currentVisibleRange
 
         TwoMonths ->
-            updateWithIntervalFunc addMonths visibleRange
+            updateWithIntervalFunc (monthChange (intervalChange * 2)) currentVisibleRange
 
         OneMonth ->
-            updateWithIntervalFunc addMonths visibleRange
+            updateWithIntervalFunc (monthChange intervalChange) currentVisibleRange
 
 
 presetsDisplay : Model -> Posix -> Html Msg
@@ -1458,7 +1481,7 @@ bottomBar model today =
 {- Posix range is local -}
 
 
-leftSelector : PosixRange -> Model -> Zone -> Html Msg
+leftSelector : PartsRange -> Model -> Zone -> Html Msg
 leftSelector =
     mkSelector -1 .end "prev-range-selector" "❮"
 
@@ -1467,7 +1490,7 @@ leftSelector =
 {- Posix range is local -}
 
 
-rightSelector : PosixRange -> Model -> Zone -> Html Msg
+rightSelector : PartsRange -> Model -> Zone -> Html Msg
 rightSelector =
     mkSelector 1 .start "next-range-selector" "❯"
 
@@ -1476,7 +1499,7 @@ rightSelector =
 {- Posix range is local -}
 
 
-mkSelector : Int -> (PosixRange -> Posix) -> String -> String -> PosixRange -> Model -> Zone -> Html Msg
+mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> PartsRange -> Model -> Zone -> Html Msg
 mkSelector moveInterval partOfRange class textContent visibleRange model zone =
     let
         newRange =
@@ -1517,7 +1540,7 @@ clockButton model =
 {- Posix range is Local -> Today Posix is Local -}
 
 
-topBar : Model -> PosixRange -> Posix -> Zone -> Html Msg
+topBar : Model -> PartsRange -> Posix -> Zone -> Html Msg
 topBar model visibleRange today zone =
     let
         ( fullCalendarSelector, class ) =
@@ -1540,7 +1563,7 @@ topBar model visibleRange today zone =
                     clockButton model
 
         selection =
-            { start = getFirstDayOfYear utc visibleRange.start, end = getLastDayOfYear utc visibleRange.start }
+            { start = partsToPosix utc visibleRange.start , end = partsToPosix utc visibleRange.end }
                 |> createSelectionInRange model zone
                 |> RangeSelection
     in
@@ -1582,9 +1605,9 @@ createSelectionInRange model zone posixRange =
     { start = updatedSelectionStart, end = updatedSelectionEnd }
 
 
-selectionText : PosixRange -> String
+selectionText : PartsRange -> String
 selectionText visibleRange =
-    String.fromInt <| Time.toYear utc visibleRange.start
+    String.fromInt <| Time.toYear utc <| partsToPosix utc visibleRange.start
 
 
 calendarInput : Model -> Posix -> Html Msg
@@ -2132,11 +2155,65 @@ isSameDay posix1 posix2 =
 
 {- today is local output is local -}
 
+calcVisibleRange : Parts -> Model -> PartsRange
+calcVisibleRange localToday model =
+    case model.calendarType of
+        FullCalendar ->
+            { start = 
+                { localToday | month = Jan, day = 1, hour = 0 , minute = 0, second = 0, millisecond = 0 }
+            , end = 
+                {localToday | month = Dec
+                            , day = 31
+                            , hour = 23 
+                            , minute = 59
+                            , second = 59
+                            , millisecond = 0 
+                            }
+            }
+
+        ThreeMonths ->
+            { start = 
+                { localToday | month = getPrevMonth localToday.month
+                , day = 1, hour = 0 , minute = 0, second = 0, millisecond = 0 }
+            , end = 
+                {localToday | month = getNextMonth localToday.month
+                            , day = numberOfDaysInMonth localToday.year <| getNextMonth localToday.month
+                            , hour = 23 
+                            , minute = 59
+                            , second = 59
+                            , millisecond = 0 
+                            }
+            }
+
+        TwoMonths ->
+            { start = 
+                { localToday | month = getPrevMonth localToday.month, day = 1, hour = 0 , minute = 0, second = 0, millisecond = 0 }
+            , end = 
+                {localToday | day = numberOfDaysInMonth localToday.year localToday.month
+                            , hour = 23 
+                            , minute = 59
+                            , second = 59
+                            , millisecond = 0 
+                            }
+            }
+
+        OneMonth ->
+            { start = 
+                { localToday | day = 1, hour = 0 , minute = 0, second = 0, millisecond = 0 }
+            , end = 
+                {localToday | day = numberOfDaysInMonth localToday.year localToday.month
+                            , hour = 23 
+                            , minute = 59
+                            , second = 59
+                            , millisecond = 0 
+                            }
+            }
+
+
 
 calcRange : Posix -> Model -> PosixRange
 calcRange today model =
     Maybe.withDefault (convertToRange today model.calendarType) model.visibleCalendarRange
-
 
 convertToRange : Posix -> CalendarType -> PosixRange
 convertToRange day calendarType =
