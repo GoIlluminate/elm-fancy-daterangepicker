@@ -142,7 +142,7 @@ update msg model =
         ChangeToAfter ->
             case model.today of
                 Just today ->
-                    ( { model | datePicker = DateRangePicker.setSelection model.datePicker <| Just (DateRangePicker.After today) }, Cmd.none )
+                    ( { model | datePicker = DateRangePicker.setSelection zone (Just (DateRangePicker.After today)) model.datePicker }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -150,7 +150,7 @@ update msg model =
         ChangeToBefore ->
             case model.today of
                 Just today ->
-                    ( { model | datePicker = DateRangePicker.setSelection model.datePicker <| Just (DateRangePicker.Before today) }, Cmd.none )
+                    ( { model | datePicker = DateRangePicker.setSelection zone (Just (DateRangePicker.Before today)) model.datePicker }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -171,7 +171,7 @@ view model =
             case ( model.today, model.zone ) of
                 ( Just t, Just z ) ->
                     div [ class styleClass, class divClass ]
-                        [ DateRangePicker.defaultOpener model.datePicker buttonId
+                        [ DateRangePicker.defaultOpener z model.datePicker buttonId
                         , DateRangePicker.view t z datepicker
                         , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
@@ -193,7 +193,7 @@ view model =
                 ( Just t, Just timezone ) ->
                     case DateRangePicker.localSelectionRange timezone t datepicker of
                         Just pos ->
-                            ( DateRangePicker.displaySelection datepicker
+                            ( DateRangePicker.displaySelection timezone datepicker
                             , DateCore.getTzOffset timezone pos.start
                             )
 
@@ -206,7 +206,7 @@ view model =
         utcSelection datepicker =
             case model.zone of
                 Just zone ->
-                    DateRangePicker.displayUtcSelection zone datepicker
+                    DateRangePicker.displayUtcSelection datepicker
 
                 Nothing ->
                     ""
