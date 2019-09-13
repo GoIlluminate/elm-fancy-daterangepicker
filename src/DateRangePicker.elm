@@ -899,9 +899,8 @@ innerUpdate zone msg model =
                 { model | isOpen = True }
 
         Close today ->
-            R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+            R2.withNoCmd <| finishInput today zone { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
-        --<| finishInput today zone { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
                 { model
@@ -916,9 +915,8 @@ innerUpdate zone msg model =
                 }
 
         OnInputFinish today ->
-            R2.withNoCmd model
+            R2.withNoCmd <| finishInput today zone model
 
-        -- <| finishInput today zone model
         OnInputChange newText ->
             R2.withNoCmd { model | inputText = newText }
 
@@ -1148,7 +1146,7 @@ finishInput today zone model =
         Ok value ->
             let
                 ( selection, format ) =
-                    convertInput value model
+                    convertInput zone value model
             in
             { model
                 | selection = selection
@@ -1618,14 +1616,14 @@ inputPlaceHolder model =
             model.languageConfig.datePickerInputPlaceholder
 
 
-convertInput : Input -> Model -> ( InternalSelection, Format )
-convertInput input model =
+convertInput : Zone -> Input -> Model -> ( InternalSelection, Format )
+convertInput zone input model =
     case input of
         SingleInput inputDate ->
-            singleInputConversion inputDate model False
+            singleInputConversion zone inputDate model False
 
         RangeInput start end ->
-            combineInputToRange start end
+            combineInputToRange zone start end
 
         CustomDate selectedCustomDate ->
             let
@@ -1640,17 +1638,17 @@ convertInput input model =
                     ( Unselected, DateFormat )
 
         BeforeInput inputDate ->
-            singleInputConversion inputDate model True
+            singleInputConversion zone inputDate model True
 
         AfterInput inputDate ->
-            singleInputConversion inputDate model False
+            singleInputConversion zone inputDate model False
 
 
-singleInputConversion : InputDate -> Model -> Bool -> ( InternalSelection, Format )
-singleInputConversion inputDate model isEndSelection =
+singleInputConversion : Zone -> InputDate -> Model -> Bool -> ( InternalSelection, Format )
+singleInputConversion zone inputDate model isEndSelection =
     let
         ( initialSelection, format ) =
-            convertInputDate inputDate isEndSelection
+            convertInputDate zone inputDate isEndSelection
 
         selection =
             case model.dateSelectionType of
@@ -1668,14 +1666,14 @@ singleInputConversion inputDate model isEndSelection =
     ( selection, Maybe.withDefault DateFormat format )
 
 
-combineInputToRange : InputDate -> InputDate -> ( InternalSelection, Format )
-combineInputToRange start end =
+combineInputToRange : Zone -> InputDate -> InputDate -> ( InternalSelection, Format )
+combineInputToRange zone start end =
     let
         ( startSelection, startFormat ) =
-            convertInputDate start False
+            convertInputDate zone start False
 
         ( endSelection, endFormat ) =
-            convertInputDate end True
+            convertInputDate zone end True
 
         fullFormat =
             case ( startFormat, endFormat ) of
@@ -1705,19 +1703,19 @@ combineInputToRange start end =
             ( Unselected, DateFormat )
 
 
-convertInputDate : InputDate -> Bool -> ( InternalSelection, Maybe Format )
-convertInputDate inputDate isEndSelection =
+convertInputDate : Zone -> InputDate -> Bool -> ( InternalSelection, Maybe Format )
+convertInputDate zone inputDate isEndSelection =
     case inputDate of
         JustYear year ->
-            ( RangeSelection <| yearToPosixRange year Time.utc, Nothing )
+            ( RangeSelection <| yearToPosixRange year zone, Nothing )
 
         JustYearAndMonth yearAndMonth ->
-            ( RangeSelection <| yearAndMonthToPosixRange yearAndMonth Time.utc, Nothing )
+            ( RangeSelection <| yearAndMonthToPosixRange yearAndMonth zone, Nothing )
 
         FullDate dateParts ->
             let
                 unAdjustedPosix =
-                    datePartsToPosix dateParts Time.utc
+                    datePartsToPosix dateParts zone
 
                 adjusted =
                     if isEndSelection then
@@ -1731,7 +1729,7 @@ convertInputDate inputDate isEndSelection =
         FullDateTime dateTimeParts ->
             let
                 unAdjustedPosix =
-                    dateTimePartsToPosix dateTimeParts Time.utc
+                    dateTimePartsToPosix dateTimeParts zone
 
                 adjusted =
                     if isEndSelection then
