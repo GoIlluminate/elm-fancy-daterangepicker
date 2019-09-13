@@ -498,16 +498,7 @@ view today zone (DatePicker model) =
             posixToParts zone today
 
         visibleRangeParts =
-            calcVisibleRange todayParts model
-
-        _ =
-            Debug.log "asdf" <|
-                List.map .month <|
-                    getMonthsFromRange
-                        0
-                        11
-                        visibleRangeParts
-                        getFirstDayOfYearParts
+            Maybe.withDefault (calcVisibleRange todayParts model) model.visibleCalendarRange
 
         mouseEvent =
             if model.isMouseDown && model.isMouseOutside then
@@ -918,14 +909,10 @@ innerUpdate zone msg model =
                 }
 
         SetSelection selection ->
-            let
-                updatedSelection =
-                    finalizeSelection model selection
-            in
             R2.withNoCmd
                 { model
-                    | selection = updatedSelection
-                    , inputText = prettyFormatSelection zone updatedSelection model.languageConfig model.displayFormat
+                    | selection = selection
+                    , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
                 }
 
         OnInputFinish today ->
@@ -1174,36 +1161,6 @@ finishInput today zone model =
             { model | inputText = prettyFormatSelection zone model.selection model.languageConfig model.displayFormat }
 
 
-finalizeSelection : Model -> InternalSelection -> InternalSelection
-finalizeSelection model selection =
-    case selection of
-        SingleSelection posix ->
-            SingleSelection <| getStartOfDay posix
-
-        RangeSelection posixRange ->
-            case model.dateSelectionType of
-                DateSelection ->
-                    SingleSelection <| getStartOfDay posixRange.start
-
-                DateRangeSelection ->
-                    RangeSelection { start = getStartOfDay posixRange.start, end = getEndOfDay posixRange.end }
-
-        Unselected ->
-            selection
-
-        Selecting _ ->
-            selection
-
-        PresetSelection _ ->
-            selection
-
-        BeforeSelection pos ->
-            BeforeSelection <| getEndOfDay pos
-
-        AfterSelection pos ->
-            AfterSelection <| getStartOfDay pos
-
-
 selectPresetInternal : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
 selectPresetInternal presetType today zone model =
     let
@@ -1443,7 +1400,7 @@ calculateNewCalendarRange model intervalChange currentVisibleRange =
             }
 
         yearChange parts =
-            { parts | year = parts.year + intervalChange }
+            { parts | year = Debug.log "new year" <| parts.year + intervalChange }
     in
     case model.calendarType of
         FullCalendar ->
@@ -1515,26 +1472,14 @@ bottomBar model zone today =
         ]
 
 
-
-{- Posix range is local -}
-
-
 leftSelector : PartsRange -> Model -> Zone -> Html Msg
 leftSelector =
     mkSelector -1 .end "prev-range-selector" "❮"
 
 
-
-{- Posix range is local -}
-
-
 rightSelector : PartsRange -> Model -> Zone -> Html Msg
 rightSelector =
     mkSelector 1 .start "next-range-selector" "❯"
-
-
-
-{- Posix range is local -}
 
 
 mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> PartsRange -> Model -> Zone -> Html Msg
@@ -1898,12 +1843,26 @@ posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
 posixRangeForMonths startMonth endMonth currentYear zone =
     let
         start =
-            yearAndMonthToPosixRange { year = currentYear, month = monthToNumber1 startMonth } zone
+            { year = currentYear
+            , month = startMonth
+            , day = 1
+            , hour = 0
+            , minute = 0
+            , second = 0
+            , millisecond = 0
+            }
 
         end =
-            yearAndMonthToPosixRange { year = currentYear, month = monthToNumber1 endMonth } zone
+            { year = currentYear
+            , month = endMonth
+            , day = numberOfDaysInMonth currentYear endMonth
+            , hour = 23
+            , minute = 59
+            , second = 59
+            , millisecond = 0
+            }
     in
-    { start = start.start, end = end.end }
+    { start = partsToPosix zone start, end = partsToPosix zone end }
 
 
 
@@ -1988,13 +1947,13 @@ dayCalendarView zone currentMonth currentDay today model =
 
         --All local
         ( selectionStart, selectionEnd, isInSelectionRange ) =
-            selectionPoints (partsToPosix zone currentDay) model (partsToPosix zone today) zone
+            selectionPoints currentDay model today zone
 
         classList =
             Attrs.classList
                 [ ( "day", True )
                 , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange )
-                , ( "border-selection", isSameDayOfSelection (Maybe.map (posixToParts zone) selectionStart) || isSameDayOfSelection (Maybe.map (posixToParts zone) selectionEnd) )
+                , ( "border-selection", isSameDayOfSelection selectionStart || isSameDayOfSelection selectionEnd )
                 , ( "today", isSameDay currentDay today )
                 , ( "disabled", posixIsOutOfAllowedRange currentDay model zone )
                 , ( "wrong-month", not contentIsInCorrectMonth )
@@ -2128,26 +2087,36 @@ normalizeSelectingRange posixRange =
 {- comparisonPosix is local, selection is utc, today is utc -}
 
 
-selectionPoints : Posix -> Model -> Posix -> Zone -> ( Maybe Posix, Maybe Posix, Bool )
-selectionPoints comparisonPosix { selection } today localZone =
+selectionPoints : Parts -> Model -> Parts -> Zone -> ( Maybe Parts, Maybe Parts, Bool )
+selectionPoints date { selection } today zone =
     let
-        posixInMillis =
-            posixToMillis comparisonPosix
-
         compareRange range =
-            posixToMillis range.start <= posixInMillis && posixInMillis <= posixToMillis range.end
+            posixToMillis range.start
+                <= (posixToMillis <| partsToPosix zone date)
+                && (posixToMillis <| partsToPosix zone date)
+                <= posixToMillis range.end
+
+        -- let
+        --     start =
+        --         posixToParts zone range.start
+        --     end =
+        --         posixToParts zone range.end
+        -- in
+        -- (start.year <= date.year && end.year >= date.year)
+        --     && (monthNum start <= monthNum date && monthNum end >= monthNum date)
+        --     && (start.day <= date.day && end.day >= date.day)
     in
     -- we adjust the utc times to local for comparison
     case selection of
         SingleSelection posix ->
-            ( Just posix
-            , Just posix
+            ( Just <| posixToParts zone posix
+            , Just <| posixToParts zone posix
             , False
             )
 
         RangeSelection posixRange ->
-            ( Just posixRange.start
-            , Just posixRange.end
+            ( Just <| posixToParts zone posixRange.start
+            , Just <| Debug.log "end" <| posixToParts zone posixRange.end
             , compareRange posixRange
             )
 
@@ -2159,30 +2128,30 @@ selectionPoints comparisonPosix { selection } today localZone =
                 normalized =
                     normalizeSelectingRange posixRange
             in
-            ( Just normalized.start
-            , Just normalized.end
+            ( Just <| posixToParts zone normalized.start
+            , Just <| posixToParts zone normalized.end
             , compareRange normalized
             )
 
         PresetSelection presetType ->
             let
                 posixRange =
-                    presetToPosixRange presetType today localZone
+                    presetToPosixRange presetType (partsToPosix zone today) zone
             in
-            ( Just posixRange.start
-            , Just posixRange.end
+            ( Just <| posixToParts zone posixRange.start
+            , Just <| posixToParts zone posixRange.end
             , compareRange posixRange
             )
 
         AfterSelection posix ->
-            ( Just posix
-            , Just posix
+            ( Just <| posixToParts zone posix
+            , Just <| posixToParts zone posix
             , False
             )
 
         BeforeSelection posix ->
-            ( Just posix
-            , Just posix
+            ( Just <| posixToParts zone posix
+            , Just <| posixToParts zone posix
             , False
             )
 
@@ -2443,7 +2412,6 @@ getCurrentMonthDatesFullWeeks zone time =
     List.range 0 numberDaysInMonth
         |> List.map (addDayParts firstDayOfMonth)
         |> List.map (posixToParts zone)
-        |> Debug.log "monthlol"
 
 
 getDiffLastSun : Weekday -> Int
