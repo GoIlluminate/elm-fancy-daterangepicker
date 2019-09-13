@@ -209,9 +209,6 @@ type alias PartsRange =
 
 
 {-| A record which represents the main datepicker model
-Selection stored as UTC
-Presets Are currently stored as Local
-HoveredDate is Utc
 -}
 type alias Model =
     { selection : InternalSelection
@@ -417,8 +414,6 @@ defaultOpener zone (DatePicker model) openerId =
     Sub.map DatePickerMsgs <|
         DateRangePicker.subscriptions model.datePicker currentTime localZone
 
-    Pass in Today as utc
-
 -}
 subscriptions : DatePicker -> Posix -> Zone -> Sub Msg
 subscriptions (DatePicker model) today zone =
@@ -486,14 +481,11 @@ update zone msg (DatePicker model) =
 
     DateRangePicker.view currentTime localZone datePicker
 
-
-    Pass in today as utc.
-
 -}
 view : Posix -> Zone -> DatePicker -> Html Msg
 view today zone (DatePicker model) =
     let
-        -- Adjust today with the timezone and then every other view below uses utc which does not adjust the time when manipulating it
+        -- All view Functions from here on Take in a Time.Extra.Parts which is in local time
         todayParts =
             posixToParts zone today
 
@@ -854,7 +846,6 @@ presetToUtcPosixRange presetType today zone =
 -}
 presetToLocalPosixRange : PresetType -> Posix -> PosixRange
 presetToLocalPosixRange presetType today =
-    --TODO
     presetToPosixRange presetType today Time.utc
 
 
@@ -1398,7 +1389,7 @@ calculateNewCalendarRange model intervalChange currentVisibleRange =
             }
 
         yearChange parts =
-            { parts | year = Debug.log "new year" <| parts.year + intervalChange }
+            { parts | year = parts.year + intervalChange }
     in
     case model.calendarType of
         FullCalendar ->
@@ -1517,10 +1508,6 @@ clockButton model =
         [ text "🕒" ]
 
 
-
-{- Posix range is Local -> Today Posix is Local -}
-
-
 topBar : Model -> PartsRange -> Parts -> Zone -> Html Msg
 topBar model visibleRange today zone =
     let
@@ -1554,10 +1541,6 @@ topBar model visibleRange today zone =
         , calendarInput model (partsToPosix zone today)
         , clock
         ]
-
-
-
--- View Function
 
 
 createSelectionInRange : Model -> Zone -> PosixRange -> PosixRange
@@ -1765,10 +1748,6 @@ convertInputDate zone inputDate isEndSelection =
             ( SingleSelection adjusted, Just DateTimeFormat )
 
 
-
-{- Posix range is local -> Posix today is In UTC -}
-
-
 calendarView : Model -> Parts -> PartsRange -> Zone -> Html Msg
 calendarView model =
     case model.calendarType of
@@ -1783,10 +1762,6 @@ calendarView model =
 
         OneMonth ->
             monthlyCalendarView model "monthly-large" 0
-
-
-
-{- Posix range is local -> Posix today is In UTC -}
 
 
 yearCalendarView : Model -> Parts -> PartsRange -> Zone -> Html Msg
@@ -1836,10 +1811,6 @@ yearCalendarView model today visibleRange zone =
         ]
 
 
-
-{- Posix range is local -> Posix today is In UTC -}
-
-
 monthlyCalendarView : Model -> String -> Int -> Parts -> PartsRange -> Zone -> Html Msg
 monthlyCalendarView model monthClass endInterval today visibleRange zone =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
@@ -1887,10 +1858,6 @@ posixRangeForMonths startMonth endMonth currentYear zone =
     { start = partsToPosix zone start, end = partsToPosix zone end }
 
 
-
-{- Posix Month is local -> Posix today is In UTC -}
-
-
 monthCalendarView : Parts -> Parts -> Model -> Zone -> Html Msg
 monthCalendarView currentMonth today model zone =
     let
@@ -1928,10 +1895,6 @@ monthCalendarView currentMonth today model zone =
                     getCurrentMonthDatesFullWeeks zone currentMonth
             ]
         ]
-
-
-
-{- currentMonth is local, currrentDay is local, today is utc -}
 
 
 dayCalendarView : Zone -> Parts -> Parts -> Parts -> Model -> Html Msg
@@ -2112,7 +2075,7 @@ selectionPoints date { selection, availableForSelectionStart, availableForSelect
 
         RangeSelection posixRange ->
             ( Just <| posixToParts zone posixRange.start
-            , Just <| Debug.log "end" <| posixToParts zone posixRange.end
+            , Just <| posixToParts zone posixRange.end
             , compareRange posixRange
             )
 
@@ -2155,10 +2118,6 @@ selectionPoints date { selection, availableForSelectionStart, availableForSelect
 isSameDay : Parts -> Parts -> Bool
 isSameDay posix1 posix2 =
     posix1.day == posix2.day && posix1.month == posix2.month && posix1.year == posix2.year
-
-
-
-{- today is local output is local -}
 
 
 calcVisibleRange : Parts -> Model -> PartsRange
@@ -2243,10 +2202,6 @@ convertToRange day zone calendarType =
             , end =
                 localToday |> getLastDayOfMonthEndOfDayParts
             }
-
-
-
-{- internal Selection is in utc, outout posix range is in local -}
 
 
 getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Zone -> Posix -> Maybe PartsRange
