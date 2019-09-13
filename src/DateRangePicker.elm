@@ -1638,10 +1638,34 @@ convertInput zone input model =
                     ( Unselected, DateFormat )
 
         BeforeInput inputDate ->
-            singleInputConversion zone inputDate model True
+            let
+                ( posix, format ) =
+                    wildcardInputConversion zone inputDate .end
+            in
+            ( BeforeSelection <| posix, format )
 
         AfterInput inputDate ->
-            singleInputConversion zone inputDate model False
+            let
+                ( posix, format ) =
+                    wildcardInputConversion zone inputDate .start
+            in
+            ( AfterSelection <| posix, format )
+
+
+wildcardInputConversion : Zone -> InputDate -> (PosixRange -> Posix) -> ( Posix, Format )
+wildcardInputConversion zone inputDate getPosix =
+    case inputDate of
+        JustYear year ->
+            ( getPosix <| yearToPosixRange year zone, DateFormat )
+
+        JustYearAndMonth yearAndMonth ->
+            ( getPosix <| yearAndMonthToPosixRange yearAndMonth zone, DateFormat )
+
+        FullDate dateParts ->
+            ( getEndOfDay <| datePartsToPosix dateParts zone, DateFormat )
+
+        FullDateTime dateTimeParts ->
+            ( getEndOfDay <| dateTimePartsToPosix dateTimeParts zone, DateTimeFormat )
 
 
 singleInputConversion : Zone -> InputDate -> Model -> Bool -> ( InternalSelection, Format )
@@ -2049,16 +2073,6 @@ calculateXPosition button calendar { width } =
         )
 
 
-dateToPosixRange : Date -> Zone -> PosixRange
-dateToPosixRange d zone =
-    datePartsToPosixRange
-        { year = Date.year d
-        , month = Date.monthToNumber <| Date.month d
-        , day = Date.day d
-        }
-        zone
-
-
 posixIsOutOfAllowedRange : Parts -> Model -> Zone -> Bool
 posixIsOutOfAllowedRange parts model zone =
     let
@@ -2080,31 +2094,15 @@ normalizeSelectingRange posixRange =
         posixRange
 
 
-
---View Function
-{- comparisonPosix is local, selection is utc, today is utc -}
-
-
 selectionPoints : Parts -> Model -> Parts -> Zone -> ( Maybe Parts, Maybe Parts, Bool )
-selectionPoints date { selection } today zone =
+selectionPoints date { selection, availableForSelectionStart, availableForSelectionEnd } today zone =
     let
         compareRange range =
             posixToMillis range.start
                 <= (posixToMillis <| partsToPosix zone date)
                 && (posixToMillis <| partsToPosix zone date)
                 <= posixToMillis range.end
-
-        -- let
-        --     start =
-        --         posixToParts zone range.start
-        --     end =
-        --         posixToParts zone range.end
-        -- in
-        -- (start.year <= date.year && end.year >= date.year)
-        --     && (monthNum start <= monthNum date && monthNum end >= monthNum date)
-        --     && (start.day <= date.day && end.day >= date.day)
     in
-    -- we adjust the utc times to local for comparison
     case selection of
         SingleSelection posix ->
             ( Just <| posixToParts zone posix
@@ -2143,14 +2141,14 @@ selectionPoints date { selection } today zone =
 
         AfterSelection posix ->
             ( Just <| posixToParts zone posix
-            , Just <| posixToParts zone posix
-            , False
+            , Just <| posixToParts zone availableForSelectionEnd
+            , compareRange { start = posix, end = availableForSelectionEnd }
             )
 
         BeforeSelection posix ->
-            ( Just <| posixToParts zone posix
+            ( Just <| posixToParts zone availableForSelectionStart
             , Just <| posixToParts zone posix
-            , False
+            , compareRange { start = availableForSelectionStart, end = posix }
             )
 
 
@@ -2302,10 +2300,10 @@ prettyFormatSelection zone selection language format =
             presetToDisplayString presetType language
 
         BeforeSelection posix ->
-            starFormatter language format language.beforeThisDate zone posix
+            singleFormatter zone language format posix ++ " " ++ language.beforeThisDate
 
         AfterSelection posix ->
-            starFormatter language format language.afterThisDate zone posix
+            singleFormatter zone language format posix ++ " " ++ language.afterThisDate
 
 
 singleFormatter : Zone -> LanguageConfig -> Format -> Posix -> String
@@ -2333,38 +2331,6 @@ singleFormatter zone language format =
             ++ timeParts
         )
         zone
-
-
-starFormatter : LanguageConfig -> Format -> String -> Zone -> Posix -> String
-starFormatter language format additionalString zone =
-    let
-        timeParts =
-            case format of
-                DateFormat ->
-                    []
-
-                DateTimeFormat ->
-                    [ DateFormat.text " "
-                    , DateFormat.hourMilitaryFixed
-                    , DateFormat.text ":"
-                    , DateFormat.minuteFixed
-                    ]
-
-        dateString pos =
-            DateFormat.formatWithLanguage language.dateFormatLanguage
-                ([ DateFormat.monthNameAbbreviated
-                 , DateFormat.text " "
-                 , DateFormat.dayOfMonthNumber
-                 , DateFormat.text ", "
-                 , DateFormat.yearNumber
-                 ]
-                    ++ timeParts
-                )
-                zone
-                pos
-                ++ additionalString
-    in
-    dateString
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String
@@ -2492,15 +2458,6 @@ getLastDayOfMonthEndOfDay zone =
 getFirstDayOfMonthStartOfDay : Zone -> Posix -> Posix
 getFirstDayOfMonthStartOfDay zone =
     getFirstDayOfMonth zone >> getStartOfDay
-
-
-datePartsToPosixRange : DateParts -> Zone -> PosixRange
-datePartsToPosixRange dateParts zone =
-    let
-        posix =
-            datePartsToPosix dateParts zone
-    in
-    { start = getStartOfDay posix, end = getEndOfDay posix }
 
 
 addEndingDateTimeParts : Posix -> Posix
