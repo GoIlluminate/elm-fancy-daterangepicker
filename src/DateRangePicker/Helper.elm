@@ -1,4 +1,4 @@
-module DateRangePicker.Helper exposing (mouseDownNoDefault, onClickNoDefault)
+module DateRangePicker.Helper exposing (..)
 
 import Html exposing (Html)
 import Html.Events as Events
@@ -22,6 +22,18 @@ onClickNoDefault message =
 mouseDownNoDefault : msg -> Html.Attribute msg
 mouseDownNoDefault message =
     Events.custom "mousedown" <|
+        Json.succeed
+            { message = message
+            , stopPropagation = False
+            , preventDefault = True
+            }
+
+
+{-| An opaque function that prevents default click events.
+-}
+onDragNoDefault : msg -> Html.Attribute msg
+onDragNoDefault message =
+    Events.custom "drag" <|
         Json.succeed
             { message = message
             , stopPropagation = False

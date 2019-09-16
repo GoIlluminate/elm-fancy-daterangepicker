@@ -4,6 +4,7 @@ import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (DateTimeParts, Input(..), InputDate(..), ParsingConfig, parseDateTime)
 import Expect exposing (equal)
 import Test exposing (Test, describe, test)
+import Time.Extra
 
 
 dateTestSuite : Test

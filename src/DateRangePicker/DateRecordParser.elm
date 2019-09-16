@@ -1,9 +1,11 @@
-module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), Language, ParsingConfig, YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
+module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), Language, ParsingConfig, YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 
 import Date exposing (Date)
 import Derberos.Date.Core exposing (civilToPosix)
+import Derberos.Date.Utils exposing (monthToNumber, monthToNumber1, numberOfDaysInMonth, numberToMonth)
 import Parser exposing ((|.), (|=), Parser)
-import Time exposing (Month(..), Posix, Zone, posixToMillis, utc)
+import Time exposing (Month(..), Posix, Zone, posixToMillis)
+import Time.Extra exposing (Parts)
 
 
 type alias YearAndMonth =
@@ -544,10 +546,10 @@ requireEndToBeAfterStart : Input -> Result String Input
 requireEndToBeAfterStart input =
     let
         startMillis startInputDate =
-            posixToMillis <| convertInputDateToPosix startInputDate
+            posixToMillis <| Time.Extra.partsToPosix Time.utc <| convertInputDateToParts startInputDate
 
         endMillis endInputDate =
-            posixToMillis <| convertInputDateToPosix endInputDate
+            posixToMillis <| Time.Extra.partsToPosix Time.utc <| convertInputDateToParts endInputDate
     in
     case input of
         RangeInput start end ->
@@ -561,20 +563,20 @@ requireEndToBeAfterStart input =
             Ok input
 
 
-convertInputDateToPosix : InputDate -> Posix
-convertInputDateToPosix inputDate =
+convertInputDateToParts : InputDate -> Parts
+convertInputDateToParts inputDate =
     case inputDate of
         JustYear int ->
-            yearToPosix int utc
+            yearToParts int
 
         JustYearAndMonth yearAndMonth ->
-            yearAndMonthToPosix yearAndMonth utc
+            yearAndMonthToParts yearAndMonth
 
         FullDate dateParts ->
-            datePartsToPosix dateParts utc
+            datePartsToParts dateParts
 
         FullDateTime dateTimeParts ->
-            dateTimePartsToPosix dateTimeParts utc
+            dateTimePartsToParts dateTimeParts
 
 
 validate : (InputDate -> Input -> Result String Input) -> Input -> Result String Input
@@ -598,72 +600,52 @@ validate validateInputDateFunc input =
             validateInputDateFunc inputDate input
 
 
-yearToPosix : Int -> Zone -> Posix
-yearToPosix year zone =
-    let
-        dateRecord =
-            { year = year
-            , month = 1
-            , day = 1
-            , hour = 0
-            , minute = 0
-            , second = 0
-            , millis = 0
-            , zone = zone
-            }
-    in
-    civilToPosix dateRecord
+yearToParts : Int -> Parts
+yearToParts year =
+    { year = year
+    , month = Jan
+    , day = 1
+    , hour = 0
+    , minute = 0
+    , second = 0
+    , millisecond = 0
+    }
 
 
-yearAndMonthToPosix : YearAndMonth -> Zone -> Posix
-yearAndMonthToPosix { year, month } zone =
-    let
-        dateRecord =
-            { year = year
-            , month = month
-            , day = 1
-            , hour = 0
-            , minute = 0
-            , second = 0
-            , millis = 0
-            , zone = zone
-            }
-    in
-    civilToPosix dateRecord
+yearAndMonthToParts : YearAndMonth -> Parts
+yearAndMonthToParts { year, month } =
+    { year = year
+    , month = Maybe.withDefault Jan <| numberToMonth (month - 1)
+    , day = 1
+    , hour = 0
+    , minute = 0
+    , second = 0
+    , millisecond = 0
+    }
 
 
-datePartsToPosix : DateParts -> Zone -> Posix
-datePartsToPosix { year, month, day } zone =
-    let
-        dateRecord =
-            { year = year
-            , month = month
-            , day = day
-            , hour = 0
-            , minute = 0
-            , second = 0
-            , millis = 0
-            , zone = zone
-            }
-    in
-    civilToPosix dateRecord
+datePartsToParts : DateParts -> Parts
+datePartsToParts { year, month, day } =
+    { year = year
+    , month = Maybe.withDefault Jan <| numberToMonth (month - 1)
+    , day = day
+    , hour = 0
+    , minute = 0
+    , second = 0
+    , millisecond = 0
+    }
 
 
-dateTimePartsToPosix : DateTimeParts -> Zone -> Posix
-dateTimePartsToPosix { year, month, day, hour, minute } zone =
-    let
-        dateRecord =
-            { year = year
-            , month = month
-            , day = day
-            , hour = hour
-            , minute = minute
-            , second = 0
-            , millis = 0
-            , zone = zone
-            }
-    in
-    civilToPosix dateRecord
+dateTimePartsToParts : DateTimeParts -> Parts
+dateTimePartsToParts { year, month, day, hour, minute } =
+    { year = year
+    , month = Maybe.withDefault Jan <| numberToMonth (month - 1)
+    , day = day
+    , hour = hour
+    , minute = minute
+    , second = 0
+    , millisecond = 0
+    }
 
 
 parseDateTime : ParsingConfig -> String -> Result String Input

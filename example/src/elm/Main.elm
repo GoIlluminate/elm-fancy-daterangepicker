@@ -8,6 +8,7 @@ import Html.Attributes exposing (class)
 import Html.Events
 import Task
 import Time exposing (Month(..), Posix, Zone)
+import Time.Extra exposing (partsToPosix, posixToParts)
 
 
 type Msg
@@ -32,27 +33,27 @@ type alias Model =
     , datePicker : DateRangePicker.DatePicker
     , datePickerabs : DateRangePicker.DatePicker
     , datePickerfixed : DateRangePicker.DatePicker
-    , today : Maybe Posix
-    , zone : Maybe Zone
     , colorTheme : ColorTheme
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+type BootstrapModel
+    = Loading (Maybe Posix) (Maybe Zone)
+    | Loaded Model
+
+
+initialModel : Posix -> Zone -> Model
+initialModel now zone =
     let
         calendarDisplay =
             DateRangePicker.FullCalendar
 
         initDatePicker =
-            DateRangePicker.initWithOptions
+            DateRangePicker.initWithOptions now
                 { defaultConfig
                     | presets =
                         [ DateRangePicker.Today
                         , DateRangePicker.Yesterday
-                        , DateRangePicker.PastWeek
-                        , DateRangePicker.PastMonth
-                        , DateRangePicker.PastYear
                         , DateRangePicker.Custom <|
                             { intervalStart = DateRangePicker.Days
                             , intervalStartValue = -3
@@ -60,19 +61,26 @@ init =
                             , intervalEndValue = -1
                             , display = "Past Three Days"
                             }
+                        , DateRangePicker.PastWeek
+                        , DateRangePicker.PastMonth
+                        , DateRangePicker.PastYear
                         ]
                     , calendarType = calendarDisplay
                     , dateSelectionType = DateRangePicker.DateRangeSelection
+                    , displayTimezone = zone
                 }
     in
-    ( { calendarDisplay = calendarDisplay
-      , datePicker = initDatePicker
-      , datePickerabs = initDatePicker
-      , datePickerfixed = initDatePicker
-      , today = Nothing
-      , zone = Nothing
-      , colorTheme = Light
-      }
+    { calendarDisplay = calendarDisplay
+    , datePicker = initDatePicker
+    , datePickerabs = initDatePicker
+    , datePickerfixed = initDatePicker
+    , colorTheme = Light
+    }
+
+
+init : ( BootstrapModel, Cmd Msg )
+init =
+    ( Loading Nothing Nothing
     , Cmd.batch
         [ Task.perform NewTime Time.now
         , Task.perform NewZone Time.here
@@ -80,155 +88,155 @@ init =
     )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    let
-        zone =
-            Maybe.withDefault Time.utc model.zone
-    in
-    case msg of
-        ChangeCalendarDisplay calendarType ->
+update : Msg -> BootstrapModel -> ( BootstrapModel, Cmd Msg )
+update msg appModel =
+    case appModel of
+        Loaded model ->
+            case msg of
+                ChangeCalendarDisplay calendarType ->
+                    let
+                        newDateRangeSelector datePicker =
+                            datePicker
+                                |> DateRangePicker.setCalendarType calendarType
+                    in
+                    ( Loaded
+                        { model
+                            | calendarDisplay = calendarType
+                            , datePicker = newDateRangeSelector model.datePicker
+                        }
+                    , Cmd.none
+                    )
+
+                DatePickerMsgs msg_ ->
+                    let
+                        ( newDateRangePicker, dateRangePickerCmd ) =
+                            DateRangePicker.update msg_ model.datePicker
+                    in
+                    ( Loaded { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
+
+                DatePickerMsgsAbs msg_ ->
+                    let
+                        ( newDateRangePicker, dateRangePickerCmd ) =
+                            DateRangePicker.update msg_ model.datePickerabs
+                    in
+                    ( Loaded { model | datePickerabs = newDateRangePicker }, Cmd.map DatePickerMsgsAbs dateRangePickerCmd )
+
+                DatePickerMsgsFixed msg_ ->
+                    let
+                        ( newDateRangePicker, dateRangePickerCmd ) =
+                            DateRangePicker.update msg_ model.datePickerfixed
+                    in
+                    ( Loaded { model | datePickerfixed = newDateRangePicker }, Cmd.map DatePickerMsgsFixed dateRangePickerCmd )
+
+                ToggleColorTheme ->
+                    ( Loaded
+                        { model
+                            | colorTheme =
+                                if model.colorTheme == Light then
+                                    Dark
+
+                                else
+                                    Light
+                        }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( Loaded model, Cmd.none )
+
+        Loading (Just time) (Just zone) ->
+            ( Loaded (initialModel time zone), Cmd.none )
+
+        Loading (Just t) maybeZone ->
+            case msg of
+                NewZone z ->
+                    ( Loaded (initialModel t z), Cmd.none )
+
+                _ ->
+                    ( appModel, Cmd.none )
+
+        Loading maybeTime (Just z) ->
+            case msg of
+                NewTime t ->
+                    ( Loaded (initialModel t z), Cmd.none )
+
+                _ ->
+                    ( appModel, Cmd.none )
+
+        Loading maybeTime maybeZone ->
+            case msg of
+                NewTime posix ->
+                    ( Loading (Just posix) maybeZone, Cmd.none )
+
+                NewZone z ->
+                    ( Loading maybeTime (Just z), Cmd.none )
+
+                _ ->
+                    ( appModel, Cmd.none )
+
+
+view : BootstrapModel -> Html Msg
+view bootstrapModel =
+    case bootstrapModel of
+        Loaded model ->
             let
-                newDateRangeSelector datePicker =
-                    datePicker
-                        |> DateRangePicker.setCalendarType calendarType
-            in
-            ( { model
-                | calendarDisplay = calendarType
-                , datePicker = newDateRangeSelector model.datePicker
-              }
-            , Cmd.none
-            )
+                styleClass =
+                    case model.colorTheme of
+                        Light ->
+                            "theme-light open-button"
 
-        NewTime posix ->
-            ( { model | today = Just posix }, Cmd.none )
+                        Dark ->
+                            "theme-dark open-button"
 
-        DatePickerMsgs msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update zone msg_ model.datePicker
-            in
-            ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
-
-        DatePickerMsgsAbs msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update zone msg_ model.datePickerabs
-            in
-            ( { model | datePickerabs = newDateRangePicker }, Cmd.map DatePickerMsgsAbs dateRangePickerCmd )
-
-        DatePickerMsgsFixed msg_ ->
-            let
-                ( newDateRangePicker, dateRangePickerCmd ) =
-                    DateRangePicker.update zone msg_ model.datePickerfixed
-            in
-            ( { model | datePickerfixed = newDateRangePicker }, Cmd.map DatePickerMsgsFixed dateRangePickerCmd )
-
-        NewZone z ->
-            ( { model | zone = Just z }, Cmd.none )
-
-        ToggleColorTheme ->
-            ( { model
-                | colorTheme =
-                    if model.colorTheme == Light then
-                        Dark
-
-                    else
-                        Light
-              }
-            , Cmd.none
-            )
-
-        ChangeToAfter ->
-            case model.today of
-                Just today ->
-                    ( { model | datePicker = DateRangePicker.setSelection zone (Just (DateRangePicker.After today)) model.datePicker }, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        ChangeToBefore ->
-            case model.today of
-                Just today ->
-                    ( { model | datePicker = DateRangePicker.setSelection zone (Just (DateRangePicker.Before today)) model.datePicker }, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-
-view : Model -> Html Msg
-view model =
-    let
-        styleClass =
-            case model.colorTheme of
-                Light ->
-                    "theme-light open-button"
-
-                Dark ->
-                    "theme-dark open-button"
-
-        getSelector datepicker buttonId divClass =
-            case ( model.today, model.zone ) of
-                ( Just t, Just z ) ->
+                getSelector datepicker buttonId divClass =
                     div [ class styleClass, class divClass ]
-                        [ DateRangePicker.defaultOpener z model.datePicker buttonId
-                        , DateRangePicker.view t z datepicker
+                        [ DateRangePicker.defaultOpener datepicker buttonId
+                        , DateRangePicker.view datepicker
                         , getStats (getLocal datepicker) (utcSelection datepicker)
                         ]
 
-                _ ->
-                    text ""
+                selector1 =
+                    getSelector model.datePicker "datepicker--button" "relative-class"
 
-        selector1 =
-            getSelector model.datePicker "datepicker--button" "relative-class"
+                selectorabs =
+                    getSelector model.datePickerabs "datepicker--buttonabs" "absolute-class"
 
-        selectorabs =
-            getSelector model.datePickerabs "datepicker--buttonabs" "absolute-class"
+                selectorfixed =
+                    getSelector model.datePickerfixed "datepicker--buttonfixed" "fixed-class"
 
-        selectorfixed =
-            getSelector model.datePickerfixed "datepicker--buttonfixed" "fixed-class"
-
-        getLocal datepicker =
-            case ( model.today, model.zone ) of
-                ( Just t, Just timezone ) ->
-                    case DateRangePicker.localSelectionRange timezone t datepicker of
+                getLocal datepicker =
+                    case DateRangePicker.localSelectionRange datepicker of
                         Just pos ->
-                            ( DateRangePicker.displaySelection timezone datepicker
-                            , DateCore.getTzOffset timezone pos.start
+                            ( DateRangePicker.displaySelection datepicker
+                            , DateCore.getTzOffset Time.utc (partsToPosix Time.utc pos.start)
                             )
 
                         _ ->
                             ( "", 0 )
 
-                _ ->
-                    ( "", 0 )
-
-        utcSelection datepicker =
-            case model.zone of
-                Just zone ->
+                utcSelection datepicker =
                     DateRangePicker.displayUtcSelection datepicker
 
-                Nothing ->
-                    ""
-
-        getStats ( localSel, localTimezone ) utcSel =
-            div []
-                [ div [] [ text <| "LocalTime: " ++ localSel ]
-                , div [] [ text <| "TimeZone: " ++ String.fromInt localTimezone ]
-                , div [] [ text <| "UtcTime: " ++ utcSel ]
+                getStats ( localSel, localTimezone ) utcSel =
+                    div []
+                        [ div [] [ text <| "LocalTime: " ++ localSel ]
+                        , div [] [ text <| "UtcTime: " ++ utcSel ]
+                        ]
+            in
+            div [ class "main" ]
+                [ calendarDisplayOptions model
+                , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
+                , Html.map DatePickerMsgs selector1
+                , Html.map DatePickerMsgsAbs selectorabs
+                , Html.map DatePickerMsgsFixed selectorfixed
+                , div []
+                    [ button [ Html.Events.onClick ChangeToBefore ] [ text "before" ]
+                    , button [ Html.Events.onClick ChangeToAfter ] [ text "after" ]
+                    ]
                 ]
-    in
-    div [ class "main" ]
-        [ calendarDisplayOptions model
-        , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
-        , Html.map DatePickerMsgs selector1
-        , Html.map DatePickerMsgsAbs selectorabs
-        , Html.map DatePickerMsgsFixed selectorfixed
-        , div []
-            [ button [ Html.Events.onClick ChangeToBefore ] [ text "before" ]
-            , button [ Html.Events.onClick ChangeToAfter ] [ text "after" ]
-            ]
-        ]
+
+        _ ->
+            text ""
 
 
 calendarDisplayOptions : Model -> Html Msg
@@ -262,7 +270,7 @@ calendarDisplayOptions model =
         ]
 
 
-main : Program () Model Msg
+main : Program () BootstrapModel Msg
 main =
     Browser.element
         { init = \_ -> init
@@ -272,22 +280,22 @@ main =
         }
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : BootstrapModel -> Sub Msg
+subscriptions bootstrapModel =
     let
         selectorSubscriptions datepicker =
-            case ( model.today, model.zone ) of
-                ( Just t, Just z ) ->
-                    DateRangePicker.subscriptions datepicker t z
-
-                _ ->
-                    Sub.none
+            DateRangePicker.subscriptions datepicker
     in
-    Sub.batch
-        [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
-        , Sub.map DatePickerMsgsAbs (selectorSubscriptions model.datePickerabs)
-        , Sub.map DatePickerMsgsFixed (selectorSubscriptions model.datePickerfixed)
-        ]
+    case bootstrapModel of
+        Loaded model ->
+            Sub.batch
+                [ Sub.map DatePickerMsgs (selectorSubscriptions model.datePicker)
+                , Sub.map DatePickerMsgsAbs (selectorSubscriptions model.datePickerabs)
+                , Sub.map DatePickerMsgsFixed (selectorSubscriptions model.datePickerfixed)
+                ]
+
+        _ ->
+            Sub.none
 
 
 calendarDisplayToDisplayStr : DateRangePicker.CalendarType -> String

@@ -4,7 +4,7 @@ module DateRangePicker exposing
     , Selection(..), Format(..), PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, isOpen, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
-    , presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToLocalPosixRange, presetToUtcPosixRange, displaySelection, displayUtcSelection
+    , presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
     )
 
 {-| A customizable date picker component.
@@ -15,6 +15,7 @@ module DateRangePicker exposing
 @docs Msg, DatePicker, subscriptions, view, update
 
 @docs init, open, defaultOpener
+@docs `
 
 
 # Selection
@@ -34,7 +35,7 @@ module DateRangePicker exposing
 
 # Helpers
 
-@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToLocalPosixRange, presetToUtcPosixRange, selectPreset, displaySelection, displayUtcSelection
+@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displayUtcSelection
 
 -}
 
@@ -43,9 +44,9 @@ import Browser.Events
 import Date exposing (Date)
 import DateFormat
 import DateFormat.Language as DateFormat
-import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToPosix, dateTimePartsToPosix, parseDateTime, yearAndMonthToPosix, yearToPosix)
+import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 import DateRangePicker.Helper exposing (onClickNoDefault)
-import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks, getFirstDayOfMonth, getFirstDayOfYear, getLastDayOfMonth, getLastDayOfYear)
+import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks)
 import Derberos.Date.Core as DateCore exposing (civilToPosix, posixToCivil)
 import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
 import Derberos.Date.Utils exposing (getNextMonth, getPrevMonth, getWeekday, monthToNumber, monthToNumber1, numberOfDaysInMonth, numberToMonth)
@@ -70,26 +71,26 @@ import Time.Extra as TimeExtra exposing (Parts, partsToPosix, posixToParts)
 type Msg
     = DoNothing
     | Open String
-    | Close Posix
+    | Close
     | SetVisibleRange PartsRange
-    | SetSelection InternalSelection
-    | OnInputFinish Posix
+    | SetSelection Selection
+    | OnInputFinish
     | OnInputChange String
     | Reset
-    | StartSelection Posix
-    | EndSelection (Maybe Posix)
-    | KeyDown Posix RawKey
+    | StartSelection Parts
+    | EndSelection (Maybe Parts)
+    | KeyDown RawKey
     | KeyUp RawKey
     | TerminateBadState
     | CancelShift
-    | OnHoverOverDay Posix
+    | OnHoverOverDay Parts
     | OnMouseMove Mouse.Event
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
     | OnGetDatePickerButton (Result Error Element)
-    | CheckToMoveToNextVisibleRange Posix
-    | SetPresetMenu Bool
-    | SelectPreset PresetType Posix
+    | CheckToMoveToNextVisibleRange
+    | SetPresetMenuVisibility MenuVisibility
+    | SelectPreset PresetType
     | ToggleFormat
     | OnWindowsResize Int Int
     | GotViewPort (Result Error Viewport)
@@ -148,31 +149,19 @@ type alias CustomPreset =
     }
 
 
-
-{- Stored as UTC -}
-
-
-type InternalSelection
-    = SingleSelection Posix
-    | RangeSelection PosixRange
-    | Unselected
-    | Selecting PosixRange
-    | PresetSelection PresetType
-    | BeforeSelection Posix
-    | AfterSelection Posix
-
-
 {-| The type which represents what the current selection is in the datepicker.
 
-If you select a preset you can use @presetToPosixRange to get the appropriate posix range for the selection.
+If you select a preset you can use @presetToPartsRange to get the appropriate posix range for the selection.
 
 -}
 type Selection
-    = Single Posix
-    | Range PosixRange
+    = Single Parts
+    | Range PartsRange
+    | Unselected
+    | Selecting PartsRange
     | Preset PresetType
-    | Before Posix
-    | After Posix
+    | Before Parts
+    | After Parts
 
 
 {-| The type which specifies what size calendar you want to display
@@ -196,6 +185,11 @@ type Format
     | DateTimeFormat
 
 
+type MenuVisibility
+    = MenuOpen
+    | MenuClosed
+
+
 type alias WindowSize =
     { width : Float
     , height : Float
@@ -208,32 +202,38 @@ type alias PartsRange =
     }
 
 
+type UserDateInput
+    = DirtyInput String
+    | CommittedInput String
+
+
 {-| A record which represents the main datepicker model
 -}
 type alias Model =
-    { selection : InternalSelection
-    , availableForSelectionStart : Posix
-    , availableForSelectionEnd : Posix
+    { selection : Selection
+    , allowedRange : PartsRange
     , visibleCalendarRange : Maybe PartsRange
     , isMouseDown : Bool
     , isShiftDown : Bool
     , presets : List PresetType
     , calendarType : CalendarType
     , isOpen : Bool
-    , inputText : String
+    , inputText : UserDateInput
     , terminationCounter : Int
-    , currentlyHoveredDate : Maybe Posix
+    , currentlyHoveredDate : Maybe Parts
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
     , uiButton : Maybe Element
     , isMouseOutside : Bool
     , languageConfig : LanguageConfig
-    , isPresetMenuOpen : Bool
+    , presetMenuVisibility : MenuVisibility
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
     , displayFormat : Format
     , dateSelectionType : DateSelectionType
     , hidePresets : Bool
     , windowSize : WindowSize
+    , displayTimezone : Zone
+    , now : Posix
     }
 
 
@@ -245,19 +245,18 @@ type DatePicker
 
 {-| Initialize the datepicker with the default settings
 -}
-init : DatePicker
-init =
+init : Posix -> DatePicker
+init now =
     DatePicker <|
         { selection = Unselected
-        , availableForSelectionStart = civilToPosix <| DateCore.newDateRecord 1900 1 1 0 0 0 0 Time.utc
-        , availableForSelectionEnd = civilToPosix <| DateCore.newDateRecord 2100 12 31 23 59 59 0 Time.utc
+        , allowedRange = defaultAllowedRange
         , visibleCalendarRange = Nothing
         , isMouseDown = False
         , isShiftDown = False
         , presets = []
         , calendarType = FullCalendar
         , isOpen = False
-        , inputText = ""
+        , inputText = CommittedInput ""
         , terminationCounter = 0
         , currentlyHoveredDate = Nothing
         , mousePosition = Nothing
@@ -265,20 +264,21 @@ init =
         , uiButton = Nothing
         , isMouseOutside = False
         , languageConfig = englishLanguageConfig
-        , isPresetMenuOpen = False
+        , presetMenuVisibility = MenuClosed
         , keyboardSelectedPreset = Nothing
         , displayFormat = DateFormat
         , dateSelectionType = DateRangeSelection
         , hidePresets = False
         , windowSize = WindowSize 0 0
+        , displayTimezone = Time.utc
+        , now = now
         }
 
 
 {-| A record which specifies config options which can be set when initializes the datepicker
 -}
 type alias Config =
-    { availableForSelectionStart : Posix
-    , availableForSelectionEnd : Posix
+    { allowedRange : PartsRange
     , presets : List PresetType
     , calendarType : CalendarType
     , isOpen : Bool
@@ -286,6 +286,7 @@ type alias Config =
     , dateSelectionType : DateSelectionType
     , hidePresets : Bool
     , defaultSelection : Maybe Selection
+    , displayTimezone : Zone
     }
 
 
@@ -338,17 +339,21 @@ englishLanguageConfig =
 
 {-| Initialize the datepicker with the custom settings
 -}
-initWithOptions : Config -> DatePicker
-initWithOptions config =
-    updateModelWithConfig init config
+initWithOptions : Posix -> Config -> DatePicker
+initWithOptions now config =
+    updateModelWithConfig (init now) config
+
+
+defaultAllowedRange : PartsRange
+defaultAllowedRange =
+    { start = Parts 1900 Jan 1 0 0 0 0, end = Parts 2100 Dec 31 23 59 59 0 }
 
 
 {-| A default config which can be combined with @initWithOptions so that you only need to specify the fields which you want to customize
 -}
 defaultConfig : Config
 defaultConfig =
-    { availableForSelectionStart = civilToPosix <| DateCore.newDateRecord 1900 1 1 0 0 0 0 Time.utc
-    , availableForSelectionEnd = civilToPosix <| DateCore.newDateRecord 2100 12 31 23 59 59 0 Time.utc
+    { allowedRange = defaultAllowedRange
     , presets = []
     , calendarType = FullCalendar
     , isOpen = False
@@ -356,6 +361,7 @@ defaultConfig =
     , dateSelectionType = DateRangeSelection
     , hidePresets = False
     , defaultSelection = Nothing
+    , displayTimezone = Time.utc
     }
 
 
@@ -382,11 +388,11 @@ open openerId =
 You will need to call convert the message to the appropriate type via Html.map
 
 -}
-defaultOpener : Zone -> DatePicker -> String -> Html Msg
-defaultOpener zone (DatePicker model) openerId =
+defaultOpener : DatePicker -> String -> Html Msg
+defaultOpener (DatePicker model) openerId =
     let
         selectionValue =
-            prettyFormatSelection zone model.selection model.languageConfig model.displayFormat
+            prettyFormatSelection (DatePicker model)
 
         displayValue =
             if String.isEmpty selectionValue then
@@ -412,11 +418,11 @@ defaultOpener zone (DatePicker model) openerId =
 {-| The subscriptions for the datepicker
 
     Sub.map DatePickerMsgs <|
-        DateRangePicker.subscriptions model.datePicker currentTime localZone
+        DateRangePicker.subscriptions model.datePicker
 
 -}
-subscriptions : DatePicker -> Posix -> Zone -> Sub Msg
-subscriptions (DatePicker model) today zone =
+subscriptions : DatePicker -> Sub Msg
+subscriptions (DatePicker model) =
     let
         shiftSubs =
             if model.isShiftDown then
@@ -429,13 +435,13 @@ subscriptions (DatePicker model) today zone =
                 []
 
         keyDowns =
-            [ Keyboard.downs (KeyDown today) ]
+            [ Keyboard.downs KeyDown ]
 
         mouseSubs =
             if model.isMouseDown then
                 [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
                 , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
-                , Time.every 1250 (always <| CheckToMoveToNextVisibleRange today)
+                , Time.every 750 (always <| CheckToMoveToNextVisibleRange)
                 ]
 
             else
@@ -446,7 +452,7 @@ subscriptions (DatePicker model) today zone =
 
         closeSub =
             if model.isMouseOutside && not model.isMouseDown then
-                [ Browser.Events.onClick (Json.succeed <| Close today) ]
+                [ Browser.Events.onClick (Json.succeed Close) ]
 
             else
                 []
@@ -468,26 +474,26 @@ subscriptions (DatePicker model) today zone =
         ( { model | datePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
 
 -}
-update : Zone -> Msg -> DatePicker -> ( DatePicker, Cmd Msg )
-update zone msg (DatePicker model) =
+update : Msg -> DatePicker -> ( DatePicker, Cmd Msg )
+update msg (DatePicker model) =
     let
         ( model_, cmd ) =
-            innerUpdate zone msg model
+            innerUpdate msg model
     in
     ( DatePicker model_, cmd )
 
 
 {-| The view for the datepicker. You will have to pass in the current time as well as the local zone and the datepicker model.
 
-    DateRangePicker.view currentTime localZone datePicker
+    DateRangePicker.view datePicker
 
 -}
-view : Posix -> Zone -> DatePicker -> Html Msg
-view today zone (DatePicker model) =
+view : DatePicker -> Html Msg
+view (DatePicker model) =
     let
         -- All view Functions from here on Take in a Time.Extra.Parts which is in local time
         todayParts =
-            posixToParts zone today
+            posixToParts model.displayTimezone model.now
 
         visibleRangeParts =
             Maybe.withDefault (calcVisibleRange todayParts model) model.visibleCalendarRange
@@ -516,11 +522,11 @@ view today zone (DatePicker model) =
                     ]
                     (calendarPositioning model.uiButton model.uiElement model.windowSize)
                 )
-                [ topBar model visibleRangeParts todayParts zone
-                , leftSelector visibleRangeParts model zone
-                , rightSelector visibleRangeParts model zone
-                , calendarView model todayParts visibleRangeParts zone
-                , bottomBar model zone todayParts
+                [ topBar model visibleRangeParts todayParts
+                , leftSelector visibleRangeParts model
+                , rightSelector visibleRangeParts model
+                , calendarView model todayParts visibleRangeParts
+                , bottomBar model
                 ]
             ]
 
@@ -554,11 +560,11 @@ presetToDisplayString presetType language =
 
 {-| A helper function to set a preset outside of the default preset ui
 -}
-selectPreset : PresetType -> Posix -> Zone -> DatePicker -> ( DatePicker, Cmd Msg )
-selectPreset presetType today zone (DatePicker model) =
+selectPreset : PresetType -> DatePicker -> ( DatePicker, Cmd Msg )
+selectPreset presetType (DatePicker model) =
     let
         ( model_, cmd ) =
-            selectPresetInternal presetType today zone model
+            selectPresetInternal presetType model
     in
     ( DatePicker model_, cmd )
 
@@ -638,16 +644,16 @@ hasLocalSelectionChanged =
 
 {-| Check if the selection has changed.
 -}
-hasUtcRangeChanged : DatePicker -> Maybe PosixRange -> Posix -> Zone -> Bool
-hasUtcRangeChanged model comparisonRange today zone =
-    checkForChange (utcSelectionRange zone today) model comparisonRange
+hasUtcRangeChanged : DatePicker -> Maybe PartsRange -> Bool
+hasUtcRangeChanged model comparisonRange =
+    checkForChange utcSelectionRange model comparisonRange
 
 
 {-| Check if the selection has changed.
 -}
-hasLocalRangeChanged : DatePicker -> Maybe PosixRange -> Posix -> Zone -> Bool
-hasLocalRangeChanged model comparisonRange today zone =
-    checkForChange (localSelectionRange zone today) model comparisonRange
+hasLocalRangeChanged : DatePicker -> Maybe PartsRange -> Bool
+hasLocalRangeChanged model comparisonRange =
+    checkForChange localSelectionRange model comparisonRange
 
 
 {-| A helper function to change the calendar type on an existing model. Usually you should use @initWithOptions and configure this at initialization.
@@ -662,10 +668,10 @@ setCalendarType calendarType (DatePicker model) =
 localSelection : DatePicker -> Maybe Selection
 localSelection (DatePicker model) =
     case model.selection of
-        SingleSelection pos ->
+        Single pos ->
             Just <| Single pos
 
-        RangeSelection range ->
+        Range range ->
             Just <| Range range
 
         Unselected ->
@@ -674,13 +680,13 @@ localSelection (DatePicker model) =
         Selecting _ ->
             Nothing
 
-        PresetSelection presetType ->
+        Preset presetType ->
             Just <| Preset presetType
 
-        BeforeSelection pos ->
+        Before pos ->
             Just <| Before pos
 
-        AfterSelection pos ->
+        After pos ->
             Just <| After pos
 
 
@@ -689,11 +695,11 @@ localSelection (DatePicker model) =
 utcSelection : DatePicker -> Maybe Selection
 utcSelection (DatePicker model) =
     case model.selection of
-        SingleSelection pos ->
+        Single pos ->
             Single pos
                 |> Just
 
-        RangeSelection range ->
+        Range range ->
             Just <| Range range
 
         Unselected ->
@@ -702,29 +708,25 @@ utcSelection (DatePicker model) =
         Selecting _ ->
             Nothing
 
-        PresetSelection presetType ->
+        Preset presetType ->
             Just <| Preset presetType
 
-        BeforeSelection pos ->
+        Before pos ->
             Just <| Before pos
 
-        AfterSelection pos ->
+        After pos ->
             Just <| After pos
 
 
 {-| A convenience function to get the current selection as a posix range in utc time.
-
-Pass in today as utc
-Pass in Zone to convert the presets to utc
-
 -}
-utcSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
-utcSelectionRange zone today (DatePicker model) =
+utcSelectionRange : DatePicker -> Maybe PartsRange
+utcSelectionRange (DatePicker model) =
     case model.selection of
-        SingleSelection pos ->
+        Single pos ->
             Just <| convertSingleIntoRange pos
 
-        RangeSelection range ->
+        Range range ->
             Just range
 
         Unselected ->
@@ -733,25 +735,25 @@ utcSelectionRange zone today (DatePicker model) =
         Selecting _ ->
             Nothing
 
-        PresetSelection presetType ->
-            Just <| presetToUtcPosixRange presetType today zone
+        Preset presetType ->
+            Just <| presetToPartsRange (DatePicker model) presetType
 
-        BeforeSelection pos ->
+        Before pos ->
             Just <| convertSingleIntoRange pos
 
-        AfterSelection pos ->
+        After pos ->
             Just <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a posix range in local time.
 -}
-localSelectionRange : Zone -> Posix -> DatePicker -> Maybe PosixRange
-localSelectionRange zone today (DatePicker model) =
+localSelectionRange : DatePicker -> Maybe PartsRange
+localSelectionRange (DatePicker model) =
     case model.selection of
-        SingleSelection pos ->
+        Single pos ->
             Just <| convertSingleIntoRange pos
 
-        RangeSelection range ->
+        Range range ->
             Just range
 
         Unselected ->
@@ -760,28 +762,28 @@ localSelectionRange zone today (DatePicker model) =
         Selecting _ ->
             Nothing
 
-        PresetSelection presetType ->
-            Just <| presetToLocalPosixRange presetType today
+        Preset presetType ->
+            Just <| presetToPartsRange (DatePicker model) presetType
 
-        BeforeSelection pos ->
+        Before pos ->
             Just <| convertSingleIntoRange pos
 
-        AfterSelection pos ->
+        After pos ->
             Just <| convertSingleIntoRange pos
 
 
 {-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
 -}
-utcSelectionSingle : Zone -> Posix -> DatePicker -> Maybe Posix
-utcSelectionSingle zone today model =
-    Maybe.map .start (utcSelectionRange zone today model)
+utcSelectionSingle : DatePicker -> Maybe Posix
+utcSelectionSingle (DatePicker model) =
+    Maybe.map (partsToPosix model.displayTimezone << .start) (utcSelectionRange (DatePicker model))
 
 
 {-| A convenience function to get the current selection as a single posix in local time. This is particularly useful when you only allow for single date selection.
 -}
-localSelectionSingle : Zone -> Posix -> DatePicker -> Maybe Posix
-localSelectionSingle zone today model =
-    Maybe.map .start (localSelectionRange zone today model)
+localSelectionSingle : DatePicker -> Maybe Parts
+localSelectionSingle model =
+    Maybe.map .start (localSelectionRange model)
 
 
 {-| Gets the current presets
@@ -804,74 +806,41 @@ updateModelWithConfig : DatePicker -> Config -> DatePicker
 updateModelWithConfig (DatePicker model) config =
     DatePicker
         { model
-            | availableForSelectionStart = config.availableForSelectionStart
-            , availableForSelectionEnd = config.availableForSelectionEnd
+            | allowedRange = config.allowedRange
             , presets = config.presets
             , calendarType = config.calendarType
             , isOpen = config.isOpen
             , dateSelectionType = config.dateSelectionType
             , hidePresets = config.hidePresets
-            , selection = selectionToInternalSelection config.defaultSelection
+            , selection = selectionToSelection config.defaultSelection
+            , displayTimezone = config.displayTimezone
         }
 
 
 {-| Sets the datepicker's selection outside of the ui. Normally the ui should have all the interactions you would want.
 -}
-setSelection : Zone -> Maybe Selection -> DatePicker -> DatePicker
-setSelection zone selection (DatePicker model) =
-    case selection of
-        Just _ ->
-            DatePicker
-                { model
-                    | selection = selectionToInternalSelection selection
-                    , inputText = prettyFormatSelection zone (selectionToInternalSelection selection) model.languageConfig model.displayFormat
-                }
-
-        Nothing ->
-            DatePicker
-                { model
-                    | selection = selectionToInternalSelection selection
-                    , inputText = ""
-                }
-
-
-{-| A helper function to get the posix range for a given preset in utc time
--}
-presetToUtcPosixRange : PresetType -> Posix -> Zone -> PosixRange
-presetToUtcPosixRange presetType today zone =
-    presetToPosixRange presetType today zone
-
-
-{-| A helper function to get the posix range for a given preset in local time
--}
-presetToLocalPosixRange : PresetType -> Posix -> PosixRange
-presetToLocalPosixRange presetType today =
-    presetToPosixRange presetType today Time.utc
+setSelection : Selection -> DatePicker -> DatePicker
+setSelection selection (DatePicker model) =
+    DatePicker
+        (withUpdatedSelection selection model)
 
 
 {-| A helper function to display the selection in the same way that the datepicker does
 -}
-displaySelection : Zone -> DatePicker -> String
-displaySelection zone (DatePicker model) =
-    prettyFormatSelection zone model.selection model.languageConfig model.displayFormat
+displaySelection : DatePicker -> String
+displaySelection datePicker =
+    prettyFormatSelection datePicker
 
 
 {-| A helper function to display the selection in the same way that the datepicker does. It is in utc time.
 -}
 displayUtcSelection : DatePicker -> String
 displayUtcSelection datePicker =
-    let
-        selection =
-            selectionToInternalSelection <| utcSelection datePicker
-
-        format (DatePicker picker) =
-            prettyFormatSelection Time.utc selection picker.languageConfig picker.displayFormat
-    in
-    format datePicker
+    prettyFormatSelectionInZone datePicker Time.utc
 
 
-innerUpdate : Zone -> Msg -> Model -> ( Model, Cmd Msg )
-innerUpdate zone msg model =
+innerUpdate : Msg -> Model -> ( Model, Cmd Msg )
+innerUpdate msg model =
     case msg of
         DoNothing ->
             R2.withNoCmd model
@@ -889,8 +858,8 @@ innerUpdate zone msg model =
                 ]
                 { model | isOpen = True }
 
-        Close today ->
-            R2.withNoCmd <| finishInput today zone { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+        Close ->
+            R2.withNoCmd <| finishInput { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -899,40 +868,27 @@ innerUpdate zone msg model =
                 }
 
         SetSelection selection ->
-            R2.withNoCmd
-                { model
-                    | selection = selection
-                    , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
-                }
+            withUpdatedSelection selection model
+                |> R2.withNoCmd
 
-        OnInputFinish today ->
-            R2.withNoCmd <| finishInput today zone model
+        OnInputFinish ->
+            R2.withNoCmd <| finishInput model
 
         OnInputChange newText ->
-            R2.withNoCmd { model | inputText = newText }
+            R2.withNoCmd { model | inputText = DirtyInput newText }
 
         Reset ->
-            R2.withNoCmd { model | inputText = "", selection = Unselected, visibleCalendarRange = Nothing }
+            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected, visibleCalendarRange = Nothing }
 
         StartSelection posix ->
             case model.dateSelectionType of
                 DateSelection ->
-                    let
-                        selection =
-                            SingleSelection posix
-                    in
-                    R2.withNoCmd
-                        { model
-                            | selection = selection
-                            , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
-                        }
+                    withUpdatedSelection (Single posix) model
+                        |> R2.withNoCmd
 
                 DateRangeSelection ->
-                    R2.withNoCmd
-                        { model
-                            | isMouseDown = True
-                            , selection = Selecting { start = posix, end = posix }
-                        }
+                    withUpdatedSelection (Selecting { start = posix, end = posix }) { model | isMouseDown = True }
+                        |> R2.withNoCmd
 
         EndSelection posix ->
             case posix of
@@ -940,32 +896,26 @@ innerUpdate zone msg model =
                     let
                         selection =
                             date
-                                |> posixToParts zone
                                 |> getEndOfDayParts
-                                |> partsToPosix zone
                                 |> createSelectingRange model
                                 |> normalizeSelectingRange
-                                |> RangeSelection
+                                |> Range
                     in
-                    R2.withNoCmd
-                        { model
-                            | isMouseDown = False
-                            , selection = selection
-                            , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
-                        }
+                    withUpdatedSelection selection { model | isMouseDown = False }
+                        |> R2.withNoCmd
 
                 Nothing ->
                     R2.withNoCmd model
 
-        KeyDown today rawKey ->
-            onKey rawKey model (onKeyDown model today zone)
+        KeyDown rawKey ->
+            onKey rawKey model (onKeyDown model)
 
         KeyUp rawKey ->
             onKey rawKey
                 model
                 (\key ->
                     if key == Shift then
-                        cancelShift zone model
+                        cancelShift model
 
                     else
                         R2.withNoCmd model
@@ -988,18 +938,18 @@ innerUpdate zone msg model =
                 R2.withNoCmd { model | terminationCounter = model.terminationCounter - 1 }
 
         CancelShift ->
-            cancelShift zone model
+            cancelShift model
 
         OnHoverOverDay posix ->
             let
-                selection =
+                withNewSelection =
                     if model.isMouseDown || model.isShiftDown then
-                        Selecting <| createSelectingRange model posix
+                        withUpdatedSelection (Selecting <| createSelectingRange model posix) { model | currentlyHoveredDate = Just posix }
 
                     else
-                        model.selection
+                        { model | currentlyHoveredDate = Just posix }
             in
-            R2.withNoCmd { model | currentlyHoveredDate = Just posix, selection = selection }
+            R2.withNoCmd withNewSelection
 
         OnMouseMove event ->
             R2.withNoCmd { model | mousePosition = Just event }
@@ -1023,13 +973,13 @@ innerUpdate zone msg model =
                 Err _ ->
                     R2.withNoCmd model
 
-        CheckToMoveToNextVisibleRange today ->
+        CheckToMoveToNextVisibleRange ->
             let
                 localToday =
-                    posixToParts zone today
+                    posixToParts model.displayTimezone model.now
 
                 visibleRange =
-                    calcVisibleRange localToday model
+                    Maybe.withDefault (calcVisibleRange localToday model) model.visibleCalendarRange
             in
             case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
@@ -1046,30 +996,30 @@ innerUpdate zone msg model =
                 _ ->
                     R2.withNoCmd model
 
-        SetPresetMenu bool ->
-            R2.withNoCmd { model | isPresetMenuOpen = bool, keyboardSelectedPreset = Nothing }
+        SetPresetMenuVisibility visibility ->
+            R2.withNoCmd { model | presetMenuVisibility = visibility, keyboardSelectedPreset = Nothing }
 
-        SelectPreset presetType today ->
-            selectPresetInternal presetType today zone model
+        SelectPreset presetType ->
+            selectPresetInternal presetType model
 
         ToggleFormat ->
             let
-                updatedModel =
+                toggleFormat =
                     case model.displayFormat of
                         DateFormat ->
                             { model
                                 | displayFormat = DateTimeFormat
-                                , inputText = prettyFormatSelection zone model.selection model.languageConfig DateTimeFormat
                             }
 
                         DateTimeFormat ->
                             { model
                                 | displayFormat = DateFormat
-                                , inputText = prettyFormatSelection zone model.selection model.languageConfig DateFormat
-                                , selection = model.selection
                             }
+
+                updateInputText =
+                    { toggleFormat | inputText = CommittedInput (prettyFormatSelection (DatePicker toggleFormat)) }
             in
-            R2.withNoCmd updatedModel
+            R2.withNoCmd updateInputText
 
         OnWindowsResize width height ->
             R2.withNoCmd { model | windowSize = WindowSize (toFloat width) (toFloat height) }
@@ -1081,32 +1031,23 @@ innerUpdate zone msg model =
             R2.withNoCmd model
 
 
-selectionToInternalSelection : Maybe Selection -> InternalSelection
-selectionToInternalSelection selection =
-    Maybe.withDefault Unselected <|
-        Maybe.map
-            (\s ->
-                case s of
-                    Single val ->
-                        SingleSelection val
-
-                    Range val ->
-                        RangeSelection val
-
-                    Preset val ->
-                        PresetSelection val
-
-                    Before pos ->
-                        BeforeSelection pos
-
-                    After pos ->
-                        AfterSelection pos
-            )
-            selection
+withUpdatedSelection : Selection -> Model -> Model
+withUpdatedSelection selection model =
+    let
+        updatedModel =
+            { model | selection = selection }
+    in
+    { updatedModel | inputText = CommittedInput (prettyFormatSelection (DatePicker updatedModel)) }
 
 
-finishInput : Posix -> Zone -> Model -> Model
-finishInput today zone model =
+selectionToSelection : Maybe Selection -> Selection
+selectionToSelection selection =
+    Maybe.withDefault Unselected
+        selection
+
+
+finishInput : Model -> Model
+finishInput model =
     let
         allowTime =
             case model.dateSelectionType of
@@ -1130,45 +1071,53 @@ finishInput today zone model =
             , allowTime = allowTime
             }
 
-        parseOutput =
-            parseDateTime parseConfig model.inputText
+        parseInput inputText =
+            case parseDateTime parseConfig inputText of
+                Ok value ->
+                    let
+                        ( selection, format ) =
+                            convertInput Time.utc (Debug.log "value" value) model
+
+                        modelWithFormat =
+                            withUpdatedSelection selection { model | displayFormat = format }
+                    in
+                    { modelWithFormat
+                        | visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType (DatePicker modelWithFormat)
+                    }
+
+                Err _ ->
+                    model
     in
-    case parseOutput of
-        Ok value ->
-            let
-                ( selection, format ) =
-                    convertInput zone value model
-            in
-            { model
-                | selection = selection
-                , inputText = prettyFormatSelection zone selection model.languageConfig format
-                , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType zone today
-                , displayFormat = format
-            }
+    case model.inputText of
+        DirtyInput inputText ->
+            parseInput inputText
 
-        Err _ ->
-            { model | inputText = prettyFormatSelection zone model.selection model.languageConfig model.displayFormat }
+        CommittedInput _ ->
+            model
 
 
-selectPresetInternal : PresetType -> Posix -> Zone -> Model -> ( Model, Cmd Msg )
-selectPresetInternal presetType today zone model =
+selectPresetInternal : PresetType -> Model -> ( Model, Cmd Msg )
+selectPresetInternal presetType model =
     let
         selection =
-            PresetSelection presetType
+            Preset presetType
+
+        updatedModel =
+            withUpdatedSelection
+                selection
+                { model
+                    | presetMenuVisibility = MenuClosed
+                    , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType (DatePicker model)
+                    , keyboardSelectedPreset = Nothing
+                }
     in
     R2.withCmd
         (Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--done")
-        { model
-            | isPresetMenuOpen = False
-            , selection = selection
-            , visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType zone today
-            , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
-            , keyboardSelectedPreset = Nothing
-        }
+        updatedModel
 
 
-onKeyDown : Model -> Posix -> Zone -> Key -> ( Model, Cmd Msg )
-onKeyDown model today zone key =
+onKeyDown : Model -> Key -> ( Model, Cmd Msg )
+onKeyDown model key =
     case key of
         Shift ->
             if model.isShiftDown then
@@ -1191,8 +1140,8 @@ onKeyDown model today zone key =
                         R2.withNoCmd model
 
         Escape ->
-            if model.isPresetMenuOpen then
-                R2.withNoCmd { model | isPresetMenuOpen = False, keyboardSelectedPreset = Nothing }
+            if model.presetMenuVisibility == MenuOpen then
+                R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
                 R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
@@ -1204,10 +1153,10 @@ onKeyDown model today zone key =
             arrowMovement model -1 createSelectListWithLast
 
         Enter ->
-            if model.isPresetMenuOpen then
+            if model.presetMenuVisibility == MenuOpen then
                 case model.keyboardSelectedPreset of
                     Just a ->
-                        selectPresetInternal (SelectList.selected a) today zone model
+                        selectPresetInternal (SelectList.selected a) model
 
                     Nothing ->
                         R2.withNoCmd model
@@ -1226,7 +1175,7 @@ createSelectListWithLast allPresets =
 
 arrowMovement : Model -> Int -> (List PresetType -> Maybe (SelectList PresetType)) -> ( Model, Cmd Msg )
 arrowMovement model moveDropdownBy createNewSelectList =
-    if model.isPresetMenuOpen then
+    if model.presetMenuVisibility == MenuOpen then
         let
             updatedModel =
                 case model.keyboardSelectedPreset of
@@ -1264,48 +1213,49 @@ calculateMousePosition element event =
         Inside
 
 
-createSelectingRange : Model -> Posix -> PosixRange
+createSelectingRange : Model -> Parts -> PartsRange
 createSelectingRange model changedValue =
     case model.selection of
-        SingleSelection _ ->
+        Single _ ->
             { start = changedValue, end = changedValue }
 
-        RangeSelection posixRange ->
-            { start = posixRange.start, end = changedValue }
+        Range partsRange ->
+            { start = partsRange.start, end = changedValue }
 
         Unselected ->
             { start = changedValue, end = changedValue }
 
-        Selecting posixRange ->
-            { start = posixRange.start, end = changedValue }
+        Selecting partsRange ->
+            { start = partsRange.start, end = changedValue }
 
-        PresetSelection _ ->
+        Preset _ ->
             { start = changedValue, end = changedValue }
 
-        BeforeSelection _ ->
+        Before _ ->
             { start = changedValue, end = changedValue }
 
-        AfterSelection _ ->
+        After _ ->
             { start = changedValue, end = changedValue }
 
 
-cancelShift : Zone -> Model -> ( Model, Cmd Msg )
-cancelShift zone model =
+cancelShift : Model -> ( Model, Cmd Msg )
+cancelShift model =
     case model.selection of
-        Selecting posixRange ->
+        Selecting partsRange ->
             let
                 selection =
-                    PosixRange posixRange.start posixRange.end
+                    partsRange
                         |> normalizeSelectingRange
-                        |> RangeSelection
+                        |> Range
             in
             R2.withNoCmd
-                { model
-                    | isShiftDown = False
-                    , terminationCounter = 10
-                    , selection = selection
-                    , inputText = prettyFormatSelection zone selection model.languageConfig model.displayFormat
-                }
+                (withUpdatedSelection
+                    selection
+                    { model
+                        | isShiftDown = False
+                        , terminationCounter = 10
+                    }
+                )
 
         _ ->
             R2.withNoCmd
@@ -1335,17 +1285,52 @@ updateCalendarRange model intervalChange currentVisibleRange =
         }
 
 
+addYearsToParts : Int -> Parts -> Parts
+addYearsToParts intervalChange parts =
+    { parts | year = parts.year + intervalChange }
+
+
 addMonthsToParts : Int -> Parts -> Parts
 addMonthsToParts interval parts =
-    { parts
-        | month =
-            parts.month
-                |> monthToNumber
-                |> (\x -> x + interval)
-                |> (\y -> modBy 12 y)
-                |> numberToMonth
-                |> Maybe.withDefault Jan
-    }
+    parts
+        |> partsToPosix Time.utc
+        |> TimeExtra.add TimeExtra.Month interval Time.utc
+        |> posixToParts Time.utc
+
+
+
+-- let
+--     newMonthNumber =
+--         parts.month
+--             |> monthToNumber
+--             |> (\x -> x + interval)
+--     newMonth =
+--         modBy 12 newMonthNumber
+--             |> numberToMonth
+--             |> Maybe.withDefault Jan
+--     newYear =
+--         if newMonthNumber > 11 then
+--             parts.year + 1
+--         else if newMonthNumber < 0 then
+--             parts.year - 1
+--         else
+--             parts.year
+--     newDay =
+--         clamp 1 (numberOfDaysInMonth newYear newMonth) parts.day
+-- in
+-- { parts
+--     | month = newMonth
+--     , year = newYear
+--     , day = newDay
+-- }
+
+
+addDaysToParts : Int -> Parts -> Parts
+addDaysToParts interval parts =
+    parts
+        |> partsToPosix Time.utc
+        |> TimeExtra.add TimeExtra.Day interval Time.utc
+        |> posixToParts Time.utc
 
 
 getFirstDayOfYearParts : Parts -> Parts
@@ -1399,29 +1384,35 @@ calculateNewCalendarRange model intervalChange currentVisibleRange =
             updateWithIntervalFunc (addMonthsToParts (intervalChange * 3)) currentVisibleRange
 
         TwoMonths ->
-            updateWithIntervalFunc (addMonthsToParts (intervalChange * 2)) currentVisibleRange
+            updateWithIntervalFunc (addMonthsToParts intervalChange) currentVisibleRange
 
         OneMonth ->
             updateWithIntervalFunc (addMonthsToParts intervalChange) currentVisibleRange
 
 
-presetsDisplay : Model -> Posix -> Html Msg
-presetsDisplay model today =
-    if List.isEmpty model.presets || model.hidePresets then
-        div [] []
-
-    else if model.isPresetMenuOpen then
-        presetMenu model today
-
-    else
+presetsDisplay : Model -> Html Msg
+presetsDisplay model =
+    let
+        shouldShowPresetSelector =
+            not (List.isEmpty model.presets) && not model.hidePresets
+    in
+    if shouldShowPresetSelector then
         div [ Attrs.class "preset--open--wrapper" ]
-            [ button [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenu True ]
+            [ button [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenuVisibility MenuOpen ]
                 [ text <| model.languageConfig.presets, downArrow ]
+            , if model.presetMenuVisibility == MenuOpen then
+                presetMenu model
+
+              else
+                text ""
             ]
 
+    else
+        div [] []
 
-presetMenu : Model -> Posix -> Html Msg
-presetMenu model today =
+
+presetMenu : Model -> Html Msg
+presetMenu model =
     let
         isElementSelected item =
             case model.keyboardSelectedPreset of
@@ -1435,25 +1426,25 @@ presetMenu model today =
             Attrs.classList [ ( "menu-item", True ), ( "menu-item--keyboard", isElementSelected item ) ]
     in
     div [ Attrs.class "preset-menu--container" ]
-        [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenu False ]
+        [ div [ Attrs.class "preset-menu--close", Html.Events.onClick <| SetPresetMenuVisibility MenuClosed ]
             []
         , div [ Attrs.class "preset-menu--content" ] <|
             List.map
                 (\p ->
-                    div [ Html.Events.onClick <| SelectPreset p today, classList p ]
+                    div [ Html.Events.onClick <| SelectPreset p, classList p ]
                         [ text <| presetToDisplayString p model.languageConfig ]
                 )
                 model.presets
         ]
 
 
-bottomBar : Model -> Zone -> Parts -> Html Msg
-bottomBar model zone today =
+bottomBar : Model -> Html Msg
+bottomBar model =
     div [ Attrs.class "bottom-bar" ]
         [ button
             [ Attrs.id "elm-fancy--daterangepicker--done"
             , Attrs.class "done"
-            , Html.Events.onClick <| Close (partsToPosix zone today)
+            , Html.Events.onClick Close
             ]
             [ text model.languageConfig.done ]
         , button [ Attrs.class "reset", Html.Events.onClick Reset ]
@@ -1461,24 +1452,24 @@ bottomBar model zone today =
         ]
 
 
-leftSelector : PartsRange -> Model -> Zone -> Html Msg
+leftSelector : PartsRange -> Model -> Html Msg
 leftSelector =
     mkSelector -1 .end "prev-range-selector" "❮"
 
 
-rightSelector : PartsRange -> Model -> Zone -> Html Msg
+rightSelector : PartsRange -> Model -> Html Msg
 rightSelector =
     mkSelector 1 .start "next-range-selector" "❯"
 
 
-mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> PartsRange -> Model -> Zone -> Html Msg
-mkSelector moveInterval partOfRange class textContent visibleRange model zone =
+mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> PartsRange -> Model -> Html Msg
+mkSelector moveInterval partOfRange class textContent visibleRange model =
     let
         newRange =
             calculateNewCalendarRange model moveInterval visibleRange
 
         attrs =
-            if posixIsOutOfAllowedRange (partOfRange newRange) model zone then
+            if dateIsOutOfAllowedRange (partOfRange newRange) model.allowedRange then
                 [ Attrs.class "disabled" ]
 
             else
@@ -1508,13 +1499,18 @@ clockButton model =
         [ text "🕒" ]
 
 
-topBar : Model -> PartsRange -> Parts -> Zone -> Html Msg
-topBar model visibleRange today zone =
+topBar : Model -> PartsRange -> Parts -> Html Msg
+topBar model visibleRange today =
     let
+        allVisibleDatesSelection =
+            { start = visibleRange.start, end = visibleRange.end }
+                |> createSelectionInRange model.allowedRange
+                |> Range
+
         ( fullCalendarSelector, class ) =
             case model.calendarType of
                 FullCalendar ->
-                    ( div [ Attrs.class "full-calendar-selector", onClick <| SetSelection selection ]
+                    ( div [ Attrs.class "full-calendar-selector", onClick <| SetSelection allVisibleDatesSelection ]
                         [ text <| selectionText visibleRange ]
                     , "top-bar--full"
                     )
@@ -1529,42 +1525,34 @@ topBar model visibleRange today zone =
 
                 DateRangeSelection ->
                     clockButton model
-
-        selection =
-            { start = partsToPosix zone visibleRange.start, end = partsToPosix zone visibleRange.end }
-                |> createSelectionInRange model zone
-                |> RangeSelection
     in
     div [ Attrs.class class ]
         [ fullCalendarSelector
-        , presetsDisplay model (partsToPosix zone today)
-        , calendarInput model (partsToPosix zone today)
+        , presetsDisplay model
+        , calendarInput model
         , clock
         ]
 
 
-createSelectionInRange : Model -> Zone -> PosixRange -> PosixRange
-createSelectionInRange model zone posixRange =
+createSelectionInRange : PartsRange -> PartsRange -> PartsRange
+createSelectionInRange allowedRange partsRange =
     let
-        startRange =
-            model.availableForSelectionStart
-
-        endRange =
-            model.availableForSelectionEnd
+        toComparePosix =
+            partsToPosix Time.utc
 
         updatedSelectionStart =
-            if posixToMillis posixRange.start < posixToMillis startRange then
-                startRange
+            if posixToMillis (toComparePosix partsRange.start) < posixToMillis (toComparePosix allowedRange.start) then
+                allowedRange.start
 
             else
-                posixRange.start
+                partsRange.start
 
         updatedSelectionEnd =
-            if posixToMillis posixRange.end > posixToMillis endRange then
-                endRange
+            if posixToMillis (toComparePosix partsRange.end) > posixToMillis (toComparePosix allowedRange.end) then
+                allowedRange.end
 
             else
-                posixRange.end
+                partsRange.end
     in
     { start = updatedSelectionStart, end = updatedSelectionEnd }
 
@@ -1574,16 +1562,25 @@ selectionText visibleRange =
     String.fromInt visibleRange.start.year
 
 
-calendarInput : Model -> Posix -> Html Msg
-calendarInput model today =
+calendarInput : Model -> Html Msg
+calendarInput model =
+    let
+        inputText =
+            case model.inputText of
+                DirtyInput t ->
+                    t
+
+                CommittedInput t ->
+                    t
+    in
     div [ Attrs.class "calendar-input" ]
         [ input
-            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish today ) ]
-            , Html.Events.onBlur <| OnInputFinish today
+            [ Keyboard.Events.on Keypress [ ( Enter, OnInputFinish ) ]
+            , Html.Events.onBlur OnInputFinish
             , Html.Events.onInput OnInputChange
             , Attrs.id "elm-fancy--daterangepicker--input"
             , Attrs.placeholder <| inputPlaceHolder model
-            , Attrs.value model.inputText
+            , Attrs.value inputText
             ]
             []
         ]
@@ -1599,14 +1596,14 @@ inputPlaceHolder model =
             model.languageConfig.datePickerInputPlaceholder
 
 
-convertInput : Zone -> Input -> Model -> ( InternalSelection, Format )
+convertInput : Zone -> Input -> Model -> ( Selection, Format )
 convertInput zone input model =
     case input of
         SingleInput inputDate ->
-            singleInputConversion zone inputDate model False
+            singleInputConversion inputDate model
 
         RangeInput start end ->
-            combineInputToRange zone start end
+            combineInputToRange start end
 
         CustomDate selectedCustomDate ->
             let
@@ -1615,54 +1612,54 @@ convertInput zone input model =
             in
             case List.head selectedPreset of
                 Just preset ->
-                    ( PresetSelection preset, DateFormat )
+                    ( Preset preset, DateFormat )
 
                 Nothing ->
                     ( Unselected, DateFormat )
 
         BeforeInput inputDate ->
             let
-                ( posix, format ) =
-                    wildcardInputConversion zone inputDate .end
+                ( parts, format ) =
+                    wildcardInputConversion inputDate .end
             in
-            ( BeforeSelection <| posix, format )
+            ( Before <| parts, format )
 
         AfterInput inputDate ->
             let
-                ( posix, format ) =
-                    wildcardInputConversion zone inputDate .start
+                ( parts, format ) =
+                    wildcardInputConversion inputDate .start
             in
-            ( AfterSelection <| posix, format )
+            ( After <| parts, format )
 
 
-wildcardInputConversion : Zone -> InputDate -> (PosixRange -> Posix) -> ( Posix, Format )
-wildcardInputConversion zone inputDate getPosix =
+wildcardInputConversion : InputDate -> (PartsRange -> Parts) -> ( Parts, Format )
+wildcardInputConversion inputDate getParts =
     case inputDate of
         JustYear year ->
-            ( getPosix <| yearToPosixRange year zone, DateFormat )
+            ( getParts <| yearToPartsRange year, DateFormat )
 
         JustYearAndMonth yearAndMonth ->
-            ( getPosix <| yearAndMonthToPosixRange yearAndMonth zone, DateFormat )
+            ( getParts <| yearAndMonthToPartsRange yearAndMonth, DateFormat )
 
         FullDate dateParts ->
-            ( getEndOfDay <| datePartsToPosix dateParts zone, DateFormat )
+            ( getEndOfDayParts <| datePartsToParts dateParts, DateFormat )
 
         FullDateTime dateTimeParts ->
-            ( getEndOfDay <| dateTimePartsToPosix dateTimeParts zone, DateTimeFormat )
+            ( getEndOfDayParts <| dateTimePartsToParts dateTimeParts, DateTimeFormat )
 
 
-singleInputConversion : Zone -> InputDate -> Model -> Bool -> ( InternalSelection, Format )
-singleInputConversion zone inputDate model isEndSelection =
+singleInputConversion : InputDate -> Model -> ( Selection, Format )
+singleInputConversion inputDate model =
     let
         ( initialSelection, format ) =
-            convertInputDate zone inputDate isEndSelection
+            convertInputDate inputDate
 
         selection =
             case model.dateSelectionType of
                 DateRangeSelection ->
                     case initialSelection of
-                        SingleSelection posix ->
-                            RangeSelection <| convertSingleIntoRange posix
+                        Single posix ->
+                            Range <| convertSingleIntoRange posix
 
                         _ ->
                             initialSelection
@@ -1673,82 +1670,47 @@ singleInputConversion zone inputDate model isEndSelection =
     ( selection, Maybe.withDefault DateFormat format )
 
 
-combineInputToRange : Zone -> InputDate -> InputDate -> ( InternalSelection, Format )
-combineInputToRange zone start end =
-    let
-        ( startSelection, startFormat ) =
-            convertInputDate zone start False
+combineInputToRange : InputDate -> InputDate -> ( Selection, Format )
+combineInputToRange start end =
+    convertInputDateRange ( start, end )
 
-        ( endSelection, endFormat ) =
-            convertInputDate zone end True
 
-        fullFormat =
-            case ( startFormat, endFormat ) of
-                ( Just DateTimeFormat, _ ) ->
-                    DateTimeFormat
+convertInputDate : InputDate -> ( Selection, Maybe Format )
+convertInputDate inputDate =
+    case inputDate of
+        JustYear year ->
+            ( Range <| yearToPartsRange year, Nothing )
 
-                ( _, Just DateTimeFormat ) ->
-                    DateTimeFormat
+        JustYearAndMonth yearAndMonth ->
+            ( Range <| yearAndMonthToPartsRange yearAndMonth, Nothing )
 
-                _ ->
-                    DateFormat
-    in
-    case ( startSelection, endSelection ) of
-        ( SingleSelection startPosix, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosix, end = endPosix }, fullFormat )
+        FullDate dateParts ->
+            ( Single (datePartsToParts dateParts), Nothing )
 
-        ( SingleSelection startPosix, RangeSelection endPosixRange ) ->
-            ( RangeSelection { start = startPosix, end = endPosixRange.end }, fullFormat )
+        FullDateTime dateTimeParts ->
+            ( Single (dateTimePartsToParts dateTimeParts), Just DateTimeFormat )
 
-        ( RangeSelection startPosixRange, SingleSelection endPosix ) ->
-            ( RangeSelection { start = startPosixRange.start, end = endPosix }, fullFormat )
 
-        ( RangeSelection startPosixRange, RangeSelection endPosixRange ) ->
-            ( RangeSelection { start = startPosixRange.start, end = endPosixRange.end }, fullFormat )
+convertInputDateRange : ( InputDate, InputDate ) -> ( Selection, Format )
+convertInputDateRange ( start, end ) =
+    case ( start, end ) of
+        ( JustYear yearStart, JustYear yearEnd ) ->
+            ( Range <| PartsRange (yearToParts yearStart) (yearToParts yearEnd), DateFormat )
+
+        ( JustYearAndMonth yearMonthStart, JustYearAndMonth yearMonthEnd ) ->
+            ( Range <| PartsRange (yearAndMonthToParts yearMonthStart) (yearAndMonthToParts yearMonthEnd), DateFormat )
+
+        ( FullDate datePartsStart, FullDate datePartsEnd ) ->
+            ( Range <| PartsRange (datePartsToParts datePartsStart) (datePartsToParts datePartsEnd), DateFormat )
+
+        ( FullDateTime dateTimePartsStart, FullDateTime dateTimePartsEnd ) ->
+            ( Range <| PartsRange (dateTimePartsToParts dateTimePartsStart) (dateTimePartsToParts dateTimePartsEnd), DateTimeFormat )
 
         _ ->
             ( Unselected, DateFormat )
 
 
-convertInputDate : Zone -> InputDate -> Bool -> ( InternalSelection, Maybe Format )
-convertInputDate zone inputDate isEndSelection =
-    case inputDate of
-        JustYear year ->
-            ( RangeSelection <| yearToPosixRange year zone, Nothing )
-
-        JustYearAndMonth yearAndMonth ->
-            ( RangeSelection <| yearAndMonthToPosixRange yearAndMonth zone, Nothing )
-
-        FullDate dateParts ->
-            let
-                unAdjustedPosix =
-                    datePartsToPosix dateParts zone
-
-                adjusted =
-                    if isEndSelection then
-                        getEndOfDay unAdjustedPosix
-
-                    else
-                        unAdjustedPosix
-            in
-            ( SingleSelection adjusted, Nothing )
-
-        FullDateTime dateTimeParts ->
-            let
-                unAdjustedPosix =
-                    dateTimePartsToPosix dateTimeParts zone
-
-                adjusted =
-                    if isEndSelection then
-                        addEndingDateTimeParts unAdjustedPosix
-
-                    else
-                        unAdjustedPosix
-            in
-            ( SingleSelection adjusted, Just DateTimeFormat )
-
-
-calendarView : Model -> Parts -> PartsRange -> Zone -> Html Msg
+calendarView : Model -> Parts -> PartsRange -> Html Msg
 calendarView model =
     case model.calendarType of
         FullCalendar ->
@@ -1764,25 +1726,25 @@ calendarView model =
             monthlyCalendarView model "monthly-large" 0
 
 
-yearCalendarView : Model -> Parts -> PartsRange -> Zone -> Html Msg
-yearCalendarView model today visibleRange zone =
+yearCalendarView : Model -> Parts -> PartsRange -> Html Msg
+yearCalendarView model today visibleRange =
     let
         quarter name startMonth endMonth =
             let
-                posixRangeForQuarter =
-                    posixRangeForMonths startMonth endMonth visibleRange.start.year zone
+                partsRangeForQuarter =
+                    partsRangeForMonths startMonth endMonth visibleRange.start.year
 
                 isOutOfRange =
-                    posixIsOutOfAllowedRange (posixToParts zone posixRangeForQuarter.start) model zone
-                        || posixIsOutOfAllowedRange (posixToParts zone posixRangeForQuarter.end) model zone
+                    dateIsOutOfAllowedRange partsRangeForQuarter.start model.allowedRange
+                        || dateIsOutOfAllowedRange partsRangeForQuarter.end model.allowedRange
 
                 attrs =
                     if isOutOfRange then
                         [ Attrs.class "disabled" ]
 
                     else
-                        [ posixRangeForQuarter
-                            |> RangeSelection
+                        [ partsRangeForQuarter
+                            |> Range
                             |> SetSelection
                             |> Html.Events.onClick
                         , Attrs.class "selection-hover"
@@ -1801,7 +1763,7 @@ yearCalendarView model today visibleRange zone =
         [ quarters
         , table []
             [ tbody [ Attrs.class "year" ] <|
-                List.map (\m -> monthCalendarView m today model zone) <|
+                List.map (\m -> monthCalendarView m today model) <|
                     getMonthsFromRange
                         0
                         11
@@ -1811,12 +1773,12 @@ yearCalendarView model today visibleRange zone =
         ]
 
 
-monthlyCalendarView : Model -> String -> Int -> Parts -> PartsRange -> Zone -> Html Msg
-monthlyCalendarView model monthClass endInterval today visibleRange zone =
+monthlyCalendarView : Model -> String -> Int -> Parts -> PartsRange -> Html Msg
+monthlyCalendarView model monthClass endInterval today visibleRange =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
         [ table []
             [ tbody [ Attrs.class monthClass ] <|
-                List.map (\m -> monthCalendarView m today model zone)
+                List.map (\m -> monthCalendarView m today model)
                     (getMonthsFromRange 0 endInterval visibleRange getFirstDayOfMonthStartOfDayParts)
             ]
         ]
@@ -1832,8 +1794,8 @@ getMonthsFromRange start end visibleRange fn =
         List.range start end
 
 
-posixRangeForMonths : Month -> Month -> Int -> Zone -> PosixRange
-posixRangeForMonths startMonth endMonth currentYear zone =
+partsRangeForMonths : Month -> Month -> Int -> PartsRange
+partsRangeForMonths startMonth endMonth currentYear =
     let
         start =
             { year = currentYear
@@ -1855,29 +1817,29 @@ posixRangeForMonths startMonth endMonth currentYear zone =
             , millisecond = 0
             }
     in
-    { start = partsToPosix zone start, end = partsToPosix zone end }
+    { start = start, end = end }
 
 
-monthCalendarView : Parts -> Parts -> Model -> Zone -> Html Msg
-monthCalendarView currentMonth today model zone =
+monthCalendarView : Parts -> Parts -> Model -> Html Msg
+monthCalendarView currentMonth today model =
     let
         firstOfMonth =
-            { currentMonth | day = 1, hour = 0, minute = 0, second = 0, millisecond = 0 }
+            getFirstDayOfMonthStartOfDayParts currentMonth
 
         lastOfMonth =
-            { currentMonth | day = numberOfDaysInMonth currentMonth.year currentMonth.month, hour = 23, minute = 59, second = 59, millisecond = 0 }
+            getLastDayOfMonthEndOfDayParts currentMonth
 
         range =
-            { start = partsToPosix zone firstOfMonth
-            , end = partsToPosix zone lastOfMonth
+            { start = firstOfMonth
+            , end = lastOfMonth
             }
 
         selectionInUtc =
-            RangeSelection range
+            Range range
 
         wholeMonthIsOutOfRange =
-            posixIsOutOfAllowedRange firstOfMonth model zone
-                && posixIsOutOfAllowedRange lastOfMonth model zone
+            dateIsOutOfAllowedRange firstOfMonth model.allowedRange
+                && dateIsOutOfAllowedRange lastOfMonth model.allowedRange
 
         attrs =
             if wholeMonthIsOutOfRange then
@@ -1889,16 +1851,16 @@ monthCalendarView currentMonth today model zone =
     td []
         [ table []
             [ thead attrs
-                [ text <| monthFormatter model.languageConfig zone (partsToPosix zone currentMonth) ]
+                [ text <| monthFormatter model.languageConfig Time.utc (partsToPosix Time.utc currentMonth) ]
             , tbody [ Attrs.class "month" ] <|
-                List.map (\x -> dayCalendarView zone currentMonth x today model) <|
-                    getCurrentMonthDatesFullWeeks zone currentMonth
+                List.map (\x -> dayCalendarView currentMonth x today model) <|
+                    getCurrentMonthDatesFullWeeks currentMonth
             ]
         ]
 
 
-dayCalendarView : Zone -> Parts -> Parts -> Parts -> Model -> Html Msg
-dayCalendarView zone currentMonth currentDay today model =
+dayCalendarView : Parts -> Parts -> Parts -> Model -> Html Msg
+dayCalendarView currentMonth currentDay today model =
     let
         wantedMonth =
             currentMonth.month
@@ -1908,11 +1870,11 @@ dayCalendarView zone currentMonth currentDay today model =
 
         ( hoverAttr, content, setDate ) =
             if contentIsInCorrectMonth then
-                if posixIsOutOfAllowedRange currentDay model zone then
+                if dateIsOutOfAllowedRange currentDay model.allowedRange then
                     ( Attrs.class "", [ text <| String.fromInt currentDay.day ], Attrs.class "" )
 
                 else
-                    ( Html.Events.onMouseOver <| OnHoverOverDay (partsToPosix zone currentDay)
+                    ( Html.Events.onMouseOver <| OnHoverOverDay currentDay
                     , [ text <| String.fromInt currentDay.day ]
                     , setDateAttr
                     )
@@ -1922,17 +1884,17 @@ dayCalendarView zone currentMonth currentDay today model =
 
         setDateAttr =
             if model.isShiftDown || model.isMouseDown then
-                Just (partsToPosix zone currentDay) |> EndSelection |> onClickNoDefault
+                Just currentDay |> EndSelection |> onClickNoDefault
 
             else
-                StartSelection (partsToPosix zone currentDay) |> DateRangePicker.Helper.mouseDownNoDefault
+                StartSelection currentDay |> DateRangePicker.Helper.mouseDownNoDefault
 
         isSameDayOfSelection posixFromSelection =
             contentIsInCorrectMonth && (Maybe.withDefault False <| Maybe.map (\p -> isSameDay p currentDay) posixFromSelection)
 
         --All local
         ( selectionStart, selectionEnd, isInSelectionRange ) =
-            selectionPoints currentDay model today zone
+            selectionPoints currentDay model
 
         classList =
             Attrs.classList
@@ -1940,7 +1902,7 @@ dayCalendarView zone currentMonth currentDay today model =
                 , ( "selected-range", contentIsInCorrectMonth && isInSelectionRange )
                 , ( "border-selection", isSameDayOfSelection selectionStart || isSameDayOfSelection selectionEnd )
                 , ( "today", isSameDay currentDay today )
-                , ( "disabled", posixIsOutOfAllowedRange currentDay model zone )
+                , ( "disabled", dateIsOutOfAllowedRange currentDay model.allowedRange )
                 , ( "wrong-month", not contentIsInCorrectMonth )
                 ]
     in
@@ -2036,88 +1998,88 @@ calculateXPosition button calendar { width } =
         )
 
 
-posixIsOutOfAllowedRange : Parts -> Model -> Zone -> Bool
-posixIsOutOfAllowedRange parts model zone =
+dateIsOutOfAllowedRange : Parts -> PartsRange -> Bool
+dateIsOutOfAllowedRange parts { start, end } =
     let
-        start =
-            model.availableForSelectionStart
+        startPosix =
+            partsToPosix Time.utc start
 
-        end =
-            model.availableForSelectionEnd
+        endPosix =
+            partsToPosix Time.utc end
     in
-    posixToMillis (partsToPosix zone parts) < posixToMillis start || posixToMillis (partsToPosix zone parts) > posixToMillis end
+    posixToMillis (partsToPosix Time.utc parts) < posixToMillis startPosix || posixToMillis (partsToPosix Time.utc parts) > posixToMillis endPosix
 
 
-normalizeSelectingRange : PosixRange -> PosixRange
-normalizeSelectingRange posixRange =
-    if posixToMillis posixRange.start > posixToMillis posixRange.end then
-        { start = posixRange.end, end = posixRange.start }
+normalizeSelectingRange : PartsRange -> PartsRange
+normalizeSelectingRange ({ start, end } as partsRange) =
+    if posixToMillis (partsToPosix Time.utc start) > posixToMillis (partsToPosix Time.utc end) then
+        { start = end, end = start }
 
     else
-        posixRange
+        partsRange
 
 
-selectionPoints : Parts -> Model -> Parts -> Zone -> ( Maybe Parts, Maybe Parts, Bool )
-selectionPoints date { selection, availableForSelectionStart, availableForSelectionEnd } today zone =
+selectionPoints : Parts -> Model -> ( Maybe Parts, Maybe Parts, Bool )
+selectionPoints date ({ selection, allowedRange, displayTimezone } as model) =
     let
         compareRange range =
-            posixToMillis range.start
-                <= (posixToMillis <| partsToPosix zone date)
-                && (posixToMillis <| partsToPosix zone date)
-                <= posixToMillis range.end
+            (posixToMillis <| partsToPosix displayTimezone range.start)
+                <= (posixToMillis <| partsToPosix displayTimezone date)
+                && (posixToMillis <| partsToPosix displayTimezone date)
+                <= (posixToMillis <| partsToPosix displayTimezone range.end)
     in
     case selection of
-        SingleSelection posix ->
-            ( Just <| posixToParts zone posix
-            , Just <| posixToParts zone posix
+        Single parts ->
+            ( Just parts
+            , Just parts
             , False
             )
 
-        RangeSelection posixRange ->
-            ( Just <| posixToParts zone posixRange.start
-            , Just <| posixToParts zone posixRange.end
-            , compareRange posixRange
+        Range partsRange ->
+            ( Just partsRange.start
+            , Just partsRange.end
+            , compareRange partsRange
             )
 
         Unselected ->
             ( Nothing, Nothing, False )
 
-        Selecting posixRange ->
+        Selecting partsRange ->
             let
                 normalized =
-                    normalizeSelectingRange posixRange
+                    normalizeSelectingRange partsRange
             in
-            ( Just <| posixToParts zone normalized.start
-            , Just <| posixToParts zone normalized.end
+            ( Just normalized.start
+            , Just normalized.end
             , compareRange normalized
             )
 
-        PresetSelection presetType ->
+        Preset presetType ->
             let
-                posixRange =
-                    presetToPosixRange presetType (partsToPosix zone today) zone
+                partsRange =
+                    presetToPartsRange (DatePicker model) presetType
             in
-            ( Just <| posixToParts zone posixRange.start
-            , Just <| posixToParts zone posixRange.end
-            , compareRange posixRange
+            ( Just partsRange.start
+            , Just partsRange.end
+            , compareRange partsRange
             )
 
-        AfterSelection posix ->
-            ( Just <| posixToParts zone posix
-            , Just <| posixToParts zone availableForSelectionEnd
-            , compareRange { start = posix, end = availableForSelectionEnd }
+        After parts ->
+            ( Just parts
+            , Just allowedRange.end
+            , compareRange { start = parts, end = allowedRange.end }
             )
 
-        BeforeSelection posix ->
-            ( Just <| posixToParts zone availableForSelectionStart
-            , Just <| posixToParts zone posix
-            , compareRange { start = availableForSelectionStart, end = posix }
+        Before parts ->
+            ( Just allowedRange.start
+            , Just parts
+            , compareRange { start = allowedRange.start, end = parts }
             )
 
 
 isSameDay : Parts -> Parts -> Bool
-isSameDay posix1 posix2 =
-    posix1.day == posix2.day && posix1.month == posix2.month && posix1.year == posix2.year
+isSameDay parts1 parts2 =
+    parts1.day == parts2.day && parts1.month == parts2.month && parts1.year == parts2.year
 
 
 calcVisibleRange : Parts -> Model -> PartsRange
@@ -2164,54 +2126,50 @@ calcVisibleRange localToday model =
             }
 
 
-convertToRange : Posix -> Zone -> CalendarType -> PartsRange
-convertToRange day zone calendarType =
-    let
-        localToday =
-            posixToParts zone day
-    in
+convertToRange : Parts -> CalendarType -> PartsRange
+convertToRange day calendarType =
     case calendarType of
         FullCalendar ->
-            { start = getFirstDayOfYearParts localToday, end = getLastDayOfYearParts localToday }
+            { start = getFirstDayOfYearParts day, end = getLastDayOfYearParts day }
 
         ThreeMonths ->
             { start =
-                { localToday
-                    | month = getPrevMonth localToday.month
+                { day
+                    | month = getPrevMonth day.month
                 }
                     |> getFirstDayOfMonthStartOfDayParts
             , end =
-                { localToday
-                    | month = getNextMonth localToday.month
+                { day
+                    | month = getNextMonth day.month
                 }
                     |> getLastDayOfMonthEndOfDayParts
             }
 
         TwoMonths ->
             { start =
-                { localToday | month = getPrevMonth localToday.month }
+                { day | month = getPrevMonth day.month }
                     |> getFirstDayOfMonthStartOfDayParts
             , end =
-                localToday
+                day
                     |> getLastDayOfMonthEndOfDayParts
             }
 
         OneMonth ->
             { start =
-                localToday |> getFirstDayOfMonthStartOfDayParts
+                day |> getFirstDayOfMonthStartOfDayParts
             , end =
-                localToday |> getLastDayOfMonthEndOfDayParts
+                day |> getLastDayOfMonthEndOfDayParts
             }
 
 
-getVisibleRangeFromSelection : InternalSelection -> CalendarType -> Zone -> Posix -> Maybe PartsRange
-getVisibleRangeFromSelection selection calendarType zone today =
+getVisibleRangeFromSelection : Selection -> CalendarType -> DatePicker -> Maybe PartsRange
+getVisibleRangeFromSelection selection calendarType model =
     case selection of
-        SingleSelection posix ->
-            Just { start = getStartOfDayParts <| posixToParts zone posix, end = getEndOfDayParts <| posixToParts zone posix }
+        Single parts ->
+            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
-        RangeSelection posixRange ->
-            convertToRange posixRange.start zone calendarType
+        Range partsRange ->
+            convertToRange partsRange.start calendarType
                 |> Just
 
         Unselected ->
@@ -2220,49 +2178,65 @@ getVisibleRangeFromSelection selection calendarType zone today =
         Selecting _ ->
             Nothing
 
-        PresetSelection presetType ->
-            presetToPosixRange presetType today zone
-                |> (\{ start, end } -> PartsRange (posixToParts zone start) (posixToParts zone end))
+        Preset presetType ->
+            presetToPartsRange model presetType
+                |> (\{ start, end } -> PartsRange start end)
                 |> Just
 
-        BeforeSelection posix ->
-            Just { start = getStartOfDayParts <| posixToParts zone posix, end = getEndOfDayParts <| posixToParts zone posix }
+        Before parts ->
+            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
-        AfterSelection posix ->
-            Just { start = getStartOfDayParts <| posixToParts zone posix, end = getEndOfDayParts <| posixToParts zone posix }
+        After parts ->
+            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
 
-prettyFormatSelection : Zone -> InternalSelection -> LanguageConfig -> Format -> String
-prettyFormatSelection zone selection language format =
-    case selection of
-        SingleSelection posix ->
-            singleFormatter zone language format posix
+prettyFormatSelection : DatePicker -> String
+prettyFormatSelection (DatePicker model) =
+    prettyFormatSelectionInZone (DatePicker model) model.displayTimezone
 
-        RangeSelection posixRange ->
-            if isSameDay (posixToParts zone posixRange.start) (posixToParts zone posixRange.end) && format /= DateTimeFormat then
-                singleFormatter zone language format posixRange.start
+
+prettyFormatSelectionInZone : DatePicker -> Zone -> String
+prettyFormatSelectionInZone (DatePicker model) displayZone =
+    let
+        formatSingle parts =
+            singleFormatter displayZone model.languageConfig model.displayFormat ( parts, model.displayTimezone )
+
+        formatRange range =
+            rangeFormatter displayZone model.languageConfig model.displayFormat ( range, model.displayTimezone )
+    in
+    case model.selection of
+        Single parts ->
+            formatSingle parts
+
+        Range partsRange ->
+            if isSameDay partsRange.start partsRange.end && model.displayFormat /= DateTimeFormat then
+                formatSingle partsRange.start
 
             else
-                fullFormatter zone language format posixRange.start posixRange.end
+                formatRange partsRange
 
         Unselected ->
             ""
 
-        Selecting _ ->
-            ""
+        Selecting partsRange ->
+            if isSameDay partsRange.start partsRange.end then
+                formatSingle partsRange.start
 
-        PresetSelection presetType ->
-            presetToDisplayString presetType language
+            else
+                formatRange partsRange
 
-        BeforeSelection posix ->
-            singleFormatter zone language format posix ++ " " ++ language.beforeThisDate
+        Preset presetType ->
+            presetToDisplayString presetType model.languageConfig
 
-        AfterSelection posix ->
-            singleFormatter zone language format posix ++ " " ++ language.afterThisDate
+        Before parts ->
+            formatSingle parts ++ " " ++ model.languageConfig.beforeThisDate
+
+        After parts ->
+            formatSingle parts ++ " " ++ model.languageConfig.afterThisDate
 
 
-singleFormatter : Zone -> LanguageConfig -> Format -> Posix -> String
-singleFormatter zone language format =
+singleFormatter : Zone -> LanguageConfig -> Format -> ( Parts, Zone ) -> String
+singleFormatter zone language format ( parts, partsTimezone ) =
     let
         timeParts =
             case format of
@@ -2286,6 +2260,7 @@ singleFormatter zone language format =
             ++ timeParts
         )
         zone
+        (partsToPosix partsTimezone parts)
 
 
 monthFormatter : LanguageConfig -> Zone -> Posix -> String
@@ -2295,42 +2270,42 @@ monthFormatter language =
         ]
 
 
-fullFormatter : Zone -> LanguageConfig -> Format -> Posix -> Posix -> String
-fullFormatter zone language format start end =
-    singleFormatter zone language format start
+rangeFormatter : Zone -> LanguageConfig -> Format -> ( PartsRange, Zone ) -> String
+rangeFormatter zone language format ( { start, end }, partsZone ) =
+    singleFormatter zone language format ( start, partsZone )
         ++ " to "
-        ++ singleFormatter zone language format end
+        ++ singleFormatter zone language format ( end, partsZone )
 
 
 
 -- Copied from Derberos.Date.Utils and edited to make sunday first day of the week
 
 
-getCurrentMonthDatesFullWeeks : Zone -> Parts -> List Parts
-getCurrentMonthDatesFullWeeks zone time =
+getCurrentMonthDatesFullWeeks : Parts -> List Parts
+getCurrentMonthDatesFullWeeks time =
     let
         firstDayOfMonth =
             time
                 |> getFirstDayOfMonthStartOfDayParts
-                |> partsToPosix zone
-                |> (\x -> TimeExtra.add TimeExtra.Day (getDiffLastSun (getWeekday zone x)) zone x)
+                |> partsToPosix Time.utc
+                |> (\x -> TimeExtra.add TimeExtra.Day (getDiffLastSun (getWeekday Time.utc x)) Time.utc x)
 
         lastDayOfMonth =
             time
                 |> getLastDayOfMonthEndOfDayParts
-                |> partsToPosix zone
-                |> (\x -> TimeExtra.add TimeExtra.Day (getDiffNextSat (getWeekday zone x)) zone x)
+                |> partsToPosix Time.utc
+                |> (\x -> TimeExtra.add TimeExtra.Day (getDiffNextSat (getWeekday Time.utc x)) Time.utc x)
 
         numberDaysInMonth =
             (posixToMillis lastDayOfMonth - posixToMillis firstDayOfMonth) // (1000 * 60 * 60 * 24)
 
         -- numberOfDaysInMonth time.year time.month
         addDayParts posix i =
-            TimeExtra.add TimeExtra.Day i zone posix
+            TimeExtra.add TimeExtra.Day i Time.utc posix
     in
     List.range 0 numberDaysInMonth
         |> List.map (addDayParts firstDayOfMonth)
-        |> List.map (posixToParts zone)
+        |> List.map (posixToParts Time.utc)
 
 
 getDiffLastSun : Weekday -> Int
@@ -2383,51 +2358,66 @@ getDiffNextSat weekday =
             6
 
 
-yearToPosixRange : Int -> Zone -> PosixRange
-yearToPosixRange year zone =
+getMonthText : Parts -> String
+getMonthText { month } =
+    case month of
+        Jan ->
+            "January"
+
+        Feb ->
+            "Febuary"
+
+        Mar ->
+            "March"
+
+        Apr ->
+            "April"
+
+        May ->
+            "May"
+
+        Jun ->
+            "June"
+
+        Jul ->
+            "July"
+
+        Aug ->
+            "August"
+
+        Sep ->
+            "September"
+
+        Oct ->
+            "October"
+
+        Nov ->
+            "November"
+
+        Dec ->
+            "December"
+
+
+yearToPartsRange : Int -> PartsRange
+yearToPartsRange year =
     let
-        posix =
-            yearToPosix year zone
+        parts =
+            yearToParts year
     in
-    { start = getStartOfDay <| getFirstDayOfYear zone posix
-    , end = getEndOfDay <| getLastDayOfYear zone posix
+    { start = parts
+    , end = parts
     }
 
 
-yearAndMonthToPosixRange : YearAndMonth -> Zone -> PosixRange
-yearAndMonthToPosixRange yearMonth zone =
+yearAndMonthToPartsRange : YearAndMonth -> PartsRange
+yearAndMonthToPartsRange yearMonth =
     let
-        posix =
-            yearAndMonthToPosix yearMonth zone
+        parts =
+            yearAndMonthToParts yearMonth
     in
-    { start = getFirstDayOfMonthStartOfDay zone posix
-    , end = getLastDayOfMonthEndOfDay zone posix
+    { start = parts
+    , end = parts
     }
-
-
-getLastDayOfMonthEndOfDay : Zone -> Posix -> Posix
-getLastDayOfMonthEndOfDay zone =
-    getLastDayOfMonth zone >> getEndOfDay
-
-
-getFirstDayOfMonthStartOfDay : Zone -> Posix -> Posix
-getFirstDayOfMonthStartOfDay zone =
-    getFirstDayOfMonth zone >> getStartOfDay
-
-
-addEndingDateTimeParts : Posix -> Posix
-addEndingDateTimeParts posix =
-    let
-        dateRecord =
-            posixToCivil posix
-
-        updatedDateRecord =
-            { dateRecord
-                | second = 59
-                , millis = 99
-            }
-    in
-    civilToPosix updatedDateRecord
 
 
 checkForChange : (DatePicker -> Maybe a) -> DatePicker -> Maybe a -> Bool
@@ -2439,17 +2429,17 @@ checkForChange checkFunc model elementForComparison =
         checkFunc model /= elementForComparison
 
 
-convertSingleIntoRange : Posix -> PosixRange
-convertSingleIntoRange posix =
+convertSingleIntoRange : Parts -> PartsRange
+convertSingleIntoRange parts =
     let
         timeHasBeenSetByUser =
-            posix /= getStartOfDay posix
+            parts /= getStartOfDayParts parts
     in
     if timeHasBeenSetByUser then
-        { start = posix, end = addEndingDateTimeParts posix }
+        { start = parts, end = parts }
 
     else
-        { start = getStartOfDay posix, end = getEndOfDay posix }
+        { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
 
 
@@ -2458,47 +2448,51 @@ convertSingleIntoRange posix =
 --------------------------------------------------------------------------------------------
 
 
-convertInterval : Interval -> Int -> Posix -> Zone -> Posix
-convertInterval interval intervalValue today localZone =
+convertInterval : Interval -> Int -> Parts -> Parts
+convertInterval interval intervalValue today =
     case interval of
         Days ->
-            addDays intervalValue today
+            addDaysToParts intervalValue today
 
         Months ->
-            addMonths intervalValue localZone today
+            addMonthsToParts intervalValue today
 
         Weeks ->
-            addDays (intervalValue * -7) today
+            addDaysToParts (intervalValue * -7) today
 
         Years ->
-            addYears intervalValue today
+            addYearsToParts intervalValue today
 
 
-presetToPosixRange : PresetType -> Posix -> Zone -> PosixRange
-presetToPosixRange presetType today localZone =
+presetToPartsRange : DatePicker -> PresetType -> PartsRange
+presetToPartsRange (DatePicker model) presetType =
+    let
+        todayParts =
+            posixToParts model.displayTimezone model.now
+    in
     case presetType of
         Today ->
-            { start = getStartOfDay today, end = getEndOfDay today }
+            { start = getStartOfDayParts todayParts, end = getEndOfDayParts todayParts }
 
         Yesterday ->
-            { start = getStartOfDay <| addDays -1 today, end = getEndOfDay <| addDays -1 today }
+            { start = getStartOfDayParts <| addDaysToParts -1 todayParts, end = getEndOfDayParts <| addDaysToParts -1 todayParts }
 
         PastWeek ->
-            { start = getStartOfDay <| addDays -7 today, end = getEndOfDay today }
+            { start = getStartOfDayParts <| addDaysToParts -7 todayParts, end = getEndOfDayParts todayParts }
 
         PastMonth ->
-            { start = getStartOfDay <| addMonths -1 localZone today, end = getEndOfDay today }
+            { start = getStartOfDayParts <| addMonthsToParts -1 todayParts, end = getEndOfDayParts todayParts }
 
         PastYear ->
-            { start = getStartOfDay <| addYears -1 today, end = getEndOfDay today }
+            { start = getStartOfDayParts <| addYearsToParts -1 todayParts, end = getEndOfDayParts todayParts }
 
         Custom customPreset ->
             { start =
-                convertInterval customPreset.intervalStart customPreset.intervalStartValue today localZone
-                    |> getStartOfDay
+                convertInterval customPreset.intervalStart customPreset.intervalStartValue todayParts
+                    |> getStartOfDayParts
             , end =
-                convertInterval customPreset.intervalEnd customPreset.intervalEndValue today localZone
-                    |> getEndOfDay
+                convertInterval customPreset.intervalEnd customPreset.intervalEndValue todayParts
+                    |> getEndOfDayParts
             }
 
 
