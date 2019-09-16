@@ -212,19 +212,19 @@ type UserDateInput
 type alias Model =
     { selection : Selection
     , allowedRange : PartsRange
-    , visibleCalendarRange : Maybe PartsRange
-    , isMouseDown : Bool
-    , isShiftDown : Bool
+    , visibleCalendarRange : Maybe PartsRange -- This can be generated on the fly
+    , isMouseDown : Bool -- I wonder if can put these bools used for dragging in a union type. Iff we keep the same dragggin implimentation
+    , isShiftDown : Bool -- TODOBools are bad
+    , isOpen : Bool -- TODO Bools are bad
+    , isMouseOutside : Bool -- TODO Bools are bad
     , presets : List PresetType
     , calendarType : CalendarType
-    , isOpen : Bool
     , inputText : UserDateInput
-    , terminationCounter : Int
+    , terminationCounter : Int -- Sam says this is possibly a mechanism for making sure the shift logic stops if you change windows or tabs. Maybe needs exploration
     , currentlyHoveredDate : Maybe Parts
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
     , uiButton : Maybe Element
-    , isMouseOutside : Bool
     , languageConfig : LanguageConfig
     , presetMenuVisibility : MenuVisibility
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
