@@ -80,7 +80,6 @@ type Msg
     | EndSelection (Maybe Parts)
     | KeyDown RawKey
     | KeyUp RawKey
-    | TerminateBadState
     | CancelShift
     | OnHoverOverDay Parts
     | OnMouseMove Mouse.Event
@@ -224,7 +223,6 @@ type alias Model =
     , presets : List PresetType
     , calendarType : CalendarType
     , inputText : UserDateInput
-    , terminationCounter : Int -- Sam says this is possibly a mechanism for making sure the shift logic stops if you change windows or tabs. Maybe needs exploration
     , currentlyHoveredDate : Maybe Parts
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
@@ -261,7 +259,6 @@ init now =
         , calendarType = FullCalendar
         , openState = Closed
         , inputText = CommittedInput ""
-        , terminationCounter = 0
         , currentlyHoveredDate = Nothing
         , mousePosition = Nothing
         , uiElement = Nothing
@@ -432,7 +429,7 @@ subscriptions (DatePicker model) =
             if model.isShiftDown then
                 [ Keyboard.ups KeyUp
                 , Browser.Events.onVisibilityChange (always CancelShift)
-                , Time.every 100 (always TerminateBadState)
+                -- , Time.every 100 (always TerminateBadState)
                 ]
 
             else
@@ -939,22 +936,6 @@ innerUpdate msg model =
                         R2.withNoCmd model
                 )
 
-        TerminateBadState ->
-            -- todo what should dates be set to on terminate
-            if model.terminationCounter < 0 then
-                R2.withNoCmd
-                    { model
-                        | isShiftDown = False
-                        , isMouseDown = False
-
-                        --                    , endDate = Maybe.map .end model.dateRange
-                        --                    , startDate = Maybe.map .start model.dateRange
-                        , terminationCounter = 10
-                    }
-
-            else
-                R2.withNoCmd { model | terminationCounter = model.terminationCounter - 1 }
-
         CancelShift ->
             cancelShift model
 
@@ -1138,24 +1119,12 @@ onKeyDown : Model -> Key -> ( Model, Cmd Msg )
 onKeyDown model key =
     case key of
         Shift ->
-            if model.isShiftDown then
-                R2.withNoCmd
-                    { model
-                        | terminationCounter =
-                            if model.terminationCounter >= 2 then
-                                model.terminationCounter
+            case model.dateSelectionType of
+                DateRangeSelection ->
+                    R2.withNoCmd { model | isShiftDown = True }
 
-                            else
-                                model.terminationCounter + 1
-                    }
-
-            else
-                case model.dateSelectionType of
-                    DateRangeSelection ->
-                        R2.withNoCmd { model | isShiftDown = True }
-
-                    DateSelection ->
-                        R2.withNoCmd model
+                DateSelection ->
+                    R2.withNoCmd model
 
         Escape ->
             if model.presetMenuVisibility == MenuOpen then
@@ -1271,7 +1240,6 @@ cancelShift model =
                     selection
                     { model
                         | isShiftDown = False
-                        , terminationCounter = 10
                     }
                 )
 
@@ -1279,7 +1247,6 @@ cancelShift model =
             R2.withNoCmd
                 { model
                     | isShiftDown = False
-                    , terminationCounter = 10
                 }
 
 
