@@ -1,6 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , init, open, defaultOpener
+    , partsRangeToPosixRange
     , Selection(..), Format(..), PosixRange,PartsRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
@@ -2501,3 +2502,8 @@ calendarIcon =
                 ]
             ]
         ]
+
+{-conversion from partsrnage to posix range-}
+partsRangeToPosixRange : Zone -> PartsRange -> PosixRange
+partsRangeToPosixRange zone {start, end} =
+    {start = partsToPosix zone start, end = partsToPosix zone end}
