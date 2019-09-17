@@ -1,10 +1,10 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , init, open, defaultOpener
-    , Selection(..), Format(..), PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
+    , Selection(..), Format(..), PosixRange,  getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
-    , presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
+    , presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
     , PartsRange, isOpen, partsRangeToPosixRange
     )
 
@@ -21,7 +21,7 @@ module DateRangePicker exposing
 
 # Selection
 
-@docs Selection, Format, PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
+@docs Selection, Format, PosixRange, localSelection, localSelectionRange, localSelectionSingle, getSelection, getSelectionRange, getSelectionSingle
 
 
 # Settings
@@ -36,7 +36,7 @@ module DateRangePicker exposing
 
 # Helpers
 
-@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasRangeChanged, hasSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displayUtcSelection
+@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasRangeChanged, hasSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displaygetSelection
 
 -}
 
@@ -605,14 +605,14 @@ setOpen (DatePicker model) setIsOpen =
 -}
 hasSelectionChanged : DatePicker -> Maybe Selection -> Bool
 hasSelectionChanged model comparisonSelection =
-    checkForChange utcSelection model comparisonSelection
+    checkForChange getSelection model comparisonSelection
 
 
 {-| Check if the selection has changed.
 -}
 hasRangeChanged : DatePicker -> Maybe PartsRange -> Bool
 hasRangeChanged model comparisonRange =
-    checkForChange utcSelectionRange model comparisonRange
+    checkForChange getSelectionRange model comparisonRange
 
 
 {-| A helper function to change the calendar type on an existing model. Usually you should use @initWithOptions and configure this at initialization.
@@ -706,9 +706,9 @@ localSelectionRange (DatePicker model) =
 
 {-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
 -}
-utcSelectionSingle : DatePicker -> Maybe Posix
-utcSelectionSingle (DatePicker model) =
-    Maybe.map (partsToPosix model.displayTimezone << .start) (utcSelectionRange (DatePicker model))
+getSelectionSingle : DatePicker -> Maybe Posix
+getSelectionSingle (DatePicker model) =
+    Maybe.map (partsToPosix model.displayTimezone << .start) (getSelectionRange (DatePicker model))
 
 
 {-| A convenience function to get the current selection as a single posix in local time. This is particularly useful when you only allow for single date selection.
@@ -771,8 +771,8 @@ displaySelection datePicker =
 
 {-| A helper function to display the selection in the same way that the datepicker does. It is in utc time.
 -}
-displayUtcSelection : DatePicker -> String
-displayUtcSelection datePicker =
+displaygetSelection : DatePicker -> String
+displaygetSelection datePicker =
     prettyFormatSelectionInZone datePicker Time.utc
 
 

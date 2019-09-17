@@ -192,7 +192,7 @@ view bootstrapModel =
                     div [ class styleClass, class divClass ]
                         [ DateRangePicker.defaultOpener datepicker buttonId
                         , DateRangePicker.view datepicker
-                        , getStats (getLocal datepicker) (utcSelection datepicker)
+                        , getStats (getLocal datepicker) (getSelection datepicker)
                         ]
 
                 selector1 =
@@ -205,7 +205,7 @@ view bootstrapModel =
                     getSelector model.datePickerfixed "datepicker--buttonfixed" "fixed-class"
 
                 getLocal datepicker =
-                    case DateRangePicker.localSelectionRange datepicker of
+                    case DateRangePicker.getSelectionRange datepicker of
                         Just pos ->
                             ( DateRangePicker.displaySelection datepicker
                             , DateCore.getTzOffset Time.utc (partsToPosix Time.utc pos.start)
@@ -214,8 +214,8 @@ view bootstrapModel =
                         _ ->
                             ( "", 0 )
 
-                utcSelection datepicker =
-                    DateRangePicker.displayUtcSelection datepicker
+                getSelection datepicker =
+                    DateRangePicker.displaygetSelection datepicker
 
                 getStats ( localSel, _ ) utcSel =
                     div []
