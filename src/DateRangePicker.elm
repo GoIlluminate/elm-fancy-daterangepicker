@@ -1,7 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , init, open, defaultOpener
-    , Selection(..), Format(..), PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
+    , Selection(..), Format(..), PosixRange,PartsRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
