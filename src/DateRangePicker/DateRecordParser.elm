@@ -1,10 +1,9 @@
 module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Input(..), InputDate(..), Language, ParsingConfig, YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 
-import Date exposing (Date)
-import Derberos.Date.Core exposing (civilToPosix)
-import Derberos.Date.Utils exposing (monthToNumber, monthToNumber1, numberOfDaysInMonth, numberToMonth)
+import Date
+import Derberos.Date.Utils exposing (numberToMonth)
 import Parser exposing ((|.), (|=), Parser)
-import Time exposing (Month(..), Posix, Zone, posixToMillis)
+import Time exposing (Month(..),  posixToMillis)
 import Time.Extra exposing (Parts)
 
 

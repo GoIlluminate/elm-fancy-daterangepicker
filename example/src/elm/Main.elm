@@ -8,7 +8,7 @@ import Html.Attributes exposing (class)
 import Html.Events
 import Task
 import Time exposing (Month(..), Posix, Zone)
-import Time.Extra exposing (partsToPosix, posixToParts)
+import Time.Extra exposing (partsToPosix)
 
 
 type Msg
@@ -147,7 +147,7 @@ update msg appModel =
         Loading (Just time) (Just zone) ->
             ( Loaded (initialModel time zone), Cmd.none )
 
-        Loading (Just t) maybeZone ->
+        Loading (Just t) Nothing ->
             case msg of
                 NewZone z ->
                     ( Loaded (initialModel t z), Cmd.none )
@@ -155,7 +155,7 @@ update msg appModel =
                 _ ->
                     ( appModel, Cmd.none )
 
-        Loading maybeTime (Just z) ->
+        Loading Nothing (Just z) ->
             case msg of
                 NewTime t ->
                     ( Loaded (initialModel t z), Cmd.none )
@@ -217,7 +217,7 @@ view bootstrapModel =
                 utcSelection datepicker =
                     DateRangePicker.displayUtcSelection datepicker
 
-                getStats ( localSel, localTimezone ) utcSel =
+                getStats ( localSel, _ ) utcSel =
                     div []
                         [ div [] [ text <| "LocalTime: " ++ localSel ]
                         , div [] [ text <| "UtcTime: " ++ utcSel ]

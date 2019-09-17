@@ -3,7 +3,7 @@ module DateRangePicker exposing
     , init, open, defaultOpener
     , Selection(..), Format(..), PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
-    , setCalendarType, isOpen, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
+    , setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
     )
 
@@ -30,7 +30,7 @@ module DateRangePicker exposing
 
 # Model Helpers
 
-@docs setCalendarType, isOpen, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
+@docs setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
 
 
 # Helpers
@@ -41,15 +41,13 @@ module DateRangePicker exposing
 
 import Browser.Dom as Dom exposing (Element, Error, Viewport, getElement)
 import Browser.Events
-import Date exposing (Date)
 import DateFormat
 import DateFormat.Language as DateFormat
-import DateRangePicker.DateRecordParser exposing (DateParts, Input(..), InputDate(..), YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
+import DateRangePicker.DateRecordParser exposing (Input(..), InputDate(..), YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks)
-import Derberos.Date.Core as DateCore exposing (civilToPosix, posixToCivil)
-import Derberos.Date.Delta exposing (addDays, addMonths, addYears, nextWeekdayFromTime, prevWeekdayFromTime)
-import Derberos.Date.Utils exposing (getNextMonth, getPrevMonth, getWeekday, monthToNumber, monthToNumber1, numberOfDaysInMonth, numberToMonth)
+import Derberos.Date.Core exposing (civilToPosix, posixToCivil)
+import Derberos.Date.Utils exposing (getNextMonth, getPrevMonth, getWeekday, numberOfDaysInMonth)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
 import Html.Attributes as Attrs
 import Html.Events exposing (onClick)
@@ -70,8 +68,8 @@ import Time.Extra as TimeExtra exposing (Parts, partsToPosix, posixToParts)
 -}
 type Msg
     = DoNothing
-    | Open String
-    | Close
+    | OpenDatePicker String
+    | CloseDatePicker
     | SetVisibleRange PartsRange
     | SetSelection Selection
     | OnInputFinish
@@ -207,16 +205,21 @@ type UserDateInput
     | CommittedInput String
 
 
+type DatePickerState
+    = Open
+    | Closed
+
+
 {-| A record which represents the main datepicker model
 -}
 type alias Model =
     { selection : Selection
     , allowedRange : PartsRange
-    , visibleCalendarRange : Maybe PartsRange -- This can be generated on the fly
+    , visibleCalendarRange : Maybe PartsRange
     , isMouseDown : Bool -- I wonder if can put these bools used for dragging in a union type. Iff we keep the same dragggin implimentation
-    , isShiftDown : Bool -- TODOBools are bad
-    , isOpen : Bool -- TODO Bools are bad
-    , isMouseOutside : Bool -- TODO Bools are bad
+    , isShiftDown : Bool
+    , openState : DatePickerState
+    , isMouseOutside : Bool 
     , presets : List PresetType
     , calendarType : CalendarType
     , inputText : UserDateInput
@@ -255,7 +258,7 @@ init now =
         , isShiftDown = False
         , presets = []
         , calendarType = FullCalendar
-        , isOpen = False
+        , openState = Closed
         , inputText = CommittedInput ""
         , terminationCounter = 0
         , currentlyHoveredDate = Nothing
@@ -281,7 +284,7 @@ type alias Config =
     { allowedRange : PartsRange
     , presets : List PresetType
     , calendarType : CalendarType
-    , isOpen : Bool
+    , openState : Bool
     , languageConfig : LanguageConfig
     , dateSelectionType : DateSelectionType
     , hidePresets : Bool
@@ -356,7 +359,7 @@ defaultConfig =
     { allowedRange = defaultAllowedRange
     , presets = []
     , calendarType = FullCalendar
-    , isOpen = False
+    , openState = False
     , languageConfig = englishLanguageConfig
     , dateSelectionType = DateRangeSelection
     , hidePresets = False
@@ -376,7 +379,7 @@ You will need to call convert the message to the appropriate type via Html.map
 -}
 open : String -> Attribute Msg
 open openerId =
-    Html.Events.onClick (Open openerId)
+    Html.Events.onClick (OpenDatePicker openerId)
 
 
 {-| A pre-made opener that can be used to open the datepicker instead of @open.
@@ -403,7 +406,7 @@ defaultOpener (DatePicker model) openerId =
     in
     button
         [ Attrs.class "elm-fancy--daterangepicker--opener"
-        , Keyboard.Events.on Keypress [ ( Enter, Open openerId ) ]
+        , Keyboard.Events.on Keypress [ ( Enter, OpenDatePicker openerId ) ]
         , open openerId
         , Attrs.id openerId
         ]
@@ -452,12 +455,12 @@ subscriptions (DatePicker model) =
 
         closeSub =
             if model.isMouseOutside && not model.isMouseDown then
-                [ Browser.Events.onClick (Json.succeed Close) ]
+                [ Browser.Events.onClick (Json.succeed CloseDatePicker) ]
 
             else
                 []
     in
-    if model.isOpen then
+    if model.openState == Open then
         List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub ] |> Sub.batch
 
     else
@@ -505,33 +508,34 @@ view (DatePicker model) =
             else
                 Attrs.class ""
     in
-    if model.isOpen then
-        div [ Attrs.class "elm-fancy--daterangepicker" ]
-            [ div
-                [ Attrs.class "close"
-                , mouseEvent
-                , Html.Events.onMouseLeave <| SetMouseOutside False
-                , Html.Events.onMouseEnter <| SetMouseOutside True
-                ]
-                []
-            , div
-                (List.append
-                    [ Attrs.class "body"
-                    , Attrs.id "elm-fancy--daterangepicker--wrapper"
+    case model.openState of
+        Open ->
+            div [ Attrs.class "elm-fancy--daterangepicker" ]
+                [ div
+                    [ Attrs.class "close"
                     , mouseEvent
+                    , Html.Events.onMouseLeave <| SetMouseOutside False
+                    , Html.Events.onMouseEnter <| SetMouseOutside True
                     ]
-                    (calendarPositioning model.uiButton model.uiElement model.windowSize)
-                )
-                [ topBar model visibleRangeParts todayParts
-                , leftSelector visibleRangeParts model
-                , rightSelector visibleRangeParts model
-                , calendarView model todayParts visibleRangeParts
-                , bottomBar model
+                    []
+                , div
+                    (List.append
+                        [ Attrs.class "body"
+                        , Attrs.id "elm-fancy--daterangepicker--wrapper"
+                        , mouseEvent
+                        ]
+                        (calendarPositioning model.uiButton model.uiElement model.windowSize)
+                    )
+                    [ topBar model visibleRangeParts
+                    , leftSelector visibleRangeParts model
+                    , rightSelector visibleRangeParts model
+                    , calendarView model todayParts visibleRangeParts
+                    , bottomBar model
+                    ]
                 ]
-            ]
 
-    else
-        text ""
+        Closed ->
+            text ""
 
 
 {-| A helper function to get the display value for a given preset
@@ -609,9 +613,9 @@ getStartOfDay posix =
 
 {-| Checks if the datepicker is open
 -}
-isOpen : DatePicker -> Bool
-isOpen (DatePicker model) =
-    model.isOpen
+openState : DatePicker -> Bool
+openState (DatePicker model) =
+    model.openState == Open
 
 
 {-| Gets the current selection format
@@ -624,8 +628,16 @@ displayFormat (DatePicker model) =
 {-| Set whether or not the datepicker is open. Usually you should use @open or @defaultOpener to manage this.
 -}
 setOpen : DatePicker -> Bool -> DatePicker
-setOpen (DatePicker model) openState =
-    DatePicker { model | isOpen = openState }
+setOpen (DatePicker model) isOpen =
+    DatePicker
+        { model
+            | openState =
+                if isOpen then
+                    Open
+
+                else
+                    Closed
+        }
 
 
 {-| Check if the selection has changed.
@@ -809,7 +821,12 @@ updateModelWithConfig (DatePicker model) config =
             | allowedRange = config.allowedRange
             , presets = config.presets
             , calendarType = config.calendarType
-            , isOpen = config.isOpen
+            , openState =
+                if config.openState then
+                    Open
+
+                else
+                    Closed
             , dateSelectionType = config.dateSelectionType
             , hidePresets = config.hidePresets
             , selection = selectionToSelection config.defaultSelection
@@ -845,7 +862,7 @@ innerUpdate msg model =
         DoNothing ->
             R2.withNoCmd model
 
-        Open buttonId ->
+        OpenDatePicker buttonId ->
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
                     getElement "elm-fancy--daterangepicker--wrapper"
@@ -856,10 +873,10 @@ innerUpdate msg model =
                 , Task.attempt GotViewPort <|
                     Dom.getViewport
                 ]
-                { model | isOpen = True }
+                { model | openState = Open }
 
-        Close ->
-            R2.withNoCmd <| finishInput { model | isOpen = False, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+        CloseDatePicker ->
+            R2.withNoCmd <| finishInput { model | openState = Closed, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -1076,7 +1093,7 @@ finishInput model =
                 Ok value ->
                     let
                         ( selection, format ) =
-                            convertInput Time.utc (Debug.log "value" value) model
+                            convertInput value model
 
                         modelWithFormat =
                             withUpdatedSelection selection { model | displayFormat = format }
@@ -1144,7 +1161,7 @@ onKeyDown model key =
                 R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | isOpen = False, uiButton = Nothing, uiElement = Nothing }
+                R2.withNoCmd { model | openState = Open, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
@@ -1444,7 +1461,7 @@ bottomBar model =
         [ button
             [ Attrs.id "elm-fancy--daterangepicker--done"
             , Attrs.class "done"
-            , Html.Events.onClick Close
+            , Html.Events.onClick CloseDatePicker
             ]
             [ text model.languageConfig.done ]
         , button [ Attrs.class "reset", Html.Events.onClick Reset ]
@@ -1499,8 +1516,8 @@ clockButton model =
         [ text "🕒" ]
 
 
-topBar : Model -> PartsRange -> Parts -> Html Msg
-topBar model visibleRange today =
+topBar : Model -> PartsRange -> Html Msg
+topBar model visibleRange =
     let
         allVisibleDatesSelection =
             { start = visibleRange.start, end = visibleRange.end }
@@ -1596,8 +1613,8 @@ inputPlaceHolder model =
             model.languageConfig.datePickerInputPlaceholder
 
 
-convertInput : Zone -> Input -> Model -> ( Selection, Format )
-convertInput zone input model =
+convertInput : Input -> Model -> ( Selection, Format )
+convertInput input model =
     case input of
         SingleInput inputDate ->
             singleInputConversion inputDate model
@@ -2358,46 +2375,6 @@ getDiffNextSat weekday =
             6
 
 
-getMonthText : Parts -> String
-getMonthText { month } =
-    case month of
-        Jan ->
-            "January"
-
-        Feb ->
-            "Febuary"
-
-        Mar ->
-            "March"
-
-        Apr ->
-            "April"
-
-        May ->
-            "May"
-
-        Jun ->
-            "June"
-
-        Jul ->
-            "July"
-
-        Aug ->
-            "August"
-
-        Sep ->
-            "September"
-
-        Oct ->
-            "October"
-
-        Nov ->
-            "November"
-
-        Dec ->
-            "December"
-
-
 yearToPartsRange : Int -> PartsRange
 yearToPartsRange year =
     let
@@ -2422,7 +2399,7 @@ yearAndMonthToPartsRange yearMonth =
 
 checkForChange : (DatePicker -> Maybe a) -> DatePicker -> Maybe a -> Bool
 checkForChange checkFunc model elementForComparison =
-    if isOpen model then
+    if openState model then
         False
 
     else

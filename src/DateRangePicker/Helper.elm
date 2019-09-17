@@ -1,6 +1,6 @@
 module DateRangePicker.Helper exposing (..)
 
-import Html exposing (Html)
+import Html
 import Html.Events as Events
 import Json.Decode as Json
 
