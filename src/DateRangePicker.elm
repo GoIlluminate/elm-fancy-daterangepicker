@@ -1,11 +1,11 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , init, open, defaultOpener
-    , partsRangeToPosixRange
-    , Selection(..), Format(..), PosixRange,PartsRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
+    , Selection(..), Format(..), PosixRange, localSelection, localSelectionRange, localSelectionSingle, utcSelection, utcSelectionRange, utcSelectionSingle
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
-    , setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
-    , presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
+    , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
+    , presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displayUtcSelection
+    , PartsRange, isOpen, partsRangeToPosixRange
     )
 
 {-| A customizable date picker component.
@@ -36,7 +36,7 @@ module DateRangePicker exposing
 
 # Helpers
 
-@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasUtcRangeChanged, hasUtcSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displayUtcSelection
+@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasRangeChanged, hasSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displayUtcSelection
 
 -}
 
@@ -218,8 +218,9 @@ type alias Model =
     , visibleCalendarRange : Maybe PartsRange
     , isMouseDown : Bool -- I wonder if can put these bools used for dragging in a union type. Iff we keep the same dragggin implimentation
     , isShiftDown : Bool
+    , isMouseOutside : Bool
+    , hidePresets : Bool
     , openState : DatePickerState
-    , isMouseOutside : Bool 
     , presets : List PresetType
     , calendarType : CalendarType
     , inputText : UserDateInput
@@ -227,13 +228,12 @@ type alias Model =
     , mousePosition : Maybe Mouse.Event
     , uiElement : Maybe Element
     , uiButton : Maybe Element
+    , windowSize : WindowSize
     , languageConfig : LanguageConfig
     , presetMenuVisibility : MenuVisibility
     , keyboardSelectedPreset : Maybe (SelectList PresetType)
     , displayFormat : Format
     , dateSelectionType : DateSelectionType
-    , hidePresets : Bool
-    , windowSize : WindowSize
     , displayTimezone : Zone
     , now : Posix
     }
@@ -429,7 +429,6 @@ subscriptions (DatePicker model) =
             if model.isShiftDown then
                 [ Keyboard.ups KeyUp
                 , Browser.Events.onVisibilityChange (always CancelShift)
-                -- , Time.every 100 (always TerminateBadState)
                 ]
 
             else
@@ -459,7 +458,7 @@ subscriptions (DatePicker model) =
                 []
     in
     if model.openState == Open then
-        List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub ] |> Sub.batch
+        List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub, [ window ] ] |> Sub.batch
 
     else
         window
@@ -505,25 +504,27 @@ view (DatePicker model) =
 
             else
                 Attrs.class ""
+        
+        calendarAttrs =
+            List.append
+                [ Attrs.class "elm-fancy--daterangepicker-body"
+                , Attrs.id "elm-fancy--daterangepicker--wrapper"
+                , mouseEvent
+                ]
+                (calendarPositioning model.uiButton model.uiElement model.windowSize)
     in
     case model.openState of
         Open ->
             div [ Attrs.class "elm-fancy--daterangepicker" ]
                 [ div
-                    [ Attrs.class "close"
+                    [ Attrs.class "elm-fancy--daterangepicker-close"
                     , mouseEvent
                     , Html.Events.onMouseLeave <| SetMouseOutside False
                     , Html.Events.onMouseEnter <| SetMouseOutside True
                     ]
                     []
                 , div
-                    (List.append
-                        [ Attrs.class "body"
-                        , Attrs.id "elm-fancy--daterangepicker--wrapper"
-                        , mouseEvent
-                        ]
-                        (calendarPositioning model.uiButton model.uiElement model.windowSize)
-                    )
+                    calendarAttrs
                     [ topBar model visibleRangeParts
                     , leftSelector visibleRangeParts model
                     , rightSelector visibleRangeParts model
@@ -571,48 +572,10 @@ selectPreset presetType (DatePicker model) =
     ( DatePicker model_, cmd )
 
 
-{-| A helper function to get the end of the day in time given a date
--}
-getEndOfDay : Posix -> Posix
-getEndOfDay posix =
-    let
-        dateRecord =
-            posixToCivil posix
-
-        updatedDateRecord =
-            { dateRecord
-                | hour = 23
-                , minute = 59
-                , second = 59
-                , millis = 999
-            }
-    in
-    civilToPosix updatedDateRecord
-
-
-{-| A helper function to get the start of the day in time given a date
--}
-getStartOfDay : Posix -> Posix
-getStartOfDay posix =
-    let
-        dateRecord =
-            posixToCivil posix
-
-        updatedDateRecord =
-            { dateRecord
-                | hour = 0
-                , minute = 0
-                , second = 0
-                , millis = 0
-            }
-    in
-    civilToPosix updatedDateRecord
-
-
 {-| Checks if the datepicker is open
 -}
-openState : DatePicker -> Bool
-openState (DatePicker model) =
+isOpen : DatePicker -> Bool
+isOpen (DatePicker model) =
     model.openState == Open
 
 
@@ -626,11 +589,11 @@ displayFormat (DatePicker model) =
 {-| Set whether or not the datepicker is open. Usually you should use @open or @defaultOpener to manage this.
 -}
 setOpen : DatePicker -> Bool -> DatePicker
-setOpen (DatePicker model) isOpen =
+setOpen (DatePicker model) setIsOpen =
     DatePicker
         { model
             | openState =
-                if isOpen then
+                if setIsOpen then
                     Open
 
                 else
@@ -640,30 +603,16 @@ setOpen (DatePicker model) isOpen =
 
 {-| Check if the selection has changed.
 -}
-hasUtcSelectionChanged : DatePicker -> Maybe Selection -> Bool
-hasUtcSelectionChanged model comparisonSelection =
+hasSelectionChanged : DatePicker -> Maybe Selection -> Bool
+hasSelectionChanged model comparisonSelection =
     checkForChange utcSelection model comparisonSelection
 
 
 {-| Check if the selection has changed.
 -}
-hasLocalSelectionChanged : DatePicker -> Maybe Selection -> Bool
-hasLocalSelectionChanged =
-    checkForChange localSelection
-
-
-{-| Check if the selection has changed.
--}
-hasUtcRangeChanged : DatePicker -> Maybe PartsRange -> Bool
-hasUtcRangeChanged model comparisonRange =
+hasRangeChanged : DatePicker -> Maybe PartsRange -> Bool
+hasRangeChanged model comparisonRange =
     checkForChange utcSelectionRange model comparisonRange
-
-
-{-| Check if the selection has changed.
--}
-hasLocalRangeChanged : DatePicker -> Maybe PartsRange -> Bool
-hasLocalRangeChanged model comparisonRange =
-    checkForChange localSelectionRange model comparisonRange
 
 
 {-| A helper function to change the calendar type on an existing model. Usually you should use @initWithOptions and configure this at initialization.
@@ -673,37 +622,10 @@ setCalendarType calendarType (DatePicker model) =
     DatePicker { model | calendarType = calendarType }
 
 
-{-| Get the current selection in local time.
--}
-localSelection : DatePicker -> Maybe Selection
-localSelection (DatePicker model) =
-    case model.selection of
-        Single pos ->
-            Just <| Single pos
-
-        Range range ->
-            Just <| Range range
-
-        Unselected ->
-            Nothing
-
-        Selecting _ ->
-            Nothing
-
-        Preset presetType ->
-            Just <| Preset presetType
-
-        Before pos ->
-            Just <| Before pos
-
-        After pos ->
-            Just <| After pos
-
-
 {-| Get the current selection in utc time.
 -}
-utcSelection : DatePicker -> Maybe Selection
-utcSelection (DatePicker model) =
+getSelection : DatePicker -> Maybe Selection
+getSelection (DatePicker model) =
     case model.selection of
         Single pos ->
             Single pos
@@ -730,8 +652,8 @@ utcSelection (DatePicker model) =
 
 {-| A convenience function to get the current selection as a posix range in utc time.
 -}
-utcSelectionRange : DatePicker -> Maybe PartsRange
-utcSelectionRange (DatePicker model) =
+getSelectionRange : DatePicker -> Maybe PartsRange
+getSelectionRange (DatePicker model) =
     case model.selection of
         Single pos ->
             Just <| convertSingleIntoRange pos
@@ -1764,7 +1686,7 @@ monthlyCalendarView model monthClass endInterval today visibleRange =
         [ table []
             [ tbody [ Attrs.class monthClass ] <|
                 List.map (\m -> monthCalendarView m today model)
-                    (getMonthsFromRange 0 endInterval visibleRange getFirstDayOfMonthStartOfDayParts)
+                    (getMonthsFromRange 0 endInterval (Debug.log "here" visibleRange) getFirstDayOfMonthStartOfDayParts)
             ]
         ]
 
@@ -1895,11 +1817,11 @@ dayCalendarView currentMonth currentDay today model =
 
 
 calendarPositioning : Maybe Element -> Maybe Element -> WindowSize -> List (Attribute msg)
-calendarPositioning buttonElement calendarElement size =
+calendarPositioning buttonElement calendarElement windowSize =
     case ( buttonElement, calendarElement ) of
         ( Just button, Just calendar ) ->
-            [ calculateYPosition button calendar size
-            , calculateXPosition button calendar size
+            [ calculateYPosition button calendar windowSize
+            , calculateXPosition button calendar windowSize
             ]
 
         _ ->
@@ -2069,45 +1991,26 @@ isSameDay parts1 parts2 =
 
 calcVisibleRange : Parts -> Model -> PartsRange
 calcVisibleRange localToday model =
+    --TODO should this take the current selection?
     case model.calendarType of
         FullCalendar ->
-            { start =
-                { localToday | month = Jan }
-                    |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                { localToday
-                    | month = Dec
-                }
-                    |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts { localToday | month = Jan }
+            , end = getLastDayOfMonthEndOfDayParts { localToday | month = Dec }
             }
 
         ThreeMonths ->
-            { start =
-                { localToday
-                    | month = getPrevMonth localToday.month
-                }
-                    |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                { localToday
-                    | month = getNextMonth localToday.month
-                }
-                    |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts { localToday | month = getPrevMonth localToday.month }
+            , end = getLastDayOfMonthEndOfDayParts { localToday | month = getNextMonth localToday.month }
             }
 
         TwoMonths ->
-            { start =
-                { localToday | month = getPrevMonth localToday.month }
-                    |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                localToday
-                    |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts { localToday | month = getPrevMonth localToday.month }
+            , end = getLastDayOfMonthEndOfDayParts localToday
             }
 
         OneMonth ->
-            { start =
-                localToday |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                localToday |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts localToday
+            , end = getLastDayOfMonthEndOfDayParts localToday
             }
 
 
@@ -2118,32 +2021,18 @@ convertToRange day calendarType =
             { start = getFirstDayOfYearParts day, end = getLastDayOfYearParts day }
 
         ThreeMonths ->
-            { start =
-                { day
-                    | month = getPrevMonth day.month
-                }
-                    |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                { day
-                    | month = getNextMonth day.month
-                }
-                    |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts { day | month = getPrevMonth day.month }
+            , end = getLastDayOfMonthEndOfDayParts { day | month = getNextMonth day.month }
             }
 
         TwoMonths ->
-            { start =
-                { day | month = getPrevMonth day.month }
-                    |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                day
-                    |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts { day | month = getPrevMonth day.month }
+            , end = getLastDayOfMonthEndOfDayParts day
             }
 
         OneMonth ->
-            { start =
-                day |> getFirstDayOfMonthStartOfDayParts
-            , end =
-                day |> getLastDayOfMonthEndOfDayParts
+            { start = getFirstDayOfMonthStartOfDayParts day
+            , end = getLastDayOfMonthEndOfDayParts day
             }
 
 
@@ -2367,7 +2256,7 @@ yearAndMonthToPartsRange yearMonth =
 
 checkForChange : (DatePicker -> Maybe a) -> DatePicker -> Maybe a -> Bool
 checkForChange checkFunc model elementForComparison =
-    if openState model then
+    if isOpen model then
         False
 
     else
@@ -2420,16 +2309,16 @@ presetToPartsRange (DatePicker model) presetType =
             { start = getStartOfDayParts todayParts, end = getEndOfDayParts todayParts }
 
         Yesterday ->
-            { start = getStartOfDayParts <| addDaysToParts -1 todayParts, end = getEndOfDayParts <| addDaysToParts -1 todayParts }
+            { start = getStartOfDayParts (addDaysToParts -1 todayParts), end = getEndOfDayParts (addDaysToParts -1 todayParts) }
 
         PastWeek ->
-            { start = getStartOfDayParts <| addDaysToParts -7 todayParts, end = getEndOfDayParts todayParts }
+            { start = getStartOfDayParts (addDaysToParts -7 todayParts), end = getEndOfDayParts todayParts }
 
         PastMonth ->
-            { start = getStartOfDayParts <| addMonthsToParts -1 todayParts, end = getEndOfDayParts todayParts }
+            { start = getStartOfDayParts (addMonthsToParts -1 todayParts), end = getEndOfDayParts todayParts }
 
         PastYear ->
-            { start = getStartOfDayParts <| addYearsToParts -1 todayParts, end = getEndOfDayParts todayParts }
+            { start = getStartOfDayParts (addYearsToParts -1 todayParts), end = getEndOfDayParts todayParts }
 
         Custom customPreset ->
             { start =
@@ -2470,7 +2359,11 @@ calendarIcon =
             ]
         ]
 
-{-conversion from partsrnage to posix range-}
+
+
+{- conversion from partsrnage to posix range -}
+
+
 partsRangeToPosixRange : Zone -> PartsRange -> PosixRange
-partsRangeToPosixRange zone {start, end} =
-    {start = partsToPosix zone start, end = partsToPosix zone end}
+partsRangeToPosixRange zone { start, end } =
+    { start = partsToPosix zone start, end = partsToPosix zone end }

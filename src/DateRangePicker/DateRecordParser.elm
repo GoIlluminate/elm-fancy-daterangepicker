@@ -3,7 +3,7 @@ module DateRangePicker.DateRecordParser exposing (DateParts, DateTimeParts, Inpu
 import Date
 import Derberos.Date.Utils exposing (numberToMonth)
 import Parser exposing ((|.), (|=), Parser)
-import Time exposing (Month(..),  posixToMillis)
+import Time exposing (Month(..), posixToMillis)
 import Time.Extra exposing (Parts)
 
 

@@ -24,7 +24,7 @@
       cursor: pointer;
       box-shadow: themed('box-shadow-selection1'), themed('box-shadow-selection2');
     }
-    .close {
+    .elm-fancy--daterangepicker-close {
       position: fixed;
       top: 0;
       left: 0;
@@ -32,7 +32,7 @@
       bottom: 0;
       z-index: 1000;
     }
-    .body {
+    .elm-fancy--daterangepicker-body {
       font-size: 14px;
       background: themed('color-secondary');
       display: table;
