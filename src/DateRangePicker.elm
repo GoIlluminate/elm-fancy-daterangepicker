@@ -21,7 +21,7 @@ module DateRangePicker exposing
 
 # Selection
 
-@docs Selection, Format, PosixRange, localSelection, localSelectionRange, localSelectionSingle, getSelection, getSelectionRange, getSelectionSingle
+@docs Selection, Format, PosixRange, PartsRange, getSelection, getSelectionRange, getSelectionSingle
 
 
 # Settings
@@ -36,7 +36,7 @@ module DateRangePicker exposing
 
 # Helpers
 
-@docs presetToDisplayString, getEndOfDay, getStartOfDay, hasLocalRangeChanged, hasLocalSelectionChanged, hasRangeChanged, hasSelectionChanged, presetToPartsRange, presetToPartsRange, selectPreset, displaySelection, displaygetSelection
+@docs partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, selectPreset, displaySelection, displaygetSelection
 
 -}
 
@@ -47,7 +47,6 @@ import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (Input(..), InputDate(..), YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 import DateRangePicker.Helper exposing (onClickNoDefault)
 import Derberos.Date.Calendar exposing (getCurrentMonthDatesFullWeeks)
-import Derberos.Date.Core exposing (civilToPosix, posixToCivil)
 import Derberos.Date.Utils exposing (getNextMonth, getPrevMonth, getWeekday, numberOfDaysInMonth)
 import Html exposing (Attribute, Html, button, div, input, table, tbody, td, text, thead)
 import Html.Attributes as Attrs
@@ -205,7 +204,7 @@ type UserDateInput
     | CommittedInput String
 
 
-type DatePickerState
+type DatePickerVisibility
     = Open
     | Closed
 
@@ -216,11 +215,11 @@ type alias Model =
     { selection : Selection
     , allowedRange : PartsRange
     , visibleCalendarRange : Maybe PartsRange
-    , isMouseDown : Bool -- I wonder if can put these bools used for dragging in a union type. Iff we keep the same dragggin implimentation
+    , isMouseDown : Bool
     , isShiftDown : Bool
     , isMouseOutside : Bool
     , hidePresets : Bool
-    , openState : DatePickerState
+    , openState : DatePickerVisibility
     , presets : List PresetType
     , calendarType : CalendarType
     , inputText : UserDateInput
@@ -434,9 +433,6 @@ subscriptions (DatePicker model) =
             else
                 []
 
-        keyDowns =
-            [ Keyboard.downs KeyDown ]
-
         mouseSubs =
             if model.isMouseDown then
                 [ Browser.Events.onMouseUp (EndSelection model.currentlyHoveredDate |> Json.succeed)
@@ -458,7 +454,8 @@ subscriptions (DatePicker model) =
                 []
     in
     if model.openState == Open then
-        List.concat [ shiftSubs, mouseSubs, keyDowns, closeSub, [ window ] ] |> Sub.batch
+        List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, [ window ] ] 
+            |> Sub.batch
 
     else
         window
@@ -563,13 +560,13 @@ presetToDisplayString presetType language =
 
 {-| A helper function to set a preset outside of the default preset ui
 -}
-selectPreset : PresetType -> DatePicker -> ( DatePicker, Cmd Msg )
+selectPreset : PresetType -> DatePicker -> DatePicker 
 selectPreset presetType (DatePicker model) =
     let
-        ( model_, cmd ) =
+        model_ =
             selectPresetInternal presetType model
     in
-    ( DatePicker model_, cmd )
+    DatePicker model_ 
 
 
 {-| Checks if the datepicker is open
@@ -622,7 +619,7 @@ setCalendarType calendarType (DatePicker model) =
     DatePicker { model | calendarType = calendarType }
 
 
-{-| Get the current selection in utc time.
+{-| Get the current selection in local time.
 -}
 getSelection : DatePicker -> Maybe Selection
 getSelection (DatePicker model) =
@@ -650,7 +647,7 @@ getSelection (DatePicker model) =
             Just <| After pos
 
 
-{-| A convenience function to get the current selection as a posix range in utc time.
+{-| A convenience function to get the current selection as a parts range in local time.
 -}
 getSelectionRange : DatePicker -> Maybe PartsRange
 getSelectionRange (DatePicker model) =
@@ -677,45 +674,11 @@ getSelectionRange (DatePicker model) =
             Just <| convertSingleIntoRange pos
 
 
-{-| A convenience function to get the current selection as a posix range in local time.
+{-| A convenience function to get the current selection as a single parts in local time. This is particularly useful when you only allow for single date selection.
 -}
-localSelectionRange : DatePicker -> Maybe PartsRange
-localSelectionRange (DatePicker model) =
-    case model.selection of
-        Single pos ->
-            Just <| convertSingleIntoRange pos
-
-        Range range ->
-            Just range
-
-        Unselected ->
-            Nothing
-
-        Selecting _ ->
-            Nothing
-
-        Preset presetType ->
-            Just <| presetToPartsRange (DatePicker model) presetType
-
-        Before pos ->
-            Just <| convertSingleIntoRange pos
-
-        After pos ->
-            Just <| convertSingleIntoRange pos
-
-
-{-| A convenience function to get the current selection as a single posix in utc time. This is particularly useful when you only allow for single date selection.
--}
-getSelectionSingle : DatePicker -> Maybe Posix
+getSelectionSingle : DatePicker -> Maybe Parts
 getSelectionSingle (DatePicker model) =
-    Maybe.map (partsToPosix model.displayTimezone << .start) (getSelectionRange (DatePicker model))
-
-
-{-| A convenience function to get the current selection as a single posix in local time. This is particularly useful when you only allow for single date selection.
--}
-localSelectionSingle : DatePicker -> Maybe Parts
-localSelectionSingle model =
-    Maybe.map .start (localSelectionRange model)
+    Maybe.map .start (getSelectionRange (DatePicker model))
 
 
 {-| Gets the current presets
@@ -922,6 +885,7 @@ innerUpdate msg model =
 
         SelectPreset presetType ->
             selectPresetInternal presetType model
+             |> R2.withNoCmd
 
         ToggleFormat ->
             let
@@ -951,7 +915,7 @@ innerUpdate msg model =
         GotViewPort _ ->
             R2.withNoCmd model
 
-
+ 
 withUpdatedSelection : Selection -> Model -> Model
 withUpdatedSelection selection model =
     let
@@ -1017,7 +981,7 @@ finishInput model =
             model
 
 
-selectPresetInternal : PresetType -> Model -> ( Model, Cmd Msg )
+selectPresetInternal : PresetType -> Model -> ( Model)
 selectPresetInternal presetType model =
     let
         selection =
@@ -1032,8 +996,6 @@ selectPresetInternal presetType model =
                     , keyboardSelectedPreset = Nothing
                 }
     in
-    R2.withCmd
-        (Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--done")
         updatedModel
 
 
@@ -1066,6 +1028,7 @@ onKeyDown model key =
                 case model.keyboardSelectedPreset of
                     Just a ->
                         selectPresetInternal (SelectList.selected a) model
+                            |> R2.withNoCmd
 
                     Nothing ->
                         R2.withNoCmd model
@@ -1686,19 +1649,19 @@ monthlyCalendarView model monthClass endInterval today visibleRange =
         [ table []
             [ tbody [ Attrs.class monthClass ] <|
                 List.map (\m -> monthCalendarView m today model)
-                    (getMonthsFromRange 0 endInterval (Debug.log "here" visibleRange) getFirstDayOfMonthStartOfDayParts)
+                    (getMonthsFromRange 0 endInterval visibleRange getFirstDayOfMonthStartOfDayParts)
             ]
         ]
 
 
 getMonthsFromRange : Int -> Int -> PartsRange -> (Parts -> Parts) -> List Parts
 getMonthsFromRange start end visibleRange fn =
-    List.map
-        (\x ->
-            addMonthsToParts x <| fn visibleRange.start
-        )
-    <|
-        List.range start end
+    List.range start end
+        |> List.map
+            (\x ->
+                fn visibleRange.start
+                    |> addMonthsToParts x 
+            )
 
 
 partsRangeForMonths : Month -> Month -> Int -> PartsRange
