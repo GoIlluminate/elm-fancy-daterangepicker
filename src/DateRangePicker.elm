@@ -1,6 +1,6 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
-    , init, open, defaultOpener
+    , open, defaultOpener
     , Selection(..), Format(..), PosixRange,  getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
@@ -31,7 +31,7 @@ module DateRangePicker exposing
 
 # Model Helpers
 
-@docs setCalendarType, openState, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
+@docs setCalendarType, datepickerVisibility, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
 
 
 # Helpers
@@ -91,6 +91,7 @@ type Msg
     | ToggleFormat
     | OnWindowsResize Int Int
     | GotViewPort (Result Error Viewport)
+    | GotTime Posix
 
 
 type MousePosition
@@ -164,10 +165,10 @@ type Selection
 {-| The type which specifies what size calendar you want to display
 -}
 type CalendarType
-    = FullCalendar
-    | ThreeMonths
-    | TwoMonths
-    | OneMonth
+    = YearCalendar
+    | ThreeMonthCalendar
+    | TwoMonthCalendar
+    | OneMonthCalendar
 
 
 type DateSelectionType
@@ -203,6 +204,13 @@ type UserDateInput
     = DirtyInput String
     | CommittedInput String
 
+getUserDateInput : UserDateInput -> String
+getUserDateInput input =
+    case input of
+        DirtyInput str ->
+            str
+        CommittedInput str ->
+            str
 
 type DatePickerVisibility
     = Open
@@ -214,12 +222,12 @@ type DatePickerVisibility
 type alias Model =
     { selection : Selection
     , allowedRange : PartsRange
-    , visibleCalendarRange : Maybe PartsRange
+    , visibleCalendarRange : PartsRange
     , isMouseDown : Bool
     , isShiftDown : Bool
     , isMouseOutside : Bool
     , hidePresets : Bool
-    , openState : DatePickerVisibility
+    , datepickerVisibility : DatePickerVisibility
     , presets : List PresetType
     , calendarType : CalendarType
     , inputText : UserDateInput
@@ -246,17 +254,25 @@ type DatePicker
 
 {-| Initialize the datepicker with the default settings
 -}
-init : Posix -> DatePicker
-init now =
+initWithOptions : Posix -> Maybe Posix -> Config -> DatePicker
+initWithOptions now displayDate config =
+    let 
+        getVisibleRange date =
+            calcVisibleRange (posixToParts config.displayTimezone date) config.calendarType
+
+        visibleRange = 
+            case displayDate of
+                Just dd ->
+                    getVisibleRange dd
+
+                Nothing ->
+                    getVisibleRange now
+
+    in
     DatePicker <|
-        { selection = Unselected
-        , allowedRange = defaultAllowedRange
-        , visibleCalendarRange = Nothing
+        { visibleCalendarRange = visibleRange  
         , isMouseDown = False
         , isShiftDown = False
-        , presets = []
-        , calendarType = FullCalendar
-        , openState = Closed
         , inputText = CommittedInput ""
         , currentlyHoveredDate = Nothing
         , mousePosition = Nothing
@@ -267,11 +283,21 @@ init now =
         , presetMenuVisibility = MenuClosed
         , keyboardSelectedPreset = Nothing
         , displayFormat = DateFormat
-        , dateSelectionType = DateRangeSelection
-        , hidePresets = False
         , windowSize = WindowSize 0 0
-        , displayTimezone = Time.utc
         , now = now
+        , allowedRange = config.allowedRange
+        , presets = config.presets
+        , calendarType = config.calendarType
+        , datepickerVisibility =
+            if config.datepickerVisibility then
+                Open
+
+            else
+                Closed
+        , dateSelectionType = config.dateSelectionType
+        , hidePresets = config.hidePresets
+        , selection = selectionToSelection config.defaultSelection
+        , displayTimezone = config.displayTimezone
         }
 
 
@@ -281,12 +307,13 @@ type alias Config =
     { allowedRange : PartsRange
     , presets : List PresetType
     , calendarType : CalendarType
-    , openState : Bool
+    , datepickerVisibility : Bool
     , languageConfig : LanguageConfig
     , dateSelectionType : DateSelectionType
     , hidePresets : Bool
     , defaultSelection : Maybe Selection
     , displayTimezone : Zone
+    , displayDate : Maybe Posix
     }
 
 
@@ -337,13 +364,6 @@ englishLanguageConfig =
     }
 
 
-{-| Initialize the datepicker with the custom settings
--}
-initWithOptions : Posix -> Config -> DatePicker
-initWithOptions now config =
-    updateModelWithConfig (init now) config
-
-
 defaultAllowedRange : PartsRange
 defaultAllowedRange =
     { start = Parts 1900 Jan 1 0 0 0 0, end = Parts 2100 Dec 31 23 59 59 0 }
@@ -355,13 +375,14 @@ defaultConfig : Config
 defaultConfig =
     { allowedRange = defaultAllowedRange
     , presets = []
-    , calendarType = FullCalendar
-    , openState = False
+    , calendarType = YearCalendar
+    , datepickerVisibility = False
     , languageConfig = englishLanguageConfig
     , dateSelectionType = DateRangeSelection
     , hidePresets = False
     , defaultSelection = Nothing
     , displayTimezone = Time.utc
+    , displayDate = Nothing
     }
 
 
@@ -443,8 +464,8 @@ subscriptions (DatePicker model) =
             else
                 []
 
-        window =
-            Browser.Events.onResize OnWindowsResize
+        alwaysSubbed =
+            [Browser.Events.onResize OnWindowsResize, Time.every (60 * 1000) GotTime]
 
         closeSub =
             if model.isMouseOutside && not model.isMouseDown then
@@ -453,12 +474,13 @@ subscriptions (DatePicker model) =
             else
                 []
     in
-    if model.openState == Open then
-        List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, [ window ] ] 
+    if model.datepickerVisibility == Open then
+        List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed ] 
             |> Sub.batch
 
     else
-        window
+        alwaysSubbed
+            |> Sub.batch
 
 
 {-| The update for the datepicker. You will need to integrate this into your own update.
@@ -489,12 +511,6 @@ view : DatePicker -> Html Msg
 view (DatePicker model) =
     let
         -- All view Functions from here on Take in a Time.Extra.Parts which is in local time
-        todayParts =
-            posixToParts model.displayTimezone model.now
-
-        visibleRangeParts =
-            Maybe.withDefault (calcVisibleRange todayParts model) model.visibleCalendarRange
-
         mouseEvent =
             if model.isMouseDown && model.isMouseOutside then
                 Mouse.onMove OnMouseMove
@@ -510,7 +526,7 @@ view (DatePicker model) =
                 ]
                 (calendarPositioning model.uiButton model.uiElement model.windowSize)
     in
-    case model.openState of
+    case model.datepickerVisibility of
         Open ->
             div [ Attrs.class "elm-fancy--daterangepicker" ]
                 [ div
@@ -522,10 +538,10 @@ view (DatePicker model) =
                     []
                 , div
                     calendarAttrs
-                    [ topBar model visibleRangeParts
-                    , leftSelector visibleRangeParts model
-                    , rightSelector visibleRangeParts model
-                    , calendarView model todayParts visibleRangeParts
+                    [ topBar model
+                    , leftSelector model
+                    , rightSelector model
+                    , calendarView model  
                     , bottomBar model
                     ]
                 ]
@@ -533,6 +549,9 @@ view (DatePicker model) =
         Closed ->
             text ""
 
+getTodayParts : Model -> Parts
+getTodayParts model =
+    posixToParts model.displayTimezone model.now
 
 {-| A helper function to get the display value for a given preset
 -}
@@ -573,7 +592,7 @@ selectPreset presetType (DatePicker model) =
 -}
 isOpen : DatePicker -> Bool
 isOpen (DatePicker model) =
-    model.openState == Open
+    model.datepickerVisibility == Open
 
 
 {-| Gets the current selection format
@@ -589,7 +608,7 @@ setOpen : DatePicker -> Bool -> DatePicker
 setOpen (DatePicker model) setIsOpen =
     DatePicker
         { model
-            | openState =
+            | datepickerVisibility =
                 if setIsOpen then
                     Open
 
@@ -704,8 +723,8 @@ updateModelWithConfig (DatePicker model) config =
             | allowedRange = config.allowedRange
             , presets = config.presets
             , calendarType = config.calendarType
-            , openState =
-                if config.openState then
+            , datepickerVisibility =
+                if config.datepickerVisibility then
                     Open
 
                 else
@@ -756,15 +775,15 @@ innerUpdate msg model =
                 , Task.attempt GotViewPort <|
                     Dom.getViewport
                 ]
-                { model | openState = Open }
+                { model | datepickerVisibility = Open }
 
         CloseDatePicker ->
-            R2.withNoCmd <| finishInput { model | openState = Closed, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+            R2.withNoCmd <| finishInput { model | datepickerVisibility = Closed, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
                 { model
-                    | visibleCalendarRange = Just visibleCalendarRange
+                    | visibleCalendarRange = visibleCalendarRange
                 }
 
         SetSelection selection ->
@@ -778,7 +797,7 @@ innerUpdate msg model =
             R2.withNoCmd { model | inputText = DirtyInput newText }
 
         Reset ->
-            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected, visibleCalendarRange = Nothing }
+            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected }
 
         StartSelection posix ->
             case model.dateSelectionType of
@@ -862,17 +881,15 @@ innerUpdate msg model =
                 localToday =
                     posixToParts model.displayTimezone model.now
 
-                visibleRange =
-                    Maybe.withDefault (calcVisibleRange localToday model) model.visibleCalendarRange
             in
             case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
                     case calculateMousePosition element position of
                         OutsideRight ->
-                            updateCalendarRange model 1 visibleRange
+                            updateCalendarRange model 1
 
                         OutsideLeft ->
-                            updateCalendarRange model -1 visibleRange
+                            updateCalendarRange model -1
 
                         _ ->
                             R2.withNoCmd model
@@ -914,6 +931,9 @@ innerUpdate msg model =
 
         GotViewPort _ ->
             R2.withNoCmd model
+        
+        GotTime now ->
+            R2.withNoCmd {model | now = now}
 
  
 withUpdatedSelection : Selection -> Model -> Model
@@ -1015,13 +1035,13 @@ onKeyDown model key =
                 R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | openState = Open, uiButton = Nothing, uiElement = Nothing }
+                R2.withNoCmd { model | datepickerVisibility = Open, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
 
         ArrowUp ->
-            arrowMovement model -1 createSelectListWithLast
+            arrowMovement model -1 createSelectListWithLast 
 
         Enter ->
             if model.presetMenuVisibility == MenuOpen then
@@ -1145,13 +1165,12 @@ onKey rawKey model onValidKey =
             R2.withNoCmd model
 
 
-updateCalendarRange : Model -> Int -> PartsRange -> ( Model, Cmd Msg )
-updateCalendarRange model intervalChange currentVisibleRange =
+updateCalendarRange : Model -> Int -> ( Model, Cmd Msg )
+updateCalendarRange model intervalChange =
     R2.withNoCmd
         { model
             | visibleCalendarRange =
-                Just <|
-                    calculateNewCalendarRange model intervalChange currentVisibleRange
+                    calculateNewCalendarRange model intervalChange model.visibleCalendarRange
         }
 
 
@@ -1166,33 +1185,6 @@ addMonthsToParts interval parts =
         |> partsToPosix Time.utc
         |> TimeExtra.add TimeExtra.Month interval Time.utc
         |> posixToParts Time.utc
-
-
-
--- let
---     newMonthNumber =
---         parts.month
---             |> monthToNumber
---             |> (\x -> x + interval)
---     newMonth =
---         modBy 12 newMonthNumber
---             |> numberToMonth
---             |> Maybe.withDefault Jan
---     newYear =
---         if newMonthNumber > 11 then
---             parts.year + 1
---         else if newMonthNumber < 0 then
---             parts.year - 1
---         else
---             parts.year
---     newDay =
---         clamp 1 (numberOfDaysInMonth newYear newMonth) parts.day
--- in
--- { parts
---     | month = newMonth
---     , year = newYear
---     , day = newDay
--- }
 
 
 addDaysToParts : Int -> Parts -> Parts
@@ -1247,16 +1239,16 @@ calculateNewCalendarRange model intervalChange currentVisibleRange =
             { parts | year = parts.year + intervalChange }
     in
     case model.calendarType of
-        FullCalendar ->
+        YearCalendar ->
             updateWithIntervalFunc yearChange currentVisibleRange
 
-        ThreeMonths ->
+        ThreeMonthCalendar ->
             updateWithIntervalFunc (addMonthsToParts (intervalChange * 3)) currentVisibleRange
 
-        TwoMonths ->
+        TwoMonthCalendar ->
             updateWithIntervalFunc (addMonthsToParts intervalChange) currentVisibleRange
 
-        OneMonth ->
+        OneMonthCalendar ->
             updateWithIntervalFunc (addMonthsToParts intervalChange) currentVisibleRange
 
 
@@ -1269,7 +1261,7 @@ presetsDisplay model =
     if shouldShowPresetSelector then
         div [ Attrs.class "preset--open--wrapper" ]
             [ button [ Attrs.class "preset--open", Html.Events.onClick <| SetPresetMenuVisibility MenuOpen ]
-                [ text <| model.languageConfig.presets, downArrow ]
+                [ text model.languageConfig.presets, downArrow ]
             , if model.presetMenuVisibility == MenuOpen then
                 presetMenu model
 
@@ -1322,24 +1314,24 @@ bottomBar model =
         ]
 
 
-leftSelector : PartsRange -> Model -> Html Msg
+leftSelector : Model -> Html Msg
 leftSelector =
     mkSelector -1 .end "prev-range-selector" "❮"
 
 
-rightSelector : PartsRange -> Model -> Html Msg
+rightSelector : Model -> Html Msg
 rightSelector =
     mkSelector 1 .start "next-range-selector" "❯"
 
 
-mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> PartsRange -> Model -> Html Msg
-mkSelector moveInterval partOfRange class textContent visibleRange model =
+mkSelector : Int -> (PartsRange -> Parts) -> String -> String  -> Model -> Html Msg
+mkSelector moveInterval partOfRange class textContent model =
     let
         newRange =
-            calculateNewCalendarRange model moveInterval visibleRange
+            calculateNewCalendarRange model moveInterval model.visibleCalendarRange
 
         attrs =
-            if dateIsOutOfAllowedRange (partOfRange newRange) model.allowedRange then
+            if dateIsOutOfAllowedRange (partOfRange model.visibleCalendarRange) model.allowedRange then
                 [ Attrs.class "disabled" ]
 
             else
@@ -1369,26 +1361,26 @@ clockButton model =
         [ text "🕒" ]
 
 
-topBar : Model -> PartsRange -> Html Msg
-topBar model visibleRange =
+topBar : Model  -> Html Msg
+topBar model =
     let
         allVisibleDatesSelection =
-            { start = visibleRange.start, end = visibleRange.end }
+            { start =  model.visibleCalendarRange.start, end =  model.visibleCalendarRange.end }
                 |> createSelectionInRange model.allowedRange
                 |> Range
 
         ( fullCalendarSelector, class ) =
             case model.calendarType of
-                FullCalendar ->
+                YearCalendar ->
                     ( div [ Attrs.class "full-calendar-selector", onClick <| SetSelection allVisibleDatesSelection ]
-                        [ text <| selectionText visibleRange ]
+                        [ text <| selectionText  model.visibleCalendarRange ]
                     , "top-bar--full"
                     )
 
                 _ ->
                     ( text "", "top-bar--partial" )
 
-        clock =
+        maybeClock =
             case model.dateSelectionType of
                 DateSelection ->
                     div [] []
@@ -1400,7 +1392,7 @@ topBar model visibleRange =
         [ fullCalendarSelector
         , presetsDisplay model
         , calendarInput model
-        , clock
+        , maybeClock
         ]
 
 
@@ -1436,12 +1428,7 @@ calendarInput : Model -> Html Msg
 calendarInput model =
     let
         inputText =
-            case model.inputText of
-                DirtyInput t ->
-                    t
-
-                CommittedInput t ->
-                    t
+            getUserDateInput model.inputText 
     in
     div [ Attrs.class "calendar-input" ]
         [ input
@@ -1580,29 +1567,29 @@ convertInputDateRange ( start, end ) =
             ( Unselected, DateFormat )
 
 
-calendarView : Model -> Parts -> PartsRange -> Html Msg
+calendarView : Model -> Html Msg
 calendarView model =
     case model.calendarType of
-        FullCalendar ->
+        YearCalendar ->
             yearCalendarView model
 
-        ThreeMonths ->
+        ThreeMonthCalendar ->
             monthlyCalendarView model "monthly-small" 2
 
-        TwoMonths ->
+        TwoMonthCalendar ->
             monthlyCalendarView model "monthly-large" 1
 
-        OneMonth ->
+        OneMonthCalendar ->
             monthlyCalendarView model "monthly-large" 0
 
 
-yearCalendarView : Model -> Parts -> PartsRange -> Html Msg
-yearCalendarView model today visibleRange =
+yearCalendarView : Model   -> Html Msg
+yearCalendarView model =
     let
         quarter name startMonth endMonth =
             let
                 partsRangeForQuarter =
-                    partsRangeForMonths startMonth endMonth visibleRange.start.year
+                    partsRangeForMonths startMonth endMonth model.visibleCalendarRange.start.year
 
                 isOutOfRange =
                     dateIsOutOfAllowedRange partsRangeForQuarter.start model.allowedRange
@@ -1633,23 +1620,23 @@ yearCalendarView model today visibleRange =
         [ quarters
         , table []
             [ tbody [ Attrs.class "year" ] <|
-                List.map (\m -> monthCalendarView m today model) <|
+                List.map (\m -> monthCalendarView m model) <|
                     getMonthsFromRange
                         0
                         11
-                        visibleRange
+                        model.visibleCalendarRange
                         getFirstDayOfYearParts
             ]
         ]
 
 
-monthlyCalendarView : Model -> String -> Int -> Parts -> PartsRange -> Html Msg
-monthlyCalendarView model monthClass endInterval today visibleRange =
+monthlyCalendarView : Model -> String -> Int  -> Html Msg
+monthlyCalendarView model monthClass endInterval =
     div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "month-calendar" ]
         [ table []
             [ tbody [ Attrs.class monthClass ] <|
-                List.map (\m -> monthCalendarView m today model)
-                    (getMonthsFromRange 0 endInterval visibleRange getFirstDayOfMonthStartOfDayParts)
+                List.map (\m -> monthCalendarView m model)
+                    (getMonthsFromRange 0 endInterval model.visibleCalendarRange getFirstDayOfMonthStartOfDayParts)
             ]
         ]
 
@@ -1690,8 +1677,8 @@ partsRangeForMonths startMonth endMonth currentYear =
     { start = start, end = end }
 
 
-monthCalendarView : Parts -> Parts -> Model -> Html Msg
-monthCalendarView currentMonth today model =
+monthCalendarView : Parts -> Model -> Html Msg
+monthCalendarView currentMonth model =
     let
         firstOfMonth =
             getFirstDayOfMonthStartOfDayParts currentMonth
@@ -1723,20 +1710,22 @@ monthCalendarView currentMonth today model =
             [ thead attrs
                 [ text <| monthFormatter model.languageConfig Time.utc (partsToPosix Time.utc currentMonth) ]
             , tbody [ Attrs.class "month" ] <|
-                List.map (\x -> dayCalendarView currentMonth x today model) <|
+                List.map (\x -> dayCalendarView currentMonth x model) <|
                     getCurrentMonthDatesFullWeeks currentMonth
             ]
         ]
 
 
-dayCalendarView : Parts -> Parts -> Parts -> Model -> Html Msg
-dayCalendarView currentMonth currentDay today model =
+dayCalendarView : Parts -> Parts -> Model -> Html Msg
+dayCalendarView currentMonth currentDay model =
     let
         wantedMonth =
             currentMonth.month
 
         contentIsInCorrectMonth =
             currentDay.month == wantedMonth
+        
+        today = getTodayParts model
 
         ( hoverAttr, content, setDate ) =
             if contentIsInCorrectMonth then
@@ -1952,26 +1941,25 @@ isSameDay parts1 parts2 =
     parts1.day == parts2.day && parts1.month == parts2.month && parts1.year == parts2.year
 
 
-calcVisibleRange : Parts -> Model -> PartsRange
-calcVisibleRange localToday model =
-    --TODO should this take the current selection?
-    case model.calendarType of
-        FullCalendar ->
+calcVisibleRange : Parts -> CalendarType -> PartsRange
+calcVisibleRange localToday calendarType =
+    case calendarType of
+        YearCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts { localToday | month = Jan }
             , end = getLastDayOfMonthEndOfDayParts { localToday | month = Dec }
             }
 
-        ThreeMonths ->
+        ThreeMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts { localToday | month = getPrevMonth localToday.month }
             , end = getLastDayOfMonthEndOfDayParts { localToday | month = getNextMonth localToday.month }
             }
 
-        TwoMonths ->
+        TwoMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts { localToday | month = getPrevMonth localToday.month }
             , end = getLastDayOfMonthEndOfDayParts localToday
             }
 
-        OneMonth ->
+        OneMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts localToday
             , end = getLastDayOfMonthEndOfDayParts localToday
             }
@@ -1980,51 +1968,49 @@ calcVisibleRange localToday model =
 convertToRange : Parts -> CalendarType -> PartsRange
 convertToRange day calendarType =
     case calendarType of
-        FullCalendar ->
+        YearCalendar ->
             { start = getFirstDayOfYearParts day, end = getLastDayOfYearParts day }
 
-        ThreeMonths ->
+        ThreeMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts { day | month = getPrevMonth day.month }
             , end = getLastDayOfMonthEndOfDayParts { day | month = getNextMonth day.month }
             }
 
-        TwoMonths ->
+        TwoMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts { day | month = getPrevMonth day.month }
             , end = getLastDayOfMonthEndOfDayParts day
             }
 
-        OneMonth ->
+        OneMonthCalendar ->
             { start = getFirstDayOfMonthStartOfDayParts day
             , end = getLastDayOfMonthEndOfDayParts day
             }
 
 
-getVisibleRangeFromSelection : Selection -> CalendarType -> DatePicker -> Maybe PartsRange
-getVisibleRangeFromSelection selection calendarType model =
+getVisibleRangeFromSelection : Selection -> CalendarType -> DatePicker -> PartsRange
+getVisibleRangeFromSelection selection calendarType (DatePicker model) =
     case selection of
         Single parts ->
-            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
+            { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
         Range partsRange ->
             convertToRange partsRange.start calendarType
-                |> Just
 
         Unselected ->
-            Nothing
+            model.visibleCalendarRange
 
         Selecting _ ->
-            Nothing
+            model.visibleCalendarRange
 
         Preset presetType ->
-            presetToPartsRange model presetType
+            presetToPartsRange (DatePicker model) presetType
                 |> (\{ start, end } -> PartsRange start end)
-                |> Just
 
         Before parts ->
-            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
+            { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
         After parts ->
-            Just { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
+            { start = getStartOfDayParts parts, end = getEndOfDayParts parts }
 
 
 prettyFormatSelection : DatePicker -> String

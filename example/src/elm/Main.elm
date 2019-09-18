@@ -46,10 +46,23 @@ initialModel : Posix -> Zone -> Model
 initialModel now zone =
     let
         calendarDisplay =
-            DateRangePicker.FullCalendar
+            DateRangePicker.YearCalendar
+
+        displayDate =
+            partsToPosix zone
+                (Time.Extra.Parts
+                    2000
+                    Jan
+                    1
+                    0
+                    0
+                    0
+                    0
+                )
 
         initDatePicker =
             DateRangePicker.initWithOptions now
+                (Just displayDate)
                 { defaultConfig
                     | presets =
                         [ DateRangePicker.Today
@@ -243,10 +256,10 @@ calendarDisplayOptions : Model -> Html Msg
 calendarDisplayOptions model =
     let
         options =
-            [ DateRangePicker.FullCalendar
-            , DateRangePicker.ThreeMonths
-            , DateRangePicker.TwoMonths
-            , DateRangePicker.OneMonth
+            [ DateRangePicker.YearCalendar
+            , DateRangePicker.ThreeMonthCalendar
+            , DateRangePicker.TwoMonthCalendar
+            , DateRangePicker.OneMonthCalendar
             ]
 
         selectedClass calendarDisplay =
@@ -301,14 +314,14 @@ subscriptions bootstrapModel =
 calendarDisplayToDisplayStr : DateRangePicker.CalendarType -> String
 calendarDisplayToDisplayStr calendarDisplay =
     case calendarDisplay of
-        DateRangePicker.FullCalendar ->
-            "FullCalendar"
+        DateRangePicker.YearCalendar ->
+            "YearCalendar"
 
-        DateRangePicker.ThreeMonths ->
-            "ThreeMonths"
+        DateRangePicker.ThreeMonthCalendar ->
+            "ThreeMonthCalendar"
 
-        DateRangePicker.TwoMonths ->
-            "TwoMonths"
+        DateRangePicker.TwoMonthCalendar ->
+            "TwoMonthCalendar"
 
-        DateRangePicker.OneMonth ->
-            "OneMonth"
+        DateRangePicker.OneMonthCalendar ->
+            "OneMonthCalendar"
