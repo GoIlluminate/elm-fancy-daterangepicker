@@ -621,7 +621,7 @@ setOpen (DatePicker model) setIsOpen =
 -}
 hasSelectionChanged : DatePicker -> Maybe Selection -> Bool
 hasSelectionChanged model comparisonSelection =
-    checkForChange getSelection model comparisonSelection
+    checkForChange ( Just << getSelection) model comparisonSelection
 
 
 {-| Check if the selection has changed.
@@ -640,31 +640,9 @@ setCalendarType calendarType (DatePicker model) =
 
 {-| Get the current selection in local time.
 -}
-getSelection : DatePicker -> Maybe Selection
-getSelection (DatePicker model) =
-    case model.selection of
-        Single pos ->
-            Single pos
-                |> Just
-
-        Range range ->
-            Just <| Range range
-
-        Unselected ->
-            Nothing
-
-        Selecting _ ->
-            Nothing
-
-        Preset presetType ->
-            Just <| Preset presetType
-
-        Before pos ->
-            Just <| Before pos
-
-        After pos ->
-            Just <| After pos
-
+getSelection : DatePicker -> Selection
+getSelection (DatePicker {selection}) =
+        selection
 
 {-| A convenience function to get the current selection as a parts range in local time.
 -}
@@ -2209,7 +2187,7 @@ checkForChange checkFunc model elementForComparison =
         False
 
     else
-        checkFunc model /= elementForComparison
+        ( checkFunc model) /= elementForComparison
 
 
 convertSingleIntoRange : Parts -> PartsRange
