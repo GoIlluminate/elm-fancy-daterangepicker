@@ -1477,10 +1477,10 @@ wildcardInputConversion inputDate getParts =
             ( getParts <| yearAndMonthToPartsRange yearAndMonth, DateFormat )
 
         FullDate dateParts ->
-            ( getEndOfDayParts <| datePartsToParts dateParts, DateFormat )
+            ( datePartsToParts dateParts, DateFormat )
 
         FullDateTime dateTimeParts ->
-            ( getEndOfDayParts <| dateTimePartsToParts dateTimeParts, DateTimeFormat )
+            ( dateTimePartsToParts dateTimeParts, DateTimeFormat )
 
 
 singleInputConversion : InputDate -> Model -> ( Selection, Format )

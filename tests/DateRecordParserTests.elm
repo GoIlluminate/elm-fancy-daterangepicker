@@ -232,6 +232,11 @@ dateTestSuite =
                 equal
                     (Ok <| AfterInput <| FullDate <| { year = 2000, month = 1, day = 1 })
                     (defaultParse "01-01-2000 and after")
+        , test "allows a phrase to be used after a datetime to indicate after" <|
+            \_ ->
+                equal
+                    (Ok <| AfterInput <| FullDateTime <| { year = 2000, month = 1, day = 1, hour = 1, minute = 5 })
+                    (defaultParse "01-01-2000 01:05 and after")
         ]
 
 
