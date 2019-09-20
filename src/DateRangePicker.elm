@@ -1,5 +1,5 @@
 module DateRangePicker exposing
-    ( Msg, DatePicker, subscriptions, view, update
+    ( Msg, DatePicker, subscriptions, view, update, defaultPresets
     , open, defaultOpener
     , Selection(..), Format(..), PosixRange,  getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
@@ -123,6 +123,14 @@ type PresetType
     | PastYear
     | Custom CustomPreset
 
+defaultPresets : List PresetType
+defaultPresets =
+    [ Today
+    , Yesterday
+    , PastWeek
+    , PastMonth
+    , PastYear
+    ]
 
 {-| The type of interval for a custom preset
 -}
@@ -374,7 +382,7 @@ defaultAllowedRange =
 defaultConfig : Config
 defaultConfig =
     { allowedRange = defaultAllowedRange
-    , presets = []
+    , presets = defaultPresets
     , calendarType = YearCalendar
     , datepickerVisibility = False
     , languageConfig = englishLanguageConfig
