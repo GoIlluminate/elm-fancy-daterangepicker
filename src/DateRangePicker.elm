@@ -1,5 +1,5 @@
 module DateRangePicker exposing
-    ( Msg, DatePicker, subscriptions, view, update
+    ( Msg, DatePicker, subscriptions, view, update, getConfig
     , open, defaultOpener
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
@@ -327,7 +327,7 @@ type alias Config =
     , displayTimezone : Zone
     , displayDate : Maybe Posix
     }
-
+        
 
 {-| A record that can be used if a language other than english is wanted.
 -}
@@ -716,6 +716,24 @@ presets (DatePicker model) =
 languageConfig : DatePicker -> LanguageConfig
 languageConfig (DatePicker model) =
     model.languageConfig
+
+
+{-| Gets the current languageConfig
+-}
+getConfig : DatePicker -> Config
+getConfig (DatePicker model) =
+    Config
+        model.allowedRange
+        model.presets
+        model.calendarType
+        (model.datepickerVisibility == Open)
+        model.languageConfig
+        model.dateSelectionType
+        model.hidePresets
+        (Just model.selection)
+        model.displayTimezone
+        (Just model.now)
+
 
 
 {-| Change the datePicker's current config. This will reset changed state.
