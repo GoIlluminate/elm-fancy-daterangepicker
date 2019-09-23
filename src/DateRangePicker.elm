@@ -1131,7 +1131,7 @@ createSelectingRange model changedValue =
             { start = changedValue, end = changedValue }
 
         Selecting partsRange ->
-            { start = partsRange.start, end = changedValue }
+            { start = partsRange.start, end =  changedValue }
 
         Preset _ ->
             { start = changedValue, end = changedValue }
@@ -1892,7 +1892,7 @@ dateIsOutOfAllowedRange parts { start, end } =
 normalizeSelectingRange : PartsRange -> PartsRange
 normalizeSelectingRange ({ start, end } as partsRange) =
     if posixToMillis (partsToPosix Time.utc start) > posixToMillis (partsToPosix Time.utc end) then
-        { start = end, end = start }
+        { start = getStartOfDayParts end, end = getEndOfDayParts start }
 
     else
         partsRange
@@ -2118,10 +2118,10 @@ rangeFormatter zone language format ( { start, end }, partsZone ) =
     let
         (beginning, ending) =
             if posixToMillis (partsToPosix Time.utc start) > posixToMillis (partsToPosix Time.utc end) then
-                (end, start)
+                (getStartOfDayParts end, getEndOfDayParts start)
 
             else
-                (start,end )
+                (start, end)
     in
     singleFormatter zone language format ( beginning, partsZone )
         ++ " to "
