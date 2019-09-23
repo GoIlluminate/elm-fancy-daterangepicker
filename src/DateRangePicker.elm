@@ -330,7 +330,23 @@ type alias Config =
     , displayTimezone : Zone
     , displayDate : Maybe Posix
     }
-        
+
+{-| Gets the current languageConfig
+-}
+getConfig : DatePicker -> Config
+getConfig (DatePicker model) =
+    { allowedRange = model.allowedRange
+    , presets = model.presets
+    , calendarType = model.calendarType
+    , datepickerVisibility = (model.datepickerVisibility == Open)
+    , languageConfig = model.languageConfig
+    , dateSelectionType = model.dateSelectionType
+    , canChooseTime = model.canChooseTime
+    , hidePresets = model.hidePresets
+    , defaultSelection = (Just model.selection)
+    , displayTimezone = model.displayTimezone
+    , displayDate = (Just model.now)
+    }
 
 {-| A record that can be used if a language other than english is wanted.
 -}
@@ -722,22 +738,7 @@ languageConfig (DatePicker model) =
     model.languageConfig
 
 
-{-| Gets the current languageConfig
--}
-getConfig : DatePicker -> Config
-getConfig (DatePicker model) =
-    Config
-        model.allowedRange
-        model.presets
-        model.calendarType
-        (model.datepickerVisibility == Open)
-        model.languageConfig
-        model.dateSelectionType
-        model.hidePresets
-        model.canChooseTime
-        (Just model.selection)
-        model.displayTimezone
-        (Just model.now)
+
 
 
 
