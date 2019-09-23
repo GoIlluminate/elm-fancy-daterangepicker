@@ -240,6 +240,7 @@ type alias Model =
     , isShiftDown : Bool
     , isMouseOutside : Bool
     , hidePresets : Bool
+    , canChooseTime : Bool
     , datepickerVisibility : DatePickerVisibility
     , presets : List PresetType
     , calendarType : CalendarType
@@ -291,6 +292,7 @@ initWithOptions now displayDate config =
         , uiElement = Nothing
         , uiButton = Nothing
         , isMouseOutside = False
+        , canChooseTime = config.canChooseTime
         , languageConfig = englishLanguageConfig
         , presetMenuVisibility = MenuClosed
         , keyboardSelectedPreset = Nothing
@@ -322,6 +324,7 @@ type alias Config =
     , datepickerVisibility : Bool
     , languageConfig : LanguageConfig
     , dateSelectionType : DateSelectionType
+    , canChooseTime : Bool
     , hidePresets : Bool
     , defaultSelection : Maybe Selection
     , displayTimezone : Zone
@@ -395,6 +398,7 @@ defaultConfig =
     , defaultSelection = Nothing
     , displayTimezone = Time.utc
     , displayDate = Nothing
+    , canChooseTime = True
     }
 
 
@@ -730,6 +734,7 @@ getConfig (DatePicker model) =
         model.languageConfig
         model.dateSelectionType
         model.hidePresets
+        model.canChooseTime
         (Just model.selection)
         model.displayTimezone
         (Just model.now)
@@ -755,6 +760,7 @@ updateModelWithConfig (DatePicker model) config =
             , hidePresets = config.hidePresets
             , selection = selectionToSelection config.defaultSelection
             , displayTimezone = config.displayTimezone
+            , canChooseTime = config.canChooseTime
         }
 
 
@@ -1423,7 +1429,11 @@ topBar model =
                     div [] []
 
                 DateRangeSelection ->
-                    clockButton model
+                    if model.canChooseTime then
+                        clockButton model
+
+                    else
+                        div [] []
     in
     div [ Attrs.class class ]
         [ fullCalendarSelector
