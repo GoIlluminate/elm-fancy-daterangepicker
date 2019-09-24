@@ -1072,7 +1072,7 @@ onKeyDown model key =
                         Just date ->
                             withUpdatedSelection (Selecting <| createSelectingRange { model | isShiftDown = True } date) { model | isShiftDown = True }
                                 |> R2.withNoCmd
-                                
+
                         Nothing ->
                             { model | isShiftDown = True }
                                 |> R2.withNoCmd
@@ -1372,12 +1372,12 @@ bottomBar model =
 
 leftSelector : Model -> Html Msg
 leftSelector =
-    mkSelector -1 .end "prev-range-selector" "❮"
+    mkSelector -1 .start "prev-range-selector" "❮"
 
 
 rightSelector : Model -> Html Msg
 rightSelector =
-    mkSelector 1 .start "next-range-selector" "❯"
+    mkSelector 1 .end "next-range-selector" "❯"
 
 
 mkSelector : Int -> (PartsRange -> Parts) -> String -> String -> Model -> Html Msg
