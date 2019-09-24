@@ -1429,13 +1429,21 @@ topBar model =
                 _ ->
                     ( text "", "top-bar--partial" )
 
+        isPreset =
+            case model.selection of
+                Preset _ ->
+                    True
+
+                _ ->
+                    False
+
         maybeClock =
             case model.dateSelectionType of
                 DateSelection ->
                     div [] []
 
                 DateRangeSelection ->
-                    if model.canChooseTime then
+                    if model.canChooseTime && not isPreset then
                         clockButton model
 
                     else
