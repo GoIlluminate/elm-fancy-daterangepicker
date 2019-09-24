@@ -2071,10 +2071,10 @@ prettyFormatSelectionInZone : DatePicker -> Zone -> String
 prettyFormatSelectionInZone (DatePicker model) displayZone =
     let
         formatSingle parts =
-            singleFormatter displayZone model.languageConfig model.displayFormat ( parts, model.displayTimezone )
+            singleFormatter model.canChooseTime displayZone model.languageConfig model.displayFormat ( parts, model.displayTimezone )
 
         formatRange range =
-            rangeFormatter displayZone model.languageConfig model.displayFormat ( range, model.displayTimezone )
+            rangeFormatter model.canChooseTime displayZone model.languageConfig model.displayFormat ( range, model.displayTimezone )
     in
     case model.selection of
         Single parts ->
@@ -2107,8 +2107,8 @@ prettyFormatSelectionInZone (DatePicker model) displayZone =
             formatSingle parts ++ " " ++ model.languageConfig.afterThisDate
 
 
-singleFormatter : Zone -> LanguageConfig -> Format -> ( Parts, Zone ) -> String
-singleFormatter zone language format ( parts, partsTimezone ) =
+singleFormatter : Bool -> Zone -> LanguageConfig -> Format -> ( Parts, Zone ) -> String
+singleFormatter displayTime zone language format ( parts, partsTimezone ) =
     let
         timeParts =
             case format of
@@ -2116,11 +2116,14 @@ singleFormatter zone language format ( parts, partsTimezone ) =
                     []
 
                 DateTimeFormat ->
-                    [ DateFormat.text " "
-                    , DateFormat.hourMilitaryFixed
-                    , DateFormat.text ":"
-                    , DateFormat.minuteFixed
-                    ]
+                    if displayTime then
+                        [ DateFormat.text " "
+                        , DateFormat.hourMilitaryFixed
+                        , DateFormat.text ":"
+                        , DateFormat.minuteFixed
+                        ]
+                    else
+                    []
     in
     DateFormat.formatWithLanguage language.dateFormatLanguage
         ([ DateFormat.monthNameAbbreviated
@@ -2142,8 +2145,8 @@ monthFormatter language =
         ]
 
 
-rangeFormatter : Zone -> LanguageConfig -> Format -> ( PartsRange, Zone ) -> String
-rangeFormatter zone language format ( { start, end }, partsZone ) =
+rangeFormatter : Bool -> Zone -> LanguageConfig -> Format -> ( PartsRange, Zone ) -> String
+rangeFormatter canDisplayTime zone language format ( { start, end }, partsZone ) =
     let
         (beginning, ending) =
             if posixToMillis (partsToPosix Time.utc start) > posixToMillis (partsToPosix Time.utc end) then
@@ -2152,9 +2155,9 @@ rangeFormatter zone language format ( { start, end }, partsZone ) =
             else
                 (start, end)
     in
-    singleFormatter zone language format ( beginning, partsZone )
+    singleFormatter canDisplayTime zone language format ( beginning, partsZone )
         ++ " to "
-        ++ singleFormatter zone language format ( ending, partsZone )
+        ++ singleFormatter canDisplayTime zone language format ( ending, partsZone )
 
 
 
