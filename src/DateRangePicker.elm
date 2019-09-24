@@ -2260,8 +2260,8 @@ yearToPartsRange year =
         parts =
             yearToParts year
     in
-    { start = parts
-    , end = parts
+    { start = getFirstDayOfYearParts parts
+    , end = getLastDayOfYearParts parts
     }
 
 
