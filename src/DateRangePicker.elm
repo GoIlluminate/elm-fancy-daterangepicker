@@ -81,6 +81,7 @@ type Msg
     | KeyUp RawKey
     | CancelShift
     | OnHoverOverDay Parts
+    | MouseOutsideOfCalendar
     | OnMouseMove Mouse.Event
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
@@ -897,7 +898,8 @@ innerUpdate msg model =
                         { model | currentlyHoveredDate = Just posix }
             in
             R2.withNoCmd withNewSelection
-
+        MouseOutsideOfCalendar ->
+            R2.withNoCmd {model | currentlyHoveredDate = Nothing}
         OnMouseMove event ->
             R2.withNoCmd { model | mousePosition = Just event }
 
@@ -1020,7 +1022,7 @@ finishInput model =
             }
 
         parseInput inputText =
-            case parseDateTime parseConfig inputText of
+            case parseDateTime parseConfig (String.toLower inputText) of
                 Ok value ->
                     let
                         ( selection, format ) =
@@ -1684,7 +1686,7 @@ yearCalendarView model =
                 [ Attrs.class "quarters" ]
                 [ quarter "Q1" Jan Mar, quarter "Q2" Apr Jun, quarter "Q3" Jul Sep, quarter "Q4" Oct Dec ]
     in
-    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar" ]
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar", Html.Events.onMouseLeave MouseOutsideOfCalendar]
         [ quarters
         , table []
             [ tbody [ Attrs.class "year" ] <|
