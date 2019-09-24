@@ -1068,7 +1068,14 @@ onKeyDown model key =
         Shift ->
             case model.dateSelectionType of
                 DateRangeSelection ->
-                    R2.withNoCmd { model | isShiftDown = True }
+                    case model.currentlyHoveredDate of
+                        Just date ->
+                            withUpdatedSelection (Selecting <| createSelectingRange { model | isShiftDown = True } date) { model | isShiftDown = True }
+                                |> R2.withNoCmd
+                                
+                        Nothing ->
+                            { model | isShiftDown = True }
+                                |> R2.withNoCmd
 
                 DateSelection ->
                     R2.withNoCmd model
@@ -1161,7 +1168,7 @@ createSelectingRange model changedValue =
             { start = changedValue, end = changedValue }
 
         Selecting partsRange ->
-            { start = partsRange.start, end =  changedValue }
+            { start = partsRange.start, end = getEndOfDayParts changedValue }
 
         Preset _ ->
             { start = changedValue, end = changedValue }
