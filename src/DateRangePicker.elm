@@ -5,7 +5,7 @@ module DateRangePicker exposing
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
-    , defaultPresets, isOpen, openMsg
+    , defaultPresets, isOpen, openMsg, setDisplayFormat
     )
 
 {-| A customizable date picker component.
@@ -646,6 +646,11 @@ displayFormat : DatePicker -> Format
 displayFormat (DatePicker model) =
     model.displayFormat
 
+{-| sets the current selection format
+-}
+setDisplayFormat : Format -> DatePicker -> DatePicker
+setDisplayFormat format (DatePicker model) = 
+    DatePicker {model | displayFormat = format}
 
 {-| Set whether or not the datepicker is open. Usually you should use @open or @defaultOpener to manage this.
 -}
