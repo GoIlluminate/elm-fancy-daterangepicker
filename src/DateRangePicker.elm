@@ -1022,7 +1022,7 @@ finishInput model =
             }
 
         parseInput inputText =
-            case parseDateTime parseConfig (String.toLower inputText) of
+            case parseDateTime parseConfig inputText of
                 Ok value ->
                     let
                         ( selection, format ) =
