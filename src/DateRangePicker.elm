@@ -1078,7 +1078,7 @@ onKeyDown model key =
                 R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | datepickerVisibility = Open, uiButton = Nothing, uiElement = Nothing }
+                R2.withNoCmd { model | datepickerVisibility = Closed, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
