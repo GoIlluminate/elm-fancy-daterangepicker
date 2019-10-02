@@ -6,7 +6,7 @@ module DateRangePicker exposing
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
     , defaultPresets, isOpen, openMsg, setDisplayFormat
-    )
+    , ClockStyle(..))
 
 {-| A customizable date picker component.
 
@@ -191,8 +191,12 @@ type DateSelectionType
 -}
 type Format
     = DateFormat
-    | DateTimeFormat
+    | DateTimeFormat ClockStyle
 
+
+type ClockStyle
+    = H24
+    | H12
 
 type MenuVisibility
     = MenuOpen
@@ -258,6 +262,7 @@ type alias Model =
     , dateSelectionType : DateSelectionType
     , displayTimezone : Zone
     , now : Posix
+    , clockStyle : ClockStyle
     }
 
 
@@ -313,6 +318,7 @@ initWithOptions now displayDate config =
         , hidePresets = config.hidePresets
         , selection = selectionToSelection config.defaultSelection
         , displayTimezone = config.displayTimezone
+        , clockStyle = config.clockStyle
         }
 
 
@@ -330,6 +336,7 @@ type alias Config =
     , defaultSelection : Maybe Selection
     , displayTimezone : Zone
     , displayDate : Maybe Posix
+    , clockStyle : ClockStyle
     }
 
 {-| Gets the current languageConfig
@@ -347,6 +354,7 @@ getConfig (DatePicker model) =
     , defaultSelection = (Just model.selection)
     , displayTimezone = model.displayTimezone
     , displayDate = (Just model.now)
+    , clockStyle = model.clockStyle
     }
 
 {-| A record that can be used if a language other than english is wanted.
@@ -416,6 +424,7 @@ defaultConfig =
     , displayTimezone = Time.utc
     , displayDate = Nothing
     , canChooseTime = True
+    , clockStyle = H24
     }
 
 
@@ -955,10 +964,10 @@ innerUpdate msg model =
                     case model.displayFormat of
                         DateFormat ->
                             { model
-                                | displayFormat = DateTimeFormat
+                                | displayFormat = DateTimeFormat model.clockStyle
                             }
 
-                        DateTimeFormat ->
+                        DateTimeFormat _ ->
                             { model
                                 | displayFormat = DateFormat
                             }
@@ -1408,7 +1417,7 @@ clockButton model =
                 DateFormat ->
                     Attrs.class "clock-unselected"
 
-                DateTimeFormat ->
+                DateTimeFormat _ ->
                     Attrs.class "clock-selected"
     in
     div
@@ -1530,7 +1539,7 @@ convertInput input model =
             singleInputConversion inputDate model
 
         RangeInput start end ->
-            combineInputToRange start end
+            combineInputToRange start end model.clockStyle
 
         CustomDate selectedCustomDate ->
             let
@@ -1547,20 +1556,20 @@ convertInput input model =
         BeforeInput inputDate ->
             let
                 ( parts, format ) =
-                    wildcardInputConversion inputDate .end
+                    wildcardInputConversion inputDate .end model.clockStyle
             in
             ( Before <| parts, format )
 
         AfterInput inputDate ->
             let
                 ( parts, format ) =
-                    wildcardInputConversion inputDate .start
+                    wildcardInputConversion inputDate .start model.clockStyle
             in
             ( After <| parts, format )
 
 
-wildcardInputConversion : InputDate -> (PartsRange -> Parts) -> ( Parts, Format )
-wildcardInputConversion inputDate getParts =
+wildcardInputConversion : InputDate -> (PartsRange -> Parts) -> ClockStyle -> ( Parts, Format )
+wildcardInputConversion inputDate getParts clockStyle =
     case inputDate of
         JustYear year ->
             ( getParts <| yearToPartsRange year, DateFormat )
@@ -1572,14 +1581,14 @@ wildcardInputConversion inputDate getParts =
             ( datePartsToParts dateParts, DateFormat )
 
         FullDateTime dateTimeParts ->
-            ( dateTimePartsToParts dateTimeParts, DateTimeFormat )
+            ( dateTimePartsToParts dateTimeParts, DateTimeFormat clockStyle)
 
 
 singleInputConversion : InputDate -> Model -> ( Selection, Format )
 singleInputConversion inputDate model =
     let
         ( initialSelection, format ) =
-            convertInputDate inputDate
+            convertInputDate inputDate model.clockStyle
 
         selection =
             case model.dateSelectionType of
@@ -1597,13 +1606,13 @@ singleInputConversion inputDate model =
     ( selection, Maybe.withDefault DateFormat format )
 
 
-combineInputToRange : InputDate -> InputDate -> ( Selection, Format )
-combineInputToRange start end =
-    convertInputDateRange ( start, end )
+combineInputToRange : InputDate -> InputDate -> ClockStyle -> ( Selection, Format )
+combineInputToRange start end clockStyle =
+    convertInputDateRange ( start, end ) clockStyle
 
 
-convertInputDate : InputDate -> ( Selection, Maybe Format )
-convertInputDate inputDate =
+convertInputDate : InputDate -> ClockStyle -> ( Selection, Maybe Format )
+convertInputDate inputDate clockStyle =
     case inputDate of
         JustYear year ->
             ( Range <| yearToPartsRange year, Nothing )
@@ -1615,11 +1624,11 @@ convertInputDate inputDate =
             ( Single (datePartsToParts dateParts), Nothing )
 
         FullDateTime dateTimeParts ->
-            ( Single (dateTimePartsToParts dateTimeParts), Just DateTimeFormat )
+            ( Single (dateTimePartsToParts dateTimeParts), Just <| DateTimeFormat clockStyle )
 
 
-convertInputDateRange : ( InputDate, InputDate ) -> ( Selection, Format )
-convertInputDateRange ( start, end ) =
+convertInputDateRange : ( InputDate, InputDate ) -> ClockStyle -> ( Selection, Format )
+convertInputDateRange ( start, end ) clockStyle =
     case ( start, end ) of
         ( JustYear yearStart, JustYear yearEnd ) ->
             ( Range <| PartsRange (yearToParts yearStart) (yearToParts yearEnd), DateFormat )
@@ -1631,7 +1640,7 @@ convertInputDateRange ( start, end ) =
             ( Range <| PartsRange (datePartsToParts datePartsStart) (datePartsToParts datePartsEnd), DateFormat )
 
         ( FullDateTime dateTimePartsStart, FullDateTime dateTimePartsEnd ) ->
-            ( Range <| PartsRange (dateTimePartsToParts dateTimePartsStart) (dateTimePartsToParts dateTimePartsEnd), DateTimeFormat )
+            ( Range <| PartsRange (dateTimePartsToParts dateTimePartsStart) (dateTimePartsToParts dateTimePartsEnd), DateTimeFormat clockStyle )
 
         _ ->
             ( Unselected, DateFormat )
@@ -2103,7 +2112,7 @@ prettyFormatSelectionInZone (DatePicker model) displayZone =
             formatSingle parts
 
         Range partsRange ->
-            if isSameDay partsRange.start partsRange.end && model.displayFormat /= DateTimeFormat then
+            if isSameDay partsRange.start partsRange.end && model.displayFormat /= DateTimeFormat model.clockStyle then
                 formatSingle partsRange.start
 
             else
@@ -2137,15 +2146,28 @@ singleFormatter displayTime zone language format ( parts, partsTimezone ) =
                 DateFormat ->
                     []
 
-                DateTimeFormat ->
-                    if displayTime then
-                        [ DateFormat.text " "
-                        , DateFormat.hourMilitaryFixed
-                        , DateFormat.text ":"
-                        , DateFormat.minuteFixed
-                        ]
-                    else
-                    []
+                DateTimeFormat clockStyle ->
+                    case clockStyle of
+                        H24 ->
+                            if displayTime then
+                                [ DateFormat.text " "
+                                , DateFormat.hourMilitaryFixed
+                                , DateFormat.text ":"
+                                , DateFormat.minuteFixed
+                                ]
+                            else
+                            []
+                        H12 ->
+                            if displayTime then
+                                [ DateFormat.text " "
+                                , DateFormat.hourFixed
+                                , DateFormat.text ":"
+                                , DateFormat.minuteFixed
+                                , DateFormat.text " "
+                                , DateFormat.amPmUppercase
+                                ]
+                            else
+                            []
     in
     DateFormat.formatWithLanguage language.dateFormatLanguage
         ([ DateFormat.monthNameAbbreviated

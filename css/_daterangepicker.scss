@@ -58,7 +58,7 @@
     }
     .top-bar--full {
       display: grid;
-      grid-template-columns: max-content minmax(0, 1fr) 2fr minmax(15px, max-content);
+      grid-template-columns: max-content minmax(0, 1fr) 4fr minmax(15px, max-content);
     }
     .top-bar--partial {
       display: grid;
