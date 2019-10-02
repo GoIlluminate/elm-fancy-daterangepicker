@@ -7,6 +7,15 @@
   }
   user-select: none;
 
+  &.elm-fancy--daterangepicker--always-open {
+      position: relative;
+    .elm-fancy--daterangepicker-body {
+        &#elm-fancy--daterangepicker--wrapper {
+            position: relative;
+        }
+    }
+  }
+
   table {
     border-spacing: 2px 0;
   }
@@ -39,12 +48,12 @@
       display: table;
       box-shadow: 0 1px 3px themed('color-box-shadow-body1'),
       0 4px 8px 3px themed('color-box-shadow-body2');
-      border-radius: 6px;
       z-index: 1001;
       position: fixed;
       font-family: Roboto, HelveticaNeue, Arial, sans-serif;
       letter-spacing: 0.1px;
       color: themed('color-text-default');
+      padding-bottom: 10px;
 
       .disabled {
         color: themed('color-disabled');

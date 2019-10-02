@@ -82,6 +82,7 @@ initialModel now zone =
                     , dateSelectionType = DateRangePicker.DateRangeSelection
                     , displayTimezone = zone
                     , clockStyle = DateRangePicker.H12
+                    , datepickerVisibility = True
                 }
     in
     { calendarDisplay = calendarDisplay

@@ -1,6 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update, getConfig
     , open, defaultOpener
+    , DatePickerVisibility(..)
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
@@ -233,6 +234,7 @@ getUserDateInput input =
 type DatePickerVisibility
     = Open
     | Closed
+    | AlwaysOpen
 
 
 {-| A record which represents the main datepicker model
@@ -577,11 +579,21 @@ view (DatePicker model) =
                 , Attrs.id "elm-fancy--daterangepicker--wrapper"
                 , mouseEvent
                 ]
-                (calendarPositioning model.uiButton model.uiElement model.windowSize)
+                (if model.datepickerVisibility == Open then calendarPositioning model.uiButton model.uiElement model.windowSize else [])
     in
     case model.datepickerVisibility of
+        AlwaysOpen ->
+            div [ Attrs.class "elm-fancy--daterangepicker elm-fancy--daterangepicker--always-open" ]
+                [ div
+                    calendarAttrs
+                    [ topBar model
+                    , leftSelector model
+                    , rightSelector model
+                    , calendarView model
+                    ]
+                ]
         Open ->
-            div [ Attrs.class "elm-fancy--daterangepicker" ]
+            div [ Attrs.class "elm-fancy--daterangepicker"  ]
                 [ div
                     [ Attrs.class "elm-fancy--daterangepicker-close"
                     , mouseEvent
@@ -777,6 +789,7 @@ updateModelWithConfig (DatePicker model) config =
             , selection = selectionToSelection config.defaultSelection
             , displayTimezone = config.displayTimezone
             , canChooseTime = config.canChooseTime
+            , clockStyle = config.clockStyle
         }
 
 
