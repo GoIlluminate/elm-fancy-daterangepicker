@@ -7,7 +7,7 @@ module DateRangePicker exposing
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
     , defaultPresets, isOpen, openMsg, setDisplayFormat
-    , ClockStyle(..))
+    , ClockStyle(..), focusInput)
 
 {-| A customizable date picker component.
 
@@ -823,6 +823,10 @@ displaygetSelection : DatePicker -> String
 displaygetSelection datePicker =
     prettyFormatSelectionInZone datePicker Time.utc
 
+{-focuses the inputbox -}
+focusInput : Cmd Msg
+focusInput =
+    Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--input"
 
 innerUpdate : Msg -> Model -> ( Model, Cmd Msg )
 innerUpdate msg model =
