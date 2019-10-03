@@ -84,6 +84,7 @@ type Msg
     | OnHoverOverDay Parts
     | MouseOutsideOfCalendar
     | OnMouseMove Mouse.Event
+    | OnMouseUp
     | SetMouseOutside Bool
     | OnGetElementSuccess (Result Error Element)
     | OnGetDatePickerButton (Result Error Element)
@@ -310,12 +311,7 @@ initWithOptions now displayDate config =
         , allowedRange = config.allowedRange
         , presets = config.presets
         , calendarType = config.calendarType
-        , datepickerVisibility =
-            if config.datepickerVisibility then
-                Open
-
-            else
-                Closed
+        , datepickerVisibility = config.datepickerVisibility 
         , dateSelectionType = config.dateSelectionType
         , hidePresets = config.hidePresets
         , selection = selectionToSelection config.defaultSelection
@@ -330,7 +326,7 @@ type alias Config =
     { allowedRange : PartsRange
     , presets : List PresetType
     , calendarType : CalendarType
-    , datepickerVisibility : Bool
+    , datepickerVisibility : DatePickerVisibility
     , languageConfig : LanguageConfig
     , dateSelectionType : DateSelectionType
     , canChooseTime : Bool
@@ -348,7 +344,7 @@ getConfig (DatePicker model) =
     { allowedRange = model.allowedRange
     , presets = model.presets
     , calendarType = model.calendarType
-    , datepickerVisibility = (model.datepickerVisibility == Open)
+    , datepickerVisibility = model.datepickerVisibility
     , languageConfig = model.languageConfig
     , dateSelectionType = model.dateSelectionType
     , canChooseTime = model.canChooseTime
@@ -418,7 +414,7 @@ defaultConfig =
     { allowedRange = defaultAllowedRange
     , presets = defaultPresets
     , calendarType = YearCalendar
-    , datepickerVisibility = False
+    , datepickerVisibility = Closed
     , languageConfig = englishLanguageConfig
     , dateSelectionType = DateRangeSelection
     , hidePresets = False
@@ -515,10 +511,15 @@ subscriptions (DatePicker model) =
                 , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
                 , Time.every 750 (always <| CheckToMoveToNextVisibleRange)
                 ]
-
             else
                 []
-
+        mouseMove =
+            if model.isMouseOutside && model.isMouseDown then
+                [ Browser.Events.onMouseMove (Json.map OnMouseMove Mouse.eventDecoder )
+                , Browser.Events.onMouseUp (Json.succeed OnMouseUp)
+                ]
+            else
+                []
         alwaysSubbed =
             [ Browser.Events.onResize OnWindowsResize, Time.every (60 * 1000) GotTime ]
 
@@ -529,13 +530,18 @@ subscriptions (DatePicker model) =
             else
                 []
     in
-    if model.datepickerVisibility == Open then
-        List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed ]
-            |> Sub.batch
+        case model.datepickerVisibility of
+            Open ->
+                List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed ]
+                    |> Sub.batch
 
-    else
-        alwaysSubbed
-            |> Sub.batch
+            AlwaysOpen ->
+                List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed, mouseMove ]
+                    |> Sub.batch
+
+            Closed ->
+                alwaysSubbed
+                    |> Sub.batch
 
 
 {-| The update for the datepicker. You will need to integrate this into your own update.
@@ -566,7 +572,7 @@ view : DatePicker -> Html Msg
 view (DatePicker model) =
     let
         -- All view Functions from here on Take in a Time.Extra.Parts which is in local time
-        mouseEvent =
+        outsideMouseEvent =
             if model.isMouseDown && model.isMouseOutside then
                 Mouse.onMove OnMouseMove
 
@@ -577,13 +583,16 @@ view (DatePicker model) =
             List.append
                 [ Attrs.class "elm-fancy--daterangepicker-body"
                 , Attrs.id "elm-fancy--daterangepicker--wrapper"
-                , mouseEvent
+                , outsideMouseEvent
                 ]
                 (if model.datepickerVisibility == Open then calendarPositioning model.uiButton model.uiElement model.windowSize else [])
     in
     case model.datepickerVisibility of
         AlwaysOpen ->
-            div [ Attrs.class "elm-fancy--daterangepicker elm-fancy--daterangepicker--always-open" ]
+            div [ Attrs.class "elm-fancy--daterangepicker elm-fancy--daterangepicker--always-open"
+                , Html.Events.onMouseLeave <| SetMouseOutside True
+                , Html.Events.onMouseEnter <| SetMouseOutside False 
+                ]
                 [ div
                     calendarAttrs
                     [ topBar model
@@ -596,7 +605,7 @@ view (DatePicker model) =
             div [ Attrs.class "elm-fancy--daterangepicker"  ]
                 [ div
                     [ Attrs.class "elm-fancy--daterangepicker-close"
-                    , mouseEvent
+                    , outsideMouseEvent
                     , Html.Events.onMouseLeave <| SetMouseOutside False
                     , Html.Events.onMouseEnter <| SetMouseOutside True
                     ]
@@ -659,7 +668,7 @@ selectPreset presetType (DatePicker model) =
 -}
 isOpen : DatePicker -> Bool
 isOpen (DatePicker model) =
-    model.datepickerVisibility == Open
+    model.datepickerVisibility == Open || model.datepickerVisibility == AlwaysOpen
 
 
 {-| Gets the current selection format
@@ -676,16 +685,11 @@ setDisplayFormat format (DatePicker model) =
 
 {-| Set whether or not the datepicker is open. Usually you should use @open or @defaultOpener to manage this.
 -}
-setOpen : DatePicker -> Bool -> DatePicker
+setOpen : DatePicker -> DatePickerVisibility -> DatePicker
 setOpen (DatePicker model) setIsOpen =
     DatePicker
         { model
-            | datepickerVisibility =
-                if setIsOpen then
-                    Open
-
-                else
-                    Closed
+            | datepickerVisibility = setIsOpen
         }
 
 
@@ -778,12 +782,7 @@ updateModelWithConfig (DatePicker model) config =
             | allowedRange = config.allowedRange
             , presets = config.presets
             , calendarType = config.calendarType
-            , datepickerVisibility =
-                if config.datepickerVisibility then
-                    Open
-
-                else
-                    Closed
+            , datepickerVisibility = config.datepickerVisibility 
             , dateSelectionType = config.dateSelectionType
             , hidePresets = config.hidePresets
             , selection = selectionToSelection config.defaultSelection
@@ -832,6 +831,13 @@ innerUpdate msg model =
             R2.withNoCmd model
 
         OpenDatePicker buttonId ->
+            let
+                newVisibility =
+                    if model.datepickerVisibility == AlwaysOpen then
+                        AlwaysOpen
+                    else
+                        Open
+            in
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
                     getElement "elm-fancy--daterangepicker--wrapper"
@@ -842,10 +848,17 @@ innerUpdate msg model =
                 , Task.attempt GotViewPort <|
                     Dom.getViewport
                 ]
-                { model | datepickerVisibility = Open }
+                { model | datepickerVisibility = newVisibility }
 
         CloseDatePicker ->
-            R2.withNoCmd <| finishInput { model | datepickerVisibility = Closed, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
+            let
+                newVisibility =
+                    if model.datepickerVisibility == AlwaysOpen then
+                        AlwaysOpen
+                    else
+                        Closed
+            in
+            R2.withNoCmd <| finishInput { model | datepickerVisibility = newVisibility, uiButton = Nothing, uiElement = Nothing, isMouseOutside = False }
 
         SetVisibleRange visibleCalendarRange ->
             R2.withNoCmd
@@ -874,7 +887,8 @@ innerUpdate msg model =
 
                 DateRangeSelection ->
                     withUpdatedSelection (Selecting { start = posix, end = posix }) { model | isMouseDown = True }
-                        |> R2.withNoCmd
+                        |> R2.withCmd (Task.attempt OnGetElementSuccess <|
+                            getElement "elm-fancy--daterangepicker--wrapper")
 
         EndSelection posix ->
             case posix of
@@ -922,8 +936,12 @@ innerUpdate msg model =
             R2.withNoCmd withNewSelection
         MouseOutsideOfCalendar ->
             R2.withNoCmd {model | currentlyHoveredDate = Nothing}
+
         OnMouseMove event ->
             R2.withNoCmd { model | mousePosition = Just event }
+        
+        OnMouseUp ->
+            R2.withNoCmd { model | isMouseDown = False }
 
         SetMouseOutside bool ->
             R2.withNoCmd { model | isMouseOutside = bool }
@@ -945,13 +963,9 @@ innerUpdate msg model =
                     R2.withNoCmd model
 
         CheckToMoveToNextVisibleRange ->
-            let
-                localToday =
-                    posixToParts model.displayTimezone model.now
-            in
-            case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
+            case Debug.log "getpos" <| ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
-                    case calculateMousePosition element position of
+                    case Debug.log "pos" <| calculateMousePosition element position of
                         OutsideRight ->
                             updateCalendarRange model 1
 
@@ -1109,7 +1123,7 @@ onKeyDown model key =
                 R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | datepickerVisibility = Closed, uiButton = Nothing, uiElement = Nothing }
+                R2.withNoCmd { model | datepickerVisibility = if model.datepickerVisibility == AlwaysOpen then AlwaysOpen else Closed, uiButton = Nothing, uiElement = Nothing }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList

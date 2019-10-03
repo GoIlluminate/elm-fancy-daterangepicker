@@ -11,7 +11,7 @@ html {
   display: grid;
   grid-template-rows: 75px min-content 1fr;
   grid-template-columns: 1fr 1fr;
-
+}
   .open-button {
     margin-left: 50px;
   }
@@ -85,7 +85,6 @@ html {
       color: white;
     }
   }
-}
 
 .bottom-right {
   grid-row: 3;

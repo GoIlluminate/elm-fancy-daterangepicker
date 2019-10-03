@@ -9,6 +9,7 @@
 
   &.elm-fancy--daterangepicker--always-open {
       position: relative;
+      width: min-content;
     .elm-fancy--daterangepicker-body {
         &#elm-fancy--daterangepicker--wrapper {
             position: relative;

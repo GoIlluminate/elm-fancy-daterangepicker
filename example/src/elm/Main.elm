@@ -60,7 +60,7 @@ initialModel now zone =
                     0
                 )
 
-        initDatePicker =
+        initDatePicker vis =
             DateRangePicker.initWithOptions now
                 (Just displayDate)
                 { defaultConfig
@@ -82,13 +82,13 @@ initialModel now zone =
                     , dateSelectionType = DateRangePicker.DateRangeSelection
                     , displayTimezone = zone
                     , clockStyle = DateRangePicker.H12
-                    , datepickerVisibility = True
+                    , datepickerVisibility = vis
                 }
     in
     { calendarDisplay = calendarDisplay
-    , datePicker = initDatePicker
-    , datePickerabs = initDatePicker
-    , datePickerfixed = initDatePicker
+    , datePicker = initDatePicker DateRangePicker.Closed
+    , datePickerabs = initDatePicker DateRangePicker.Closed
+    , datePickerfixed = initDatePicker DateRangePicker.AlwaysOpen
     , colorTheme = Light
     }
 
@@ -238,7 +238,7 @@ view bootstrapModel =
                         , div [] [ text <| "UtcTime: " ++ utcSel ]
                         ]
             in
-            div [ class "main" ]
+            div [ ]
                 [ calendarDisplayOptions model
                 , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
                 , Html.map DatePickerMsgs selector1

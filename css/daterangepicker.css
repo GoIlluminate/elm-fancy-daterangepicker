@@ -1,8 +1,14 @@
 .elm-fancy--daterangepicker {
   position: absolute;
-  z-index: 1000000; }
+  z-index: 1000000;
+  user-select: none; }
   .elm-fancy--daterangepicker * {
     box-sizing: border-box; }
+  .elm-fancy--daterangepicker.elm-fancy--daterangepicker--always-open {
+    position: relative;
+    width: min-content; }
+    .elm-fancy--daterangepicker.elm-fancy--daterangepicker--always-open .elm-fancy--daterangepicker-body#elm-fancy--daterangepicker--wrapper {
+      position: relative; }
   .elm-fancy--daterangepicker table {
     border-spacing: 2px 0; }
   .elm-fancy--daterangepicker.theme-light .prev-range-selector, .elm-fancy--daterangepicker.theme-light .next-range-selector,
@@ -33,12 +39,12 @@
     background: white;
     display: table;
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
-    border-radius: 6px;
     z-index: 1001;
     position: fixed;
     font-family: Roboto, HelveticaNeue, Arial, sans-serif;
     letter-spacing: 0.1px;
-    color: #3c4043; }
+    color: #3c4043;
+    padding-bottom: 10px; }
     .elm-fancy--daterangepicker.theme-light .elm-fancy--daterangepicker-body .disabled,
     .theme-light .elm-fancy--daterangepicker .elm-fancy--daterangepicker-body .disabled {
       color: rgba(60, 64, 67, 0.18); }
@@ -50,7 +56,7 @@
   .elm-fancy--daterangepicker.theme-light .top-bar--full,
   .theme-light .elm-fancy--daterangepicker .top-bar--full {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) 2fr minmax(15px, max-content); }
+    grid-template-columns: max-content minmax(0, 1fr) 4fr minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-light .top-bar--partial,
   .theme-light .elm-fancy--daterangepicker .top-bar--partial {
     display: grid;
@@ -278,12 +284,12 @@
     background: #212121;
     display: table;
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.5), 0 4px 8px 3px rgba(60, 64, 67, 0.5);
-    border-radius: 6px;
     z-index: 1001;
     position: fixed;
     font-family: Roboto, HelveticaNeue, Arial, sans-serif;
     letter-spacing: 0.1px;
-    color: #818181; }
+    color: #818181;
+    padding-bottom: 10px; }
     .elm-fancy--daterangepicker.theme-dark .elm-fancy--daterangepicker-body .disabled,
     .theme-dark .elm-fancy--daterangepicker .elm-fancy--daterangepicker-body .disabled {
       color: #3e4448; }
@@ -295,7 +301,7 @@
   .elm-fancy--daterangepicker.theme-dark .top-bar--full,
   .theme-dark .elm-fancy--daterangepicker .top-bar--full {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) 2fr minmax(15px, max-content); }
+    grid-template-columns: max-content minmax(0, 1fr) 4fr minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-dark .top-bar--partial,
   .theme-dark .elm-fancy--daterangepicker .top-bar--partial {
     display: grid;
