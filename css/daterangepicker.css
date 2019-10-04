@@ -99,7 +99,7 @@
     display: flex;
     justify-self: right;
     align-self: center;
-    padding: 0 10px;
+    padding: 10px;
     color: #3c4043; }
   .elm-fancy--daterangepicker.theme-light .done,
   .theme-light .elm-fancy--daterangepicker .done {
@@ -344,7 +344,7 @@
     display: flex;
     justify-self: right;
     align-self: center;
-    padding: 0 10px;
+    padding: 10px;
     color: #818181; }
   .elm-fancy--daterangepicker.theme-dark .done,
   .theme-dark .elm-fancy--daterangepicker .done {

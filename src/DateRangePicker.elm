@@ -599,6 +599,7 @@ view (DatePicker model) =
                     , leftSelector model
                     , rightSelector model
                     , calendarView model
+                    , bottomBar model
                     ]
                 ]
         Open ->
@@ -1400,16 +1401,26 @@ presetMenu model =
 
 bottomBar : Model -> Html Msg
 bottomBar model =
+    let
+        content = 
+            case model.datepickerVisibility of
+                AlwaysOpen ->
+                    [ button [ Attrs.class "reset", Html.Events.onClick Reset ]
+                        [ text model.languageConfig.reset ]
+                    ]
+                _ -> 
+                    [ button
+                        [ Attrs.id "elm-fancy--daterangepicker--done"
+                        , Attrs.class "done"
+                        , Html.Events.onClick CloseDatePicker
+                        ]
+                        [ text model.languageConfig.done ]
+                    , button [ Attrs.class "reset", Html.Events.onClick Reset ]
+                        [ text model.languageConfig.reset ]
+                    ]
+    in
     div [ Attrs.class "bottom-bar" ]
-        [ button
-            [ Attrs.id "elm-fancy--daterangepicker--done"
-            , Attrs.class "done"
-            , Html.Events.onClick CloseDatePicker
-            ]
-            [ text model.languageConfig.done ]
-        , button [ Attrs.class "reset", Html.Events.onClick Reset ]
-            [ text model.languageConfig.reset ]
-        ]
+        content
 
 
 leftSelector : Model -> Html Msg
