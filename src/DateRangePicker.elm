@@ -967,9 +967,9 @@ innerUpdate msg model =
                     R2.withNoCmd model
 
         CheckToMoveToNextVisibleRange ->
-            case Debug.log "getpos" <| ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
+            case ( model.uiElement, model.mousePosition, model.isMouseOutside ) of
                 ( Just element, Just position, True ) ->
-                    case Debug.log "pos" <| calculateMousePosition element position of
+                    case calculateMousePosition element position of
                         OutsideRight ->
                             updateCalendarRange model 1
 
