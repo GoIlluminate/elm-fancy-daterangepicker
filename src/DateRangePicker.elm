@@ -266,6 +266,7 @@ type alias Model =
     , displayTimezone : Zone
     , now : Posix
     , clockStyle : ClockStyle
+    , yPadding : Maybe Int
     }
 
 
@@ -317,6 +318,7 @@ initWithOptions now displayDate config =
         , selection = selectionToSelection config.defaultSelection
         , displayTimezone = config.displayTimezone
         , clockStyle = config.clockStyle
+        , yPadding = config.yPadding
         }
 
 
@@ -335,6 +337,7 @@ type alias Config =
     , displayTimezone : Zone
     , displayDate : Maybe Posix
     , clockStyle : ClockStyle
+    , yPadding : Maybe Int
     }
 
 
@@ -354,6 +357,7 @@ getConfig (DatePicker model) =
     , displayTimezone = model.displayTimezone
     , displayDate = Just model.now
     , clockStyle = model.clockStyle
+    , yPadding = model.yPadding
     }
 
 
@@ -425,6 +429,7 @@ defaultConfig =
     , displayDate = Nothing
     , canChooseTime = True
     , clockStyle = H24
+    , yPadding = Nothing
     }
 
 
@@ -592,7 +597,7 @@ view (DatePicker model) =
                 , outsideMouseEvent
                 ]
                 (if model.datepickerVisibility == Open then
-                    calendarPositioning model.uiButton model.uiElement model.windowSize
+                    calendarPositioning model.uiButton model.uiElement model.windowSize model.yPadding
 
                  else
                     []
@@ -1947,11 +1952,11 @@ dayCalendarView currentMonth currentDay model =
     td [ classList, setDate, hoverAttr ] [ div [] content ]
 
 
-calendarPositioning : Maybe Element -> Maybe Element -> WindowSize -> List (Attribute msg)
-calendarPositioning buttonElement calendarElement windowSize =
+calendarPositioning : Maybe Element -> Maybe Element -> WindowSize -> Maybe Int -> List (Attribute msg)
+calendarPositioning buttonElement calendarElement windowSize ypadding =
     case ( buttonElement, calendarElement ) of
         ( Just button, Just calendar ) ->
-            [ calculateYPosition button calendar windowSize
+            [ calculateYPosition button calendar windowSize (Maybe.withDefault 0 ypadding)
             , calculateXPosition button calendar windowSize
             ]
 
@@ -1974,15 +1979,15 @@ addPx str =
     str ++ "px"
 
 
-calculateYPosition : Element -> Element -> WindowSize -> Attribute msg
-calculateYPosition button calendar { height } =
+calculateYPosition : Element -> Element -> WindowSize -> Int -> Attribute msg
+calculateYPosition button calendar { height } ypadding =
     let
         ( yNum, yName ) =
             if button.element.y < (height / 2) then
-                ( additionalCalcForTop button.element.y, "top" )
+                ( additionalCalcForTop button.element.y + toFloat ypadding, "top" )
 
             else
-                ( additionalCalcForBottom (height - (button.element.y + button.element.height)), "bottom" )
+                ( additionalCalcForBottom (height - (button.element.y + button.element.height)) - toFloat ypadding, "bottom" )
 
         additionalCalcForBottom num =
             if button.element.y > calendar.element.height then

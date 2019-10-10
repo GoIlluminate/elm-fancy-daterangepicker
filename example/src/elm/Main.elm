@@ -83,6 +83,7 @@ initialModel now zone =
                     , displayTimezone = zone
                     , clockStyle = DateRangePicker.H12
                     , datepickerVisibility = vis
+                    , yPadding = Just 20
                 }
     in
     { calendarDisplay = calendarDisplay
@@ -238,7 +239,7 @@ view bootstrapModel =
                         , div [] [ text <| "UtcTime: " ++ utcSel ]
                         ]
             in
-            div [ ]
+            div []
                 [ calendarDisplayOptions model
                 , button [ class "toggle-theme", Html.Events.onClick ToggleColorTheme ] [ text "Toggle Color Theme" ]
                 , Html.map DatePickerMsgs selector1
