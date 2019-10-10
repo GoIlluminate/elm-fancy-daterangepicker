@@ -1,13 +1,12 @@
 module DateRangePicker exposing
-    ( Msg, DatePicker, subscriptions, view, update, getConfig
+    ( Msg, DatePicker, subscriptions, view, update
     , open, defaultOpener
-    , DatePickerVisibility(..)
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
-    , defaultPresets, isOpen, openMsg, setDisplayFormat
-    , ClockStyle(..), focusInput)
+    , ClockStyle(..), DatePickerVisibility(..), defaultPresets, focusInput, getConfig, isOpen, openMsg, setDisplayFormat
+    )
 
 {-| A customizable date picker component.
 
@@ -200,6 +199,7 @@ type ClockStyle
     = H24
     | H12
 
+
 type MenuVisibility
     = MenuOpen
     | MenuClosed
@@ -311,7 +311,7 @@ initWithOptions now displayDate config =
         , allowedRange = config.allowedRange
         , presets = config.presets
         , calendarType = config.calendarType
-        , datepickerVisibility = config.datepickerVisibility 
+        , datepickerVisibility = config.datepickerVisibility
         , dateSelectionType = config.dateSelectionType
         , hidePresets = config.hidePresets
         , selection = selectionToSelection config.defaultSelection
@@ -337,6 +337,7 @@ type alias Config =
     , clockStyle : ClockStyle
     }
 
+
 {-| Gets the current languageConfig
 -}
 getConfig : DatePicker -> Config
@@ -349,11 +350,12 @@ getConfig (DatePicker model) =
     , dateSelectionType = model.dateSelectionType
     , canChooseTime = model.canChooseTime
     , hidePresets = model.hidePresets
-    , defaultSelection = (Just model.selection)
+    , defaultSelection = Just model.selection
     , displayTimezone = model.displayTimezone
-    , displayDate = (Just model.now)
+    , displayDate = Just model.now
     , clockStyle = model.clockStyle
     }
+
 
 {-| A record that can be used if a language other than english is wanted.
 -}
@@ -511,15 +513,19 @@ subscriptions (DatePicker model) =
                 , Browser.Events.onVisibilityChange (EndSelection model.currentlyHoveredDate |> always)
                 , Time.every 750 (always <| CheckToMoveToNextVisibleRange)
                 ]
+
             else
                 []
+
         mouseMove =
             if model.isMouseOutside && model.isMouseDown then
-                [ Browser.Events.onMouseMove (Json.map OnMouseMove Mouse.eventDecoder )
+                [ Browser.Events.onMouseMove (Json.map OnMouseMove Mouse.eventDecoder)
                 , Browser.Events.onMouseUp (Json.succeed OnMouseUp)
                 ]
+
             else
                 []
+
         alwaysSubbed =
             [ Browser.Events.onResize OnWindowsResize, Time.every (60 * 1000) GotTime ]
 
@@ -530,18 +536,18 @@ subscriptions (DatePicker model) =
             else
                 []
     in
-        case model.datepickerVisibility of
-            Open ->
-                List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed ]
-                    |> Sub.batch
+    case model.datepickerVisibility of
+        Open ->
+            List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed ]
+                |> Sub.batch
 
-            AlwaysOpen ->
-                List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed, mouseMove ]
-                    |> Sub.batch
+        AlwaysOpen ->
+            List.concat [ shiftSubs, mouseSubs, [ Keyboard.downs KeyDown ], closeSub, alwaysSubbed, mouseMove ]
+                |> Sub.batch
 
-            Closed ->
-                alwaysSubbed
-                    |> Sub.batch
+        Closed ->
+            alwaysSubbed
+                |> Sub.batch
 
 
 {-| The update for the datepicker. You will need to integrate this into your own update.
@@ -585,13 +591,19 @@ view (DatePicker model) =
                 , Attrs.id "elm-fancy--daterangepicker--wrapper"
                 , outsideMouseEvent
                 ]
-                (if model.datepickerVisibility == Open then calendarPositioning model.uiButton model.uiElement model.windowSize else [])
+                (if model.datepickerVisibility == Open then
+                    calendarPositioning model.uiButton model.uiElement model.windowSize
+
+                 else
+                    []
+                )
     in
     case model.datepickerVisibility of
         AlwaysOpen ->
-            div [ Attrs.class "elm-fancy--daterangepicker elm-fancy--daterangepicker--always-open"
+            div
+                [ Attrs.class "elm-fancy--daterangepicker elm-fancy--daterangepicker--always-open"
                 , Html.Events.onMouseLeave <| SetMouseOutside True
-                , Html.Events.onMouseEnter <| SetMouseOutside False 
+                , Html.Events.onMouseEnter <| SetMouseOutside False
                 ]
                 [ div
                     calendarAttrs
@@ -602,8 +614,9 @@ view (DatePicker model) =
                     , bottomBar model
                     ]
                 ]
+
         Open ->
-            div [ Attrs.class "elm-fancy--daterangepicker"  ]
+            div [ Attrs.class "elm-fancy--daterangepicker" ]
                 [ div
                     [ Attrs.class "elm-fancy--daterangepicker-close"
                     , outsideMouseEvent
@@ -678,11 +691,13 @@ displayFormat : DatePicker -> Format
 displayFormat (DatePicker model) =
     model.displayFormat
 
+
 {-| sets the current selection format
 -}
 setDisplayFormat : Format -> DatePicker -> DatePicker
-setDisplayFormat format (DatePicker model) = 
-    DatePicker {model | displayFormat = format}
+setDisplayFormat format (DatePicker model) =
+    DatePicker { model | displayFormat = format }
+
 
 {-| Set whether or not the datepicker is open. Usually you should use @open or @defaultOpener to manage this.
 -}
@@ -770,10 +785,6 @@ languageConfig (DatePicker model) =
     model.languageConfig
 
 
-
-
-
-
 {-| Change the datePicker's current config. This will reset changed state.
 -}
 updateModelWithConfig : DatePicker -> Config -> DatePicker
@@ -783,7 +794,7 @@ updateModelWithConfig (DatePicker model) config =
             | allowedRange = config.allowedRange
             , presets = config.presets
             , calendarType = config.calendarType
-            , datepickerVisibility = config.datepickerVisibility 
+            , datepickerVisibility = config.datepickerVisibility
             , dateSelectionType = config.dateSelectionType
             , hidePresets = config.hidePresets
             , selection = selectionToSelection config.defaultSelection
@@ -799,11 +810,13 @@ setSelection : Selection -> DatePicker -> DatePicker
 setSelection selection (DatePicker model) =
     let
         newSelection =
-            case selection of 
+            case selection of
                 Before parts ->
                     Before <| getEndOfDayParts parts
+
                 After parts ->
                     After <| getStartOfDayParts parts
+
                 _ ->
                     selection
     in
@@ -824,10 +837,15 @@ displaygetSelection : DatePicker -> String
 displaygetSelection datePicker =
     prettyFormatSelectionInZone datePicker Time.utc
 
-{-focuses the inputbox -}
+
+
+{- focuses the inputbox -}
+
+
 focusInput : Cmd Msg
 focusInput =
     Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--input"
+
 
 innerUpdate : Msg -> Model -> ( Model, Cmd Msg )
 innerUpdate msg model =
@@ -836,13 +854,6 @@ innerUpdate msg model =
             R2.withNoCmd model
 
         OpenDatePicker buttonId ->
-            let
-                newVisibility =
-                    if model.datepickerVisibility == AlwaysOpen then
-                        AlwaysOpen
-                    else
-                        Open
-            in
             R2.withCmds
                 [ Task.attempt OnGetElementSuccess <|
                     getElement "elm-fancy--daterangepicker--wrapper"
@@ -853,13 +864,14 @@ innerUpdate msg model =
                 , Task.attempt GotViewPort <|
                     Dom.getViewport
                 ]
-                { model | datepickerVisibility = newVisibility }
+                model
 
         CloseDatePicker ->
             let
                 newVisibility =
                     if model.datepickerVisibility == AlwaysOpen then
                         AlwaysOpen
+
                     else
                         Closed
             in
@@ -892,8 +904,10 @@ innerUpdate msg model =
 
                 DateRangeSelection ->
                     withUpdatedSelection (Selecting { start = posix, end = posix }) { model | isMouseDown = True }
-                        |> R2.withCmd (Task.attempt OnGetElementSuccess <|
-                            getElement "elm-fancy--daterangepicker--wrapper")
+                        |> R2.withCmd
+                            (Task.attempt OnGetElementSuccess <|
+                                getElement "elm-fancy--daterangepicker--wrapper"
+                            )
 
         EndSelection posix ->
             case posix of
@@ -939,12 +953,13 @@ innerUpdate msg model =
                         { model | currentlyHoveredDate = Just posix }
             in
             R2.withNoCmd withNewSelection
+
         MouseOutsideOfCalendar ->
-            R2.withNoCmd {model | currentlyHoveredDate = Nothing}
+            R2.withNoCmd { model | currentlyHoveredDate = Nothing }
 
         OnMouseMove event ->
             R2.withNoCmd { model | mousePosition = Just event }
-        
+
         OnMouseUp ->
             R2.withNoCmd { model | isMouseDown = False }
 
@@ -954,7 +969,22 @@ innerUpdate msg model =
         OnGetElementSuccess result ->
             case result of
                 Ok element ->
-                    R2.withNoCmd { model | uiElement = Just element }
+                    let
+                        newModel =
+                            { model | uiElement = Just element }
+
+                        newVisibility =
+                            if model.datepickerVisibility == AlwaysOpen then
+                                AlwaysOpen
+
+                            else
+                                Open
+                    in
+                    if checkIfPositioningPossible newModel then
+                        R2.withNoCmd { newModel | datepickerVisibility = newVisibility }
+
+                    else
+                        R2.withNoCmd newModel
 
                 Err _ ->
                     R2.withNoCmd model
@@ -962,7 +992,22 @@ innerUpdate msg model =
         OnGetDatePickerButton result ->
             case result of
                 Ok element ->
-                    R2.withNoCmd { model | uiButton = Just element }
+                    let
+                        newModel =
+                            { model | uiButton = Just element }
+
+                        newVisibility =
+                            if model.datepickerVisibility == AlwaysOpen then
+                                AlwaysOpen
+
+                            else
+                                Open
+                    in
+                    if checkIfPositioningPossible newModel then
+                        R2.withNoCmd { newModel | datepickerVisibility = newVisibility }
+
+                    else
+                        R2.withNoCmd newModel
 
                 Err _ ->
                     R2.withNoCmd model
@@ -1128,7 +1173,17 @@ onKeyDown model key =
                 R2.withNoCmd { model | presetMenuVisibility = MenuClosed, keyboardSelectedPreset = Nothing }
 
             else
-                R2.withNoCmd { model | datepickerVisibility = if model.datepickerVisibility == AlwaysOpen then AlwaysOpen else Closed, uiButton = Nothing, uiElement = Nothing }
+                R2.withNoCmd
+                    { model
+                        | datepickerVisibility =
+                            if model.datepickerVisibility == AlwaysOpen then
+                                AlwaysOpen
+
+                            else
+                                Closed
+                        , uiButton = Nothing
+                        , uiElement = Nothing
+                    }
 
         ArrowDown ->
             arrowMovement model 1 SelectList.fromList
@@ -1350,10 +1405,11 @@ presetsDisplay model =
     let
         shouldShowPresetSelector =
             not (List.isEmpty model.presets) && not model.hidePresets
-        
+
         openPreset =
             if model.presetMenuVisibility == MenuOpen then
                 Attrs.class ""
+
             else
                 Html.Events.onClick <| SetPresetMenuVisibility MenuOpen
     in
@@ -1402,13 +1458,14 @@ presetMenu model =
 bottomBar : Model -> Html Msg
 bottomBar model =
     let
-        content = 
+        content =
             case model.datepickerVisibility of
                 AlwaysOpen ->
                     [ button [ Attrs.class "reset", Html.Events.onClick Reset ]
                         [ text model.languageConfig.reset ]
                     ]
-                _ -> 
+
+                _ ->
                     [ button
                         [ Attrs.id "elm-fancy--daterangepicker--done"
                         , Attrs.class "done"
@@ -1623,7 +1680,7 @@ wildcardInputConversion inputDate getParts clockStyle =
             ( datePartsToParts dateParts, DateFormat )
 
         FullDateTime dateTimeParts ->
-            ( dateTimePartsToParts dateTimeParts, DateTimeFormat clockStyle)
+            ( dateTimePartsToParts dateTimeParts, DateTimeFormat clockStyle )
 
 
 singleInputConversion : InputDate -> Model -> ( Selection, Format )
@@ -1737,7 +1794,7 @@ yearCalendarView model =
                 [ Attrs.class "quarters" ]
                 [ quarter "Q1" Jan Mar, quarter "Q2" Apr Jun, quarter "Q3" Jul Sep, quarter "Q4" Oct Dec ]
     in
-    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar", Html.Events.onMouseLeave MouseOutsideOfCalendar]
+    div [ Attrs.id "elm-fancy--daterangepicker-calendar", Attrs.class "year-calendar", Html.Events.onMouseLeave MouseOutsideOfCalendar ]
         [ quarters
         , table []
             [ tbody [ Attrs.class "year" ] <|
@@ -1900,6 +1957,16 @@ calendarPositioning buttonElement calendarElement windowSize =
 
         _ ->
             [ Attrs.style "left" "-9999px" ]
+
+
+checkIfPositioningPossible : Model -> Bool
+checkIfPositioningPossible { uiElement, uiButton } =
+    case ( uiElement, uiButton ) of
+        ( Just _, Just _ ) ->
+            True
+
+        _ ->
+            False
 
 
 addPx : String -> String
@@ -2197,8 +2264,10 @@ singleFormatter displayTime zone language format ( parts, partsTimezone ) =
                                 , DateFormat.text ":"
                                 , DateFormat.minuteFixed
                                 ]
+
                             else
-                            []
+                                []
+
                         H12 ->
                             if displayTime then
                                 [ DateFormat.text " "
@@ -2208,8 +2277,9 @@ singleFormatter displayTime zone language format ( parts, partsTimezone ) =
                                 , DateFormat.text " "
                                 , DateFormat.amPmUppercase
                                 ]
+
                             else
-                            []
+                                []
     in
     DateFormat.formatWithLanguage language.dateFormatLanguage
         ([ DateFormat.monthNameAbbreviated
@@ -2234,12 +2304,12 @@ monthFormatter language =
 rangeFormatter : Bool -> Zone -> LanguageConfig -> Format -> ( PartsRange, Zone ) -> String
 rangeFormatter canDisplayTime zone language format ( { start, end }, partsZone ) =
     let
-        (beginning, ending) =
+        ( beginning, ending ) =
             if posixToMillis (partsToPosix Time.utc start) > posixToMillis (partsToPosix Time.utc end) then
-                (getStartOfDayParts end, getEndOfDayParts start)
+                ( getStartOfDayParts end, getEndOfDayParts start )
 
             else
-                (start, end)
+                ( start, end )
     in
     singleFormatter canDisplayTime zone language format ( beginning, partsZone )
         ++ " to "
