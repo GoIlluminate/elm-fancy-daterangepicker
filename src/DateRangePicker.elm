@@ -267,6 +267,7 @@ type alias Model =
     , now : Posix
     , clockStyle : ClockStyle
     , yPadding : Maybe Int
+    , displayDate : Maybe Posix
     }
 
 
@@ -280,20 +281,8 @@ type DatePicker
 -}
 initWithOptions : Posix -> Maybe Posix -> Config -> DatePicker
 initWithOptions now displayDate config =
-    let
-        getVisibleRange date =
-            calcVisibleRange (posixToParts config.displayTimezone date) config.calendarType
-
-        visibleRange =
-            case displayDate of
-                Just dd ->
-                    getVisibleRange dd
-
-                Nothing ->
-                    getVisibleRange now
-    in
     DatePicker <|
-        { visibleCalendarRange = visibleRange
+        { visibleCalendarRange = getStartingVisibleRange config.displayTimezone now displayDate config.calendarType
         , isMouseDown = False
         , isShiftDown = False
         , inputText = CommittedInput ""
@@ -319,7 +308,22 @@ initWithOptions now displayDate config =
         , displayTimezone = config.displayTimezone
         , clockStyle = config.clockStyle
         , yPadding = config.yPadding
+        , displayDate = displayDate
         }
+
+
+getStartingVisibleRange : Zone -> Posix -> Maybe Posix -> CalendarType -> PartsRange
+getStartingVisibleRange zone now displayDate calendarType =
+    let
+        getVisibleRange date =
+            calcVisibleRange (posixToParts zone date) calendarType
+    in
+    case displayDate of
+        Just dd ->
+            getVisibleRange dd
+
+        Nothing ->
+            getVisibleRange now
 
 
 {-| A record which specifies config options which can be set when initializes the datepicker
@@ -899,7 +903,7 @@ innerUpdate msg model =
             R2.withNoCmd { model | inputText = DirtyInput newText }
 
         Reset ->
-            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected }
+            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected, visibleCalendarRange = getStartingVisibleRange model.displayTimezone model.now model.displayDate model.calendarType }
 
         StartSelection posix ->
             case model.dateSelectionType of

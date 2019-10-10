@@ -83,7 +83,6 @@ initialModel now zone =
                     , displayTimezone = zone
                     , clockStyle = DateRangePicker.H12
                     , datepickerVisibility = vis
-                    , yPadding = Just 20
                 }
     in
     { calendarDisplay = calendarDisplay
