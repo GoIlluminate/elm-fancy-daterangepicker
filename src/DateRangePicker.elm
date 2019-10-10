@@ -1,6 +1,7 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , open, defaultOpener
+    , resetModel
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
@@ -812,6 +813,16 @@ updateModelWithConfig (DatePicker model) config =
             , clockStyle = config.clockStyle
         }
 
+{-| Change the datePicker's current config. This will reset changed state.
+-}
+resetModel : DatePicker -> DatePicker
+resetModel (DatePicker model) =
+    DatePicker
+        { model
+            | selection = Unselected
+            , inputText = CommittedInput ""
+            , visibleCalendarRange = getStartingVisibleRange model.displayTimezone model.now model.displayDate model.calendarType
+        }
 
 {-| Sets the datepicker's selection outside of the ui. Normally the ui should have all the interactions you would want.
 -}
@@ -903,7 +914,12 @@ innerUpdate msg model =
             R2.withNoCmd { model | inputText = DirtyInput newText }
 
         Reset ->
-            R2.withNoCmd { model | inputText = CommittedInput "", selection = Unselected, visibleCalendarRange = getStartingVisibleRange model.displayTimezone model.now model.displayDate model.calendarType }
+            R2.withNoCmd
+                { model
+                    | inputText = CommittedInput ""
+                    , selection = Unselected
+                    , visibleCalendarRange = getStartingVisibleRange model.displayTimezone model.now model.displayDate model.calendarType
+                }
 
         StartSelection posix ->
             case model.dateSelectionType of
