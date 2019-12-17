@@ -1,12 +1,11 @@
 module DateRangePicker exposing
     ( Msg, DatePicker, subscriptions, view, update
     , open, defaultOpener
-    , resetModel
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
     , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
     , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
     , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
-    , ClockStyle(..), DatePickerVisibility(..), defaultPresets, focusInput, getConfig, isOpen, openMsg, setDisplayFormat
+    , ClockStyle(..), DatePickerVisibility(..), defaultPresets, focusInput, getConfig, getEndOfDayParts, getStartOfDayParts, isOpen, openMsg, resetModel, setDisplayFormat
     )
 
 {-| A customizable date picker component.
@@ -813,6 +812,7 @@ updateModelWithConfig (DatePicker model) config =
             , clockStyle = config.clockStyle
         }
 
+
 {-| Change the datePicker's current config. This will reset changed state.
 -}
 resetModel : DatePicker -> DatePicker
@@ -823,6 +823,7 @@ resetModel (DatePicker model) =
             , inputText = CommittedInput ""
             , visibleCalendarRange = getStartingVisibleRange model.displayTimezone model.now model.displayDate model.calendarType
         }
+
 
 {-| Sets the datepicker's selection outside of the ui. Normally the ui should have all the interactions you would want.
 -}
