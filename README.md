@@ -4,323 +4,146 @@
 elm install goilluminate/elm-fancy-daterangepicker
 ```
 
-A reusable daterange picker component in Elm.
-
-## Example
-[Ellie App Example](https://ellie-app.com/6c5bkBDHJrVa1)
+A reusable daterange picker in Elm.
 
 ## DateRangePicker
 
 ### Usage
 
-The `DateRangePicker.init` function initialises the DateRangePicker.  It returns the initialised DateRangePicker and associated `Cmds` so it must be done in your program's `init` or `update` functions:
-
-**Note** Make sure you don't throw away the initial `Cmd`!
+#### Initializing
+The `DateRangePicker.init` function initialises the DateRangePicker's state.
 
 ```elm
-init : (Model, Cmd Msg)
-...
-    let
-        (dateRangePicker, dateRangePickerCmd) =
-            DateRangePicker.init
-    in
-        { model
-            | dateRangePicker = dateRangePicker
-            , Cmd.map SetDateRangePicker dateRangePickerCmd
-        }
+init : Model
+init =
+    { ...
+        dateRangePicker = DateRangePicker.init
+      ...
+    }
 
 ```
-The `DateRangePicker` can be displayed in the view using the `DateRangePicker.view` function.  It returns its own message type so you should wrap it in one of your own messages using `Html.map`:
+
+#### View
+The `DateRangePicker` can be displayed in the view using the `DateRangePicker.view` function.  It returns its own message type so you should wrap it in one of your own messages using `Html.map`.
+You will need to have fetched the currentTime and localZone beforehand using `Time.now` and `Time.here`
 ```elm
 type Msg
     = ...
-    | SetDateRangePicker DateRangePicker.Msg
+    | DatePickerMsgs DateRangePicker.Msg
     | ...
 
 view : Model -> Html Msg
 view model =
     ...
     div []
-        [ DateRangePicker.view model.dateRangePicker |> Html.map SetDateRangePicker
+        [ DateRangePicker.view 
+            model.currentTime
+            model.localZone
+            model.dateRangePicker |> Html.map DatePickerMsgs
         ]
 ```
 
+There is a helper method for opening the daterangepicker, which puts an onClick with the appropriate message onto the html element.
+```elm
+button [ DateRangePicker.open "datepicker-button", Html.Attribute.id "datepicker-button" ] [ text "Open Picker" ]
+``` 
+
+#### Update
 To handle `Msg` in your update function, you should unwrap the `DateRangePicker.Msg` and pass it down to the `DateRangePicker.update` function.  The `DateRangePicker.update` function returns:
 
 * the new model
 * any command
 
-To create the settings to pass to `setSettings` when you initialise the DateRangePicker, `DateRangePicker.defaultSettings` is provided to make it easier to use.  You only have to override the settings that you are interested in.
 
 ```elm
-someSettings : DateRangePicker.Settings
-someSettings =
-    ...
-    { defaultSettings
-        | formatDateRange = newFormatDateRange
-        , placeholder = "No daterange is selected."
+    DatePickerMsgs msg_ ->
+        let
+            ( newDateRangePicker, dateRangePickerCmd ) =
+                DateRangePicker.update msg_ model.dateRangePicker
+        in
+        ( { model | dateRangePicker = newDateRangePicker }, Cmd.map DatePickerMsgs dateRangePickerCmd )
+```
+
+#### Subscriptions
+You will need to hook up subscriptions for the daterangepicker to fully function. It will also need the current time and local zone.
+
+```elm
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    let
+        pickerSubscriptions =
+            case ( model.currentTime, model.localZone ) of
+                ( Just currentTime, Just localZone ) ->
+                    DateRangePicker.subscriptions model.datePicker currentTime localZone
+
+                _ ->
+                    Sub.none
+    in
+    Sub.map DatePickerMsgs pickerSubscriptions
+```
+
+#### Settings
+
+The DateRangePicker has several settings which can be changed as wanted. You can set these at init time with `initWithOptions`. If you don't want to change all the options you can combine with this `defaultConfig` like so:
+ 
+
+```elm
+init : Model
+init =
+    { ...
+        dateRangePicker = DateRangePicker.initWithOptions
+                              { defaultConfig
+                                  | calendarType = TwoMonths
+                                  , dateSelectionType = DateSelection
+                              }
+      ...
     }
 
-init : (Model, Cmd Msg)
-...
-    let
-        (dateRangePicker_, dateRangePickerCmd) =
-            DateRangePicker.init
-        
-        dateRangePicker =
-            dateRangePicker_
-                |> setSettings someSettings
-    in
-        { model
-            | dateRangePicker = dateRangePicker
-            , Cmd.map SetDateRangePicker dateRangePickerCmd
-        }
 ```
 
-The DateRangePicker has `Presets` which are preset date ranges that can be selected.  You can configure these yourself or use the `DateRangePicker.defaultPresetOptions`.
+There is also a concept of Presets which can allow a user to quickly select a date or dateRange which is commonly used. There are a couple premade presets that you can use as well.
 
-To create these presets yourself, you can create them from a `DateRangePicker.PresetOptions`.
+The CustomPresets are set relative to the current date. All of them can be set at init time.
 
 ```elm
-somePresetSettings : List DateRangePicker.PresetSetting
-somePresetSettings =
-    let
-        pastWeek =
-            { name = "Past Week"
-            , interval = Days
-            , presetRelativeToday = ToToday
-            , value = 7
-            }
-
-        pastMonth =
-            { name = "Past Month"
-            , interval = Months
-            , presetRelativeToday = ToToday
-            , value = 1
-            }
-    in
-        [ pastWeek
-        , pastMonth
-        ]
-
-somePresets : List DateRangePicker.Preset
-somePresets =
-    [ mkPresetFromDates "January 1, 2018 to February 1, 2018" (fromCalendarDate 2018 Jan 1) (fromCalendarDate 2018 Feb 1)
-    , mkPresetFromDates "March 1, 2018 to April 1, 2018" (fromCalendarDate 2018 Mar 1) (fromCalendarDate 2018 Apr 1)
-    ]
-
-somePresetOptions : DateRangePicker.PresetOptions
-somePresetOptions =
-    { presetOption = CustomOnly
-    , presetSettings = somePresetSettings
-    , presets = somePresets
+init : Model
+init =
+    { ...
+        dateRangePicker = DateRangePicker.initWithOptions
+                              { defaultConfig
+                                  | presets =
+                                      [ DateRangePicker.Today
+                                      , DateRangePicker.Yesterday
+                                      , DateRangePicker.Custom <|
+                                          { intervalStart = DateRangePicker.Days
+                                          , intervalStartValue = -3
+                                          , intervalEnd = DateRangePicker.Days
+                                          , intervalEndValue = -1
+                                          , display = "Past Three Days"
+                                          }
+                                      , DateRangePicker.PastWeek
+                                      , DateRangePicker.PastMonth
+                                      ]
+                              }
+      ...
     }
 
-someSettings : DateRangePicker.Settings
-someSettings =
-    ...
-    { defaultSettings
-        | presetOptions = somePresetOptions
-    }
+``` 
 
-init : (Model, Cmd Msg)
-...
-    let
-        (dateRangePicker_, dateRangePickerCmd) =
-            DateRangePicker.init
-        
-        dateRangePicker =
-            dateRangePicker_
-                |> setSettings someSettings
-    in
-        { model
-            | dateRangePicker = dateRangePicker
-            , Cmd.map SetDateRangePicker dateRangePickerCmd
-        }
-```
-
-You can create your settings and then use `DateRangePicker.setSettings` like we have been doing in the previous examples, or you can chain setters in your `init` function like so:
-
-```elm
-init : (Model, Cmd Msg)
-...
-    let
-        (dateRangePicker_, dateRangePickerCmd) =
-            DateRangePicker.init
-        
-        dateRangePicker =
-            dateRangePicker_
-                |> setSettings defaultSettings
-                |> setInputId "myDateRangePicker"
-                |> setPresetOptions somePresetOptions
-                |> setPlaceholder "No date selected"
-                |> setDateRange ( Just (mkDateRange startDate endDate) )
-    in
-        { model
-            | dateRangePicker = dateRangePicker
-            , Cmd.map SetDateRangePicker dateRangePickerCmd
-        }
-```
-
-## DatePicker
-
-### Usage
-
-The `DatePicker.init` function initialises the DatePicker.  It returns the initialised DatePicker and associated `Cmds` so it must be done in your program's `init` or `update` functions:
-
-**Note** Make sure you don't throw away the initial `Cmd`!
-
-```elm
-init : (Model, Cmd Msg)
-...
-    let
-        (datePicker, datePickerCmd) =
-            DatePicker.init
-    in
-        { model
-            | datePicker = datePicker
-            , Cmd.map SetDatePicker datePickerCmd
-        }
-```
-
-The `DatePicker` can be displayed in the view using the `DatePicker.view` function.  It returns its own message type so you should wrap it in one of your own messages using `Html.map`:
-
-```elm
-type Msg
-    = ...
-    | SetDatePicker DatePicker.Msg
-    | ...
-
-view : Model -> Html Msg
-view model =
-    ...
-    div []
-        [ DatePicker.view model.datePicker |> Html.map SetDatePicker
-        ]
-```
-
-To handle `Msg` in your update function, you should unwrap the `DatePicker.Msg` and pass it down to the `DatePicker.update` function.  The `DatePicker.update` function returns:
-
-* the new model
-* any command
-
-To create the settings to pass to `setSettings` when you initialise the DatePicker, `DatePicker.defaultSettings` is provided to make it easier to use.  You only have to override the settings that you are interested in.
-
-```elm
-someSettings : DatePicker.Settings
-someSettings =
-    ...
-    { defaultSettings
-        | formatDate = newFormatDate
-        , placeholder = "No date range is selected."
-    }
-
-init : (Model, Cmd Msg)
-...
-    let
-        (datePicker_, datePickerCmd) =
-            DatePicker.init
-        
-        datePicker =
-            datePicker_
-                |> setSettings someSettings
-    in
-        { model
-            | datePicker = datePicker
-            , Cmd.map SetDatePicker datePickerCmd
-        }
-```
-
-The DatePicker has `Presets` which are preset dates that can be selected.  You can configure these yourself or use the `DatePicker.defaultPresetOptions`.
-
-To create these presets yourself, you can create them from a `DatePicker.PresetOptions`.
-
-```elm
-somePresetSettings : List DatePicker.PresetSetting
-somePresetSettings =
-    let
-        yesterday =
-            { name = "Yesterday"
-            , interval = Days
-            , presetRelativeToday = Yesterday
-            , value = 1
-            }
-
-        theDayAfterTomorrow =
-            { name = "The day after tomorrow"
-            , interval = Days
-            , presetRelativeToday = AfterToday
-            , value = 2
-            }
-    in
-        [ yesterday
-        , theDayAfterTomorrow
-        ]
-
-somePresets : List DatePicker.Preset
-somePresets =
-    [ mkPresetFromDate "January 1, 2018" (fromCalendarDate 2018 Jan 1)
-    , mkPresetFromDate "March 1, 2018" (fromCalendarDate 2018 Mar 1)
-    ]
-
-somePresetOptions : DatePicker.PresetOptions
-somePresetOptions =
-    { presetOption = CustomOnly
-    , presetSettings = somePresetSettings
-    , presets = somePresets
-    }
-
-someSettings : DatePicker.Settings
-someSettings =
-    ...
-    { defaultSettings
-        | presetOptions = somePresetOptions
-    }
-
-init : (Model, Cmd Msg)
-...
-    let
-        (datePicker_, datePickerCmd) =
-            DatePicker.init
-        
-        datePicker =
-            datePicker_
-                |> setSettings someSettings
-    in
-        { model
-            | datePicker = datePicker
-            , Cmd.map SetDatePicker datePickerCmd
-        }
-```
-
-You can create your settings and then use `DatePicker.setSettings` like we have been doing in the previous examples, or you can chain setters in your `init` function like so:
-
-```elm
-init : (Model, Cmd Msg)
-...
-    let
-        (datePicker_, datePickerCmd) =
-            DatePicker.init
-        
-        datePicker =
-            datePicker_
-                |> setSettings defaultSettings
-                |> setInputId "myDatePicker"
-                |> setPresetOptions somePresetOptions
-                |> setPlaceholder "No date selected"
-                |> setDate (Just (fromCalendarDate someDate) )
-    in
-        { model
-            | datePicker = datePicker
-            , Cmd.map SetDatePicker datePicker
-        }
-```
 
 ## CSS
 
 The CSS for the date pickers are distributed separately.  You can grab
 the compiled CSS from [here][compiled] or you can grab the SCSS source
-from [here][scss].
+from [here][scss]. There is both a light and dark theme available. You will need to have a parent element which sets the appropriate color class.
+
+```elm
+div [Attributes.class "theme-light"] [DateRangePicker.view ...]
+```
+or
+```elm
+div [Attributes.class "theme-dark"] [DateRangePicker.view ...]
+```
 
 [compiled]: https://github.com/goilluminate/elm-fancy-daterangepicker/blob/master/css/daterangepicker.css
 [scss]: https://github.com/goilluminate/elm-fancy-daterangepicker/blob/master/css/daterangepicker.scss
@@ -331,7 +154,7 @@ If you run into the compiler error [`Map.!: given key is not an element in the
 map`](https://github.com/elm/compiler/issues/1851), try moving
 "justinmimbs/date" into your direct dependencies. It _may_ fix the error.
 
-## Example
+## Development
 
 ### Prerequisites
 - [Ruby][ruby-link]
@@ -358,8 +181,3 @@ This will:
 npm install elm-test -g
 ```
 
-## References
-
-When this package was first created, the [elm-community/elm-datepicker][elm-community-datepicker] package was referenced and some of the code/ideas were used.
-
-[elm-community-datepicker]: https://github.com/elm-community/elm-datepicker

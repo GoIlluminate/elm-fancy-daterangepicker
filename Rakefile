@@ -15,6 +15,11 @@ task :build do
     sh("cd example && npm run build")
 end
 
+task :css do 
+    sh("rm -rf ./css/daterangepicker.css")
+    sh("npm run scss")
+end
+
 task :test do
     sh("./node_modules/.bin/elm-test --compiler=./node_modules/.bin/elm")
 end
