@@ -644,7 +644,11 @@ view (DatePicker model) =
                 ]
 
         Closed ->
-            text ""
+            div [ Attrs.class "elm-fancy--daterangepicker" ]
+                [ div
+                    calendarAttrs
+                    []
+                ]
 
 
 getTodayParts : Model -> Parts
