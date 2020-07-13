@@ -2487,7 +2487,7 @@ convertInterval interval intervalValue today =
             addMonthsToParts intervalValue today
 
         Weeks ->
-            addDaysToParts (intervalValue * -7) today
+            addDaysToParts (intervalValue * 7) today
 
         Years ->
             addYearsToParts intervalValue today
