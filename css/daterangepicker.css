@@ -55,11 +55,11 @@
   .elm-fancy--daterangepicker.theme-light .top-bar--full,
   .theme-light .elm-fancy--daterangepicker .top-bar--full {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) 4fr minmax(15px, max-content); }
+    grid-template-columns: max-content auto 4fr minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-light .top-bar--partial,
   .theme-light .elm-fancy--daterangepicker .top-bar--partial {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 2fr minmax(15px, max-content); }
+    grid-template-columns: minmax(0, 1fr) auto minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-light .clock-unselected, .elm-fancy--daterangepicker.theme-light .clock-selected,
   .theme-light .elm-fancy--daterangepicker .clock-unselected,
   .theme-light .elm-fancy--daterangepicker .clock-selected {
@@ -299,11 +299,11 @@
   .elm-fancy--daterangepicker.theme-dark .top-bar--full,
   .theme-dark .elm-fancy--daterangepicker .top-bar--full {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) 4fr minmax(15px, max-content); }
+    grid-template-columns: max-content auto 4fr minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-dark .top-bar--partial,
   .theme-dark .elm-fancy--daterangepicker .top-bar--partial {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 2fr minmax(15px, max-content); }
+    grid-template-columns: minmax(0, 1fr) auto minmax(15px, max-content); }
   .elm-fancy--daterangepicker.theme-dark .clock-unselected, .elm-fancy--daterangepicker.theme-dark .clock-selected,
   .theme-dark .elm-fancy--daterangepicker .clock-unselected,
   .theme-dark .elm-fancy--daterangepicker .clock-selected {

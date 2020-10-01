@@ -42,7 +42,7 @@ module DateRangePicker exposing
 
 import Browser.Dom as Dom exposing (Element, Error, Viewport, getElement)
 import Browser.Events
-import DateFormat
+import DateFormat exposing (Token)
 import DateFormat.Language as DateFormat
 import DateRangePicker.DateRecordParser exposing (Input(..), InputDate(..), YearAndMonth, datePartsToParts, dateTimePartsToParts, parseDateTime, yearAndMonthToParts, yearToParts)
 import DateRangePicker.Helper exposing (onClickNoDefault)
@@ -385,6 +385,7 @@ type alias LanguageConfig =
     , am : String
     , pm : String
     , to : String
+    , displayFormat : List Token
     }
 
 
@@ -408,7 +409,14 @@ englishLanguageConfig =
     , afterThisDate = "And After"
     , am = "am"
     , pm = "pm"
-    , to = "to"
+    , to = " to "
+    , displayFormat = ([ DateFormat.monthNameAbbreviated
+                               , DateFormat.text " "
+                               , DateFormat.dayOfMonthNumber
+                               , DateFormat.text ", "
+                               , DateFormat.yearNumber
+                               ]
+                              )
     }
 
 
@@ -2312,14 +2320,7 @@ singleFormatter displayTime zone language format ( parts, partsTimezone ) =
                                 []
     in
     DateFormat.formatWithLanguage language.dateFormatLanguage
-        ([ DateFormat.monthNameAbbreviated
-         , DateFormat.text " "
-         , DateFormat.dayOfMonthNumber
-         , DateFormat.text ", "
-         , DateFormat.yearNumber
-         ]
-            ++ timeParts
-        )
+        (language.displayFormat ++ timeParts)
         zone
         (partsToPosix partsTimezone parts)
 
@@ -2342,7 +2343,7 @@ rangeFormatter canDisplayTime zone language format ( { start, end }, partsZone )
                 ( start, end )
     in
     singleFormatter canDisplayTime zone language format ( beginning, partsZone )
-        ++ " to "
+        ++ language.to
         ++ singleFormatter canDisplayTime zone language format ( ending, partsZone )
 
 
