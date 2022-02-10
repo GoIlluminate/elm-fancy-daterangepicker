@@ -28,6 +28,6 @@
     "natives": "^1.1.6"
   },
   "dependencies": {
-    "node-sass": "^4.12.0"
+    "node-sass": "^7.0.0"
   }
 }
