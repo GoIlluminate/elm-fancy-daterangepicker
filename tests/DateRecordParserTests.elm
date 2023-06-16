@@ -237,6 +237,19 @@ dateTestSuite =
                 equal
                     (Ok <| AfterInput <| FullDateTime <| { year = 2000, month = 1, day = 1, hour = 1, minute = 5 })
                     (defaultParse "01-01-2000 01:05 and after")
+        , test "fails to parse ranges if the 'to' token has spaces" <|
+            \_ ->
+                let
+                    defaultLanguageConfig =
+                        defaultParseConfig.language
+
+                    invalidLanguageConfig =
+                        { defaultLanguageConfig | to = " to " }
+
+                    invalidParseConfig =
+                        { defaultParseConfig | language = invalidLanguageConfig }
+                in
+                Expect.err (parseDateTime invalidParseConfig "01 01 2000 to 01 01 2000")
         ]
 
 
