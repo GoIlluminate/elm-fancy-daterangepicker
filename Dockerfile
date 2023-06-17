@@ -1,5 +1,5 @@
 #####################
-FROM node:18-bullseye-slim AS builder
+FROM node:18-bullseye AS builder
 WORKDIR /
 COPY package.json /
 COPY package-lock.json /
