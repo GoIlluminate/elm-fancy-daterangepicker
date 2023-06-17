@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "./node_modules/.bin/elm-test --compiler=./node_modules/.bin/elm",
-    "scss": "node-sass ./css/styles.scss ./css/daterangepicker.css"
+    "scss": "sass ./css/styles.scss ./css/daterangepicker.css"
   },
   "repository": {
     "type": "git",
@@ -28,6 +28,6 @@
     "natives": "^1.1.6"
   },
   "dependencies": {
-    "node-sass": "^4.12.0"
+    "sass": "^1.63.4"
   }
 }
