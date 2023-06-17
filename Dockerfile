@@ -1,5 +1,5 @@
 #####################
-FROM node:10.15.0 AS builder
+FROM node:18.16.0 AS builder
 WORKDIR /
 COPY package.json /
 COPY package-lock.json /
