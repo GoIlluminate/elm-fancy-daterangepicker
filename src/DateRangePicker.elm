@@ -409,7 +409,7 @@ englishLanguageConfig =
     , afterThisDate = "And After"
     , am = "am"
     , pm = "pm"
-    , to = " to "
+    , to = "to"
     , displayFormat = ([ DateFormat.monthNameAbbreviated
                                , DateFormat.text " "
                                , DateFormat.dayOfMonthNumber
@@ -2343,7 +2343,9 @@ rangeFormatter canDisplayTime zone language format ( { start, end }, partsZone )
                 ( start, end )
     in
     singleFormatter canDisplayTime zone language format ( beginning, partsZone )
+        ++ " "
         ++ language.to
+        ++ " "
         ++ singleFormatter canDisplayTime zone language format ( ending, partsZone )
 
 

@@ -1,5 +1,5 @@
 #####################
-FROM node:10.15.0 AS builder
+FROM node:18-bullseye AS builder
 WORKDIR /
 COPY package.json /
 COPY package-lock.json /
@@ -7,7 +7,7 @@ RUN npm ci
 COPY elm.json /
 COPY src/ src/
 COPY tests/ tests/
-RUN mkdir /src/elm && \
-    echo "module Dummy exposing (..)\n\nimport DateRangePicker exposing (..)\n\ntype Model = Int\n" > /src/elm/dummy.elm && \
-    ./node_modules/elm/bin/elm make --output=/dev/null /src/elm/dummy.elm
+RUN mkdir /elm && \
+    echo "module Dummy exposing (..)\n\nimport DateRangePicker exposing (..)\n\ntype Model = Int\n" > /elm/Dummy.elm && \
+    ./node_modules/elm/bin/elm make --output=/dev/null /elm/Dummy.elm
 RUN ./node_modules/.bin/elm-test --compiler=./node_modules/.bin/elm

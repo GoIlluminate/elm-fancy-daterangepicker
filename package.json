@@ -8,8 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "scss": "node-sass ./css/styles.scss ./css/daterangepicker.css"
+    "test": "./node_modules/.bin/elm-test --compiler=./node_modules/.bin/elm",
+    "scss": "sass ./css/styles.scss ./css/daterangepicker.css"
   },
   "repository": {
     "type": "git",
@@ -22,12 +22,12 @@
   },
   "homepage": "https://github.com/GoIlluminate/elm-fancy-daterangepicker#readme",
   "devDependencies": {
-    "elm": "^0.19.0",
-    "elm-format": "^0.8.1",
-    "elm-test": "^0.19.0-beta6",
+    "elm": "0.19.1-5",
+    "elm-format": "0.8.7",
+    "elm-test": "0.19.1-revision12",
     "natives": "^1.1.6"
   },
   "dependencies": {
-    "node-sass": "^4.12.0"
+    "sass": "^1.63.4"
   }
 }
