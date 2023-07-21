@@ -852,10 +852,14 @@ setSelection selection (DatePicker model) =
 
                 _ ->
                     selection
-    in
-    DatePicker
-        (withUpdatedSelection newSelection model)
 
+        updated =
+            withUpdatedSelection newSelection model
+
+        withUpdatedViewRange =
+            { updated | visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType (DatePicker updated) }
+    in
+    DatePicker withUpdatedViewRange
 
 {-| A helper function to display the selection in the same way that the datepicker does
 -}
