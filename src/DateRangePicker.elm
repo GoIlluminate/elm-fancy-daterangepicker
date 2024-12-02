@@ -1,11 +1,10 @@
 module DateRangePicker exposing
-    ( Msg, DatePicker, subscriptions, view, update
+    ( Msg, DatePicker, subscriptions, view, update, openMsg
     , open, defaultOpener
     , Selection(..), Format(..), PosixRange, PartsRange, getSelection, getSelectionRange
-    , Config, LanguageConfig, englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
-    , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
-    , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection
-    , ClockStyle(..), DatePickerVisibility(..), defaultPresets, focusInput, getConfig, getEndOfDayParts, getStartOfDayParts, isOpen, openMsg, resetModel, setDisplayFormat
+    , Config, LanguageConfig, DatePickerVisibility(..), ClockStyle(..), englishLanguageConfig, DateSelectionType(..), PresetType(..), Interval(..), CustomPreset, CalendarType(..), defaultConfig, initWithOptions, updateModelWithConfig
+    , setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat, isOpen, resetModel, setDisplayFormat
+    , partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection, defaultPresets, focusInput, getConfig, getEndOfDayParts, getStartOfDayParts
     )
 
 {-| A customizable date picker component.
@@ -13,29 +12,29 @@ module DateRangePicker exposing
 
 # Basics
 
-@docs Msg, DatePicker, subscriptions, view, update
+@docs Msg, DatePicker, subscriptions, view, update, openMsg
 
-@docs init, open, defaultOpener
+@docs open, defaultOpener
 
 
 # Selection
 
-@docs Selection, Format, PosixRange, PartsRange, getSelection, getSelectionRange, getSelectionSingle
+@docs Selection, Format, PosixRange, PartsRange, getSelection, getSelectionRange
 
 
 # Settings
 
-@docs Config, LanguageConfig, englishLanguageConfig, DateSelectionType, PresetType, Interval, CustomPreset, CalendarType, defaultConfig, initWithOptions, updateModelWithConfig
+@docs Config, LanguageConfig, DatePickerVisibility, ClockStyle, englishLanguageConfig, DateSelectionType, PresetType, Interval, CustomPreset, CalendarType, defaultConfig, initWithOptions, updateModelWithConfig
 
 
 # Model Helpers
 
-@docs setCalendarType, datepickerVisibility, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat
+@docs setCalendarType, presets, setOpen, setSelection, languageConfig, selectPreset, displayFormat, isOpen, resetModel, setDisplayFormat
 
 
 # Helpers
 
-@docs partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, selectPreset, displaySelection, displaygetSelection
+@docs partsRangeToPosixRange, presetToDisplayString, hasRangeChanged, hasSelectionChanged, presetToPartsRange, displaySelection, displaygetSelection, defaultPresets, focusInput, getConfig, getEndOfDayParts, getStartOfDayParts
 
 -}
 
@@ -125,6 +124,8 @@ type PresetType
     | Custom CustomPreset
 
 
+{-| The defaults for the preset buttons
+-}
 defaultPresets : List PresetType
 defaultPresets =
     [ Today
@@ -182,6 +183,8 @@ type CalendarType
     | OneMonthCalendar
 
 
+{-| Represents if a single date or a range of dates should be selected.
+-}
 type DateSelectionType
     = DateRangeSelection
     | DateSelection
@@ -194,6 +197,8 @@ type Format
     | DateTimeFormat ClockStyle
 
 
+{-| Represents if times should be displayed in 24 hours or 12 hour format
+-}
 type ClockStyle
     = H24
     | H12
@@ -210,6 +215,8 @@ type alias WindowSize =
     }
 
 
+{-| Holds the beginning and end of the selection
+-}
 type alias PartsRange =
     { start : Parts
     , end : Parts
@@ -231,6 +238,8 @@ getUserDateInput input =
             str
 
 
+{-| The type of that represents the current visibility of the date picker
+-}
 type DatePickerVisibility
     = Open
     | Closed
@@ -409,13 +418,13 @@ englishLanguageConfig =
     , am = "am"
     , pm = "pm"
     , to = "to"
-    , displayFormat = ([ DateFormat.monthNameAbbreviated
-                               , DateFormat.text " "
-                               , DateFormat.dayOfMonthNumber
-                               , DateFormat.text ", "
-                               , DateFormat.yearNumber
-                               ]
-                              )
+    , displayFormat =
+        [ DateFormat.monthNameAbbreviated
+        , DateFormat.text " "
+        , DateFormat.dayOfMonthNumber
+        , DateFormat.text ", "
+        , DateFormat.yearNumber
+        ]
     }
 
 
@@ -458,12 +467,8 @@ open openerId =
     Html.Events.onClick (OpenDatePicker openerId)
 
 
-
-{-
-   The open date picker msg so you can open the date picker with a custom event
+{-| The open date picker msg so you can open the date picker with a custom event
 -}
-
-
 openMsg : String -> Msg
 openMsg openerId =
     OpenDatePicker openerId
@@ -851,14 +856,10 @@ setSelection selection (DatePicker model) =
 
                 _ ->
                     selection
-
-        updated =
-            withUpdatedSelection newSelection model
-
-        withUpdatedViewRange =
-            { updated | visibleCalendarRange = getVisibleRangeFromSelection selection model.calendarType (DatePicker updated) }
     in
-    DatePicker withUpdatedViewRange
+    DatePicker
+        (withUpdatedSelection newSelection model)
+
 
 {-| A helper function to display the selection in the same way that the datepicker does
 -}
@@ -874,10 +875,8 @@ displaygetSelection datePicker =
     prettyFormatSelectionInZone datePicker Time.utc
 
 
-
-{- focuses the inputbox -}
-
-
+{-| focuses the inputbox
+-}
 focusInput : Cmd Msg
 focusInput =
     Task.attempt (always DoNothing) <| Dom.focus "elm-fancy--daterangepicker--input"
@@ -1406,11 +1405,15 @@ getLastDayOfMonthEndOfDayParts parts =
         |> getEndOfDayParts
 
 
+{-| sets all of the timne parts to 0
+-}
 getStartOfDayParts : Parts -> Parts
 getStartOfDayParts parts =
     { parts | hour = 0, minute = 0, second = 0, millisecond = 0 }
 
 
+{-| Sets all of the time parts to their logical end except for milliseconds
+-}
 getEndOfDayParts : Parts -> Parts
 getEndOfDayParts parts =
     { parts | hour = 23, minute = 59, second = 59, millisecond = 0 }
@@ -2499,6 +2502,8 @@ convertInterval interval intervalValue today =
             addYearsToParts intervalValue today
 
 
+{-| Converts a preset to a selectable value
+-}
 presetToPartsRange : DatePicker -> PresetType -> PartsRange
 presetToPartsRange (DatePicker model) presetType =
     let
@@ -2561,10 +2566,8 @@ calendarIcon =
         ]
 
 
-
-{- conversion from partsrnage to posix range -}
-
-
+{-| conversion from partsrnage to posix range
+-}
 partsRangeToPosixRange : Zone -> PartsRange -> PosixRange
 partsRangeToPosixRange zone { start, end } =
     { start = partsToPosix zone start, end = partsToPosix zone end }
