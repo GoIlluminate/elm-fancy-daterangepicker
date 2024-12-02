@@ -16,7 +16,6 @@ module DateRangePicker exposing
 @docs Msg, DatePicker, subscriptions, view, update
 
 @docs init, open, defaultOpener
-@docs `
 
 
 # Selection
